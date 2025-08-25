@@ -1,0 +1,105 @@
+## ✅ OPCIÓN ELEGANTE Y NATIVA: *LaunchAgent*
+
+Crearemos un **LaunchAgent**, que es un pequeño archivo `.plist` que macOS ejecuta al detectar condiciones específicas — como que el sistema haya iniciado sesión.
+
+Lo que haremos es:
+
+* Crear un `LaunchAgent` que **corra el script cada vez que inicies sesión** o cuando el sistema **reactive el usuario tras suspenderse**.
+* Así, cualquier disco recién conectado será evaluado y bloqueado automáticamente.
+
+---
+
+## 🛠 PASO 1: Mover el script a una ubicación fija
+
+(asumiendo que tu script 05_bloqueo_indexado_volumenes.zsh está en otro directorio, haz una copia en tu escritorio
+
+Ejecuta esto en Terminal:
+
+```bash
+sudo mkdir -p /usr/local/bin
+sudo cp ~/Desktop/05_bloqueo_indexado_volumenes.zsh /usr/local/bin/
+sudo chmod +x /usr/local/bin/05_bloqueo_indexado_volumenes.zsh
+```
+
+---
+
+## 🛠 PASO 2: Crear el archivo `LaunchAgent`
+
+Crea el archivo plist:
+
+```bash
+mkdir -p ~/Library/LaunchAgents
+nano ~/Library/LaunchAgents/com.bloqueo.indexado.volumenes.plist
+```
+
+Pega este contenido:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.bloqueo.indexado.volumenes</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/usr/local/bin/05_bloqueo_indexado_volumenes.zsh</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StartInterval</key>
+    <integer>60</integer> <!-- Cada 10 minutos -->
+    
+    <key>StandardOutPath</key>
+    <string>/Users/andresbarbudo/Public/bloqueo_indexado_auto.out</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/andresbarbudo/Public/bloqueo_indexado_auto.err</string>
+</dict>
+</plist>
+```
+
+Guarda con `Control + O`, Enter, y cierra con `Control + X`.
+
+---
+
+## 🛠 PASO 3: Activar el LaunchAgent
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.bloqueo.indexado.volumenes.plist
+```
+
+🔁 Este comando:
+
+* Registra el agente para tu usuario,
+* Y empezará a ejecutarse cada vez que inicies sesión y cada 10 minutos.
+
+---
+
+## ✅ ¿Cómo probarlo ahora?
+
+1. Desconecta tu disco externo.
+2. Elimina (si quieres) el archivo `.metadata_never_index` del disco externo para probar la reescritura.
+3. Vuelve a conectarlo.
+4. En pocos minutos, deberías ver un nuevo log en:
+
+```bash
+~/Public/bloqueo_indexado_volumenes_*.log
+```
+
+Y el archivo `.metadata_never_index` volverá a aparecer automáticamente en el disco externo.
+
+---
+
+## 🧠 ¿Quieres desactivar o detener el agente algún día?
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.bloqueo.indexado.volumenes.plist
+```
+
+---
+
+

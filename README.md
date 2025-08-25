@@ -1,2 +1,2 @@
 # kuwagga
-tools for fixing common issues on macOS
+hey everyone, im gonna publishing the scripts i use for fixing errors that arise when my development sessions interact too much with the system, so if you're on a similar spot you imght find useful, multiple fallback zsh scripts here

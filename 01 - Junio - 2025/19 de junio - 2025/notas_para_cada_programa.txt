@@ -1,0 +1,161 @@
+--- 01 - disk guard ---
+--- instrucciones de uso:
+--- asignar un administrador de sistema con el siguiente comando en tu terminal
+
+chmod u+x ./01_disk_guard.zsh
+
+
+--- donde:
+--- chmod significa change file mode
+--- 'u' significa usuario
+--- 'x' significa derechos de ejecución
+
+--- y luego para ejecutarlo el siguiente comando:
+
+sudo ./01_disk_guard.zsh
+
+
+--- 02 - disk guard plus: ---
+--- El proceso bird es responsable de sincronizar iCloud Drive. 
+Lo detenemos para evitar que descargue datos.---
+
+--- Puedes volver a activar iCloud Drive con: ---
+
+launchctl load -w /System/Library/LaunchAgents/com.apple.bird.plist
+open -a "System Preferences" /System/Library/PreferencePanes/iCloudPref.prefPane
+
+--- instrucciones de uso:
+--- asignar un administrador de sistema con el siguiente comando en tu terminal
+
+chmod u+x ./02_disk_guard_plus.zsh
+
+
+--- donde: 
+--- chmod significa change file mode
+--- 'u' significa usuario
+--- 'x' significa derechos de ejecución
+   
+--- y luego para ejecutarlo el siguiente comando:
+
+sudo ./02_disk_guard_plus.zsh
+
+--- 03 - disk guard daemon ---
+
+chmod u+x ./03_disk_guard_daemon.zsh
+sudo ./03_disk_guard_daemon.zsh
+
+--- esta app utilitaria tiene funcinalidad 'demonio'
+--- se ejecuta en segundo plano con el siguiente comando
+
+sudo nohup ~/03_disk_guard_daemon.zsh > /dev/null 2>&1 &
+
+
+--- nohup: evita que el proceso se cierre al cerrar terminal.
+--- > /dev/null: oculta la salida.
+--- El log se guarda en: ~/Library/Logs/disk_guard.log
+
+--- para detener el demonio manualmente se utiliza el siguiente comando:
+
+kill $(cat ~/.disk_guard.pid)
+
+--- luego se utiliza el siguiente comando
+
+rm ~/.disk_guard.pid
+
+
+--- 04 - auditor disco macOS ---
+
+--- Audita el uso de disco por carpetas del sistema y usuario.
+--- Detecta snapshots ocultos de Time Machine y su tamaño.
+--- Lista los procesos que están escribiendo al disco en tiempo real.
+--- Registra todo en un archivo de log para análisis posterior.
+--- Mide espacio real libre en disco vs. espacio disponible para el usuario.
+--- Muestra el estado S.M.A.R.T. del disco.
+
+chmod u+x ./04_auditor_disco_macos.zsh
+sudo ./04_auditor_disco_macos.zsh
+
+--- 05 - limpiar cryptex ---
+--- para ejecutar este programa 
+--- saca una copia de seguridad de las cosas importantes
+--- este programa no elimina ningún archivo único
+--- por favor ten precaución de no ejecutar este programa si el sistema está en actualización o instalación
+--- despues de ejecutar este programa apaga la mac por unos 15 minutos
+--- luego prendelo, debería haber recuperado espacio
+
+--- 06 - revisar purgeable finder ---
+
+chmod u+x ./06_revisar_purgeable_finder.zsh
+sudo ./06_revisar_purgeable_finder.zsh
+
+--- Mide espacio real libre, usado y “purgeable”.
+--- Lista las carpetas ocultas (invisibles al Finder) que ocupan espacio.
+--- Reinicia Spotlight y limpia la caché de indexación de Finder.
+--- Guarda un informe detallado en tu Escritorio.
+--- Todo con permisos mínimos, y puede correr con sudo para máxima precisión.
+
+--- 07 - bloquear tethering riesgoso ---
+--- si accedes a internet compartiendo datos mobiles de prepago ilimitado desde tu smartphone a tu compu
+--- el siguiente programa puede ser útil
+
+chmod u+x ./07_bloquear_tethering_riesgoso.zsh
+sudo ./07_bloquear_tethering_riesgoso.zsh
+
+--- para restaurar los bloqueos (si todo volviera a la normalidad)
+--- puedes reiniciar el packet filter desde cero con el siguiente comando:
+
+sudo pfctl -d
+
+--- o si quieres solo eliminar las entradas de bloqueos y 
+--- mantener las reglas anteriores (si tuvieras reglas diferentes a las de este caso
+--- lo puedes hacer con este comando:
+
+sudo pfctl -t blocked -T flush
+
+--- con esto debiera ser mas que suficiente
+--- los problemas del finder reportando un uso de disco ilógico
+--- debieran solucionarse ahora, si no cambia me avisas
+
+--- besito
+
+--- bye
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---a continuación instrucciones para un caso que puede prender todas las alarmas:
+primero ejecuta el siguiente comando ---
+
+sudo launchctl print system/com.apple.tmp_cleaner
+
+--- luego busca una linea que diga lo siguiente: ---
+
+program = /usr/libexec/nombre_del_ejecutable
+
+--- en tu caso el valor de la variable de sistema "program" puede ser una ruta al binario diferente ---
+--- para verificar la firma digital utiliza el siguiente comando: ---
+
+codesign -dv --verbose=4 /usr/libexec/nombre_del_ejecutable
+
+--- el sistema te responde con tres opciones:
+--- 1. esta firmado por apple (nos salvamos!") -> esa era la buena noticia
+--- 2. esta firmado, pero por otro (sería bastante sospechoso)
+--- 3. no esta firmado en absoluto (alerta roja parce)
+
+
