@@ -44,25 +44,12 @@ if [[ ! "$response" =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
-# Look for cover.png in subdirectories
-cover_image=""
-for dir in */; do
-    if [[ -f "${dir}cover.png" ]]; then
-        cover_image="${dir}cover.png"
-        echo "${GREEN}Found cover image: $cover_image${NC}\n"
-        break
-    fi
-done
-
-# If no cover.png found in subdirectories, check current directory
-if [[ -z "$cover_image" ]] && [[ -f "cover.png" ]]; then
+# Look for cover.png in the current directory
+if [[ -f "cover.png" ]]; then
     cover_image="cover.png"
-    echo "${GREEN}Found cover image in current directory: $cover_image${NC}\n"
-fi
-
-# Exit if no cover image found
-if [[ -z "$cover_image" ]]; then
-    echo "${RED}Error: No cover.png found in any subdirectory or current directory.${NC}"
+    echo "${GREEN}Found cover image: $cover_image${NC}\n"
+else
+    echo "${RED}Error: No cover.png found in the current directory.${NC}"
     exit 1
 fi
 
@@ -82,17 +69,6 @@ for audio_file in "${m4a_files[@]}"; do
     echo "${YELLOW}Converting: $audio_file${NC}"
     
     # FFmpeg command optimized for YouTube upload
-    # - loop 1: loop the image infinitely
-    # - libx264: H.264 codec (YouTube recommended)
-    # - preset slow: better compression
-    # - crf 18: high quality (lower is better, 18-23 is good)
-    # - pix_fmt yuv420p: ensures compatibility with all devices
-    # - c:a aac: AAC audio codec (YouTube recommended)
-    # - b:a 192k: audio bitrate 192kbps
-    # - ar 48000: audio sample rate 48kHz
-    # - shortest: finish when audio ends
-    # - vf scale: ensure even dimensions and 1080p resolution
-    
     ffmpeg -loop 1 -framerate 1 -i "$cover_image" -i "$audio_file" \
         -c:v libx264 -preset slow -crf 18 \
         -c:a aac -b:a 192k -ar 48000 \
@@ -117,4 +93,3 @@ if [[ $fail_count -gt 0 ]]; then
     echo "${RED}Failed: ${fail_count} file(s)${NC}"
 fi
 echo "Output directory: ${output_dir}/"
-
