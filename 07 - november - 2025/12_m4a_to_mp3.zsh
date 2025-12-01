@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Script para convertir M4A a MP3 - Versión corregida para espacios en nombres
+# Script corregido - Limpia comillas de Finder automáticamente
 
 # Colores
 RED='\033[0;31m'
@@ -22,81 +22,68 @@ warn() {
 }
 
 # Verificar ffmpeg
-command -v ffmpeg &> /dev/null || error "ffmpeg no está instalado. Instálalo con: brew install ffmpeg"
+command -v ffmpeg &> /dev/null || error "ffmpeg no está instalado: brew install ffmpeg"
 
-# Verificar permisos de ffmpeg
-if [[ ! -x "$(command -v ffmpeg)" ]]; then
-    warn "ffmpeg no tiene permisos de ejecución. Ejecuta: sudo chmod +x $(command -v ffmpeg)"
-    exit 1
-fi
-
-echo "Ingresa la ruta del directorio con archivos M4A:"
+echo "Ingresa la ruta del directorio con archivos M4A (copia desde Finder):"
 read -r directorio
 
-# IMPORTANTE: Usar comillas dobles para manejar espacios
+# LIMPIEZA AUTOMÁTICA: Remover comillas de Finder con (Q)
+directorio="${(Q)directorio}"
+
+# Trim espacios leading/trailing
+directorio="${directorio#[[:space:]]#}"
+directorio="${directorio%%[[:space:]]#}"
+
+echo "Ruta limpia: $directorio"
+
 [[ -d "$directorio" ]] || error "El directorio '$directorio' no existe"
 
-# Crear directorio de salida
 output_dir="${directorio}/MP3_Convertidos"
-mkdir -p "$output_dir" || error "No se pudo crear el directorio de salida"
+mkdir -p "$output_dir" || error "No se pudo crear: $output_dir"
 
-# Buscar archivos M4A con comillas apropiadas
 m4a_files=()
 while IFS= read -r file; do
     m4a_files+=("$file")
 done < <(find "$directorio" -name "*.m4a" -type f 2>/dev/null)
 
-if [[ ${#m4a_files[@]} -eq 0 ]]; then
-    error "No se encontraron archivos .m4a en '$directorio'"
-fi
+[[ ${#m4a_files[@]} -eq 0 ]] && error "No hay archivos M4A en '$directorio'"
 
-info "Se encontraron ${#m4a_files[@]} archivo(s) M4A"
-info "Los MP3 se guardarán en: $output_dir"
-echo ""
+info "Encontrados ${#m4a_files[@]} archivos M4A"
+info "Salida: $output_dir"
+echo
 
 total=${#m4a_files[@]}
 actual=0
 
 for m4a_file in "${m4a_files[@]}"; do
     ((actual++))
-    
-    filename=$(basename "$m4a_file" .m4a)
+    filename=$(basename "${m4a_file}" .m4a)
     mp3_file="${output_dir}/${filename}.mp3"
     
-    echo "Procesando [$actual/$total]: ${filename}"
-    echo "Archivo de entrada: ${m4a_file}"
+    echo "[$actual/$total] ${filename}"
     
-    # CORRECCIÓN PRINCIPAL: Usar comillas para TODOS los parámetros
-    ffmpeg -i "${m4a_file}" \
-        -q:a 2 \
-        -map_metadata 0 \
-        -id3v2_version 3 \
-        -write_id3v1 1 \
-        "${mp3_file}" 2>&1
+    ffmpeg -i "${m4a_file}" -q:a 2 -map_metadata 0 -id3v2_version 3 -write_id3v1 1 "${mp3_file}"
     
-    if [[ $? -eq 0 && -f "${mp3_file}" ]]; then
-        info "Convertido: ${filename}.mp3"
+    if [[ $? -eq 0 && -s "${mp3_file}" ]]; then
+        info "✓ ${filename}.mp3 creado"
         
-        # Copiar carátula
+        # Carátula
         temp_cover="/tmp/cover_$$_${actual}.jpg"
         ffmpeg -i "${m4a_file}" -an -vcodec copy "${temp_cover}" 2>/dev/null
-        
         if [[ -s "${temp_cover}" ]]; then
-            ffmpeg -i "${mp3_file}" -i "${temp_cover}" -c copy -map 0:0 -map 1:0 -id3v2_version 3 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" "${mp3_file}.tmp" 2>/dev/null
+            ffmpeg -i "${mp3_file}" -i "${temp_cover}" -c copy -map 0:0 -map 1:0 \
+                -id3v2_version 3 -metadata:s:v title="Album cover" "${mp3_file}.tmp"
             [[ $? -eq 0 ]] && mv "${mp3_file}.tmp" "${mp3_file}"
             rm -f "${temp_cover}"
+            info "  Carátula agregada"
         fi
     else
-        warn "Error al convertir: ${filename}"
-        echo "Verifica que el archivo no esté protegido o dañado"
+        warn "✗ Falló: ${filename}"
     fi
-    
-    echo ""
+    echo
 done
 
 echo -e "${GREEN}═══════════════════════════════════════${NC}"
-info "Conversión completada"
-echo "Total de archivos procesados: $total"
-echo "Ubicación de salida: $output_dir"
-ls -la "$output_dir"
+info "Completado. Archivos en: $output_dir ($(ls "$output_dir" | wc -l) MP3s)"
 echo -e "${GREEN}═══════════════════════════════════════${NC}"
+
