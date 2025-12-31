@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Memoria de Cálculo Eléctrica</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [
+      {left: '\\(', right: '\\)', display: false},
+      {left: '\\[', right: '\\]', display: true}
+    ]});"></script>
+  <style>
+    html, body { 
+      background: #EAEEF4; 
+      color: #63627C; 
+      font-family: Arial, sans-serif; 
+      margin: 0; 
+      padding: 0; 
+      height: 100%;
+    }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    .main-container {
+      max-width: 1600px;
+      margin: 30px auto 30px auto;
+      padding: 40px 50px 40px 50px;
+      background: #EAEEF4;
+      border-radius: 24px;
+      box-shadow: 0 4px 26px 0 rgba(90,100,191,0.10);
+    }
+    h1, .portada { 
+      background: #5A64BF; 
+      color: #FFFFB8; 
+      padding: 1em 0; 
+      border-radius: 0 0 10px 10px; 
+      text-align: center;
+      margin: 0 0 32px 0;
+    }
+    h2 { 
+      color: #5A64BF; 
+      margin-top: 32px; 
+    }
+    h3 { color: #63627C; }
+    table {
+      background: #A7B7CF;
+      color: #363653;
+      width: 96%;
+      margin: 1em auto 2em auto;
+      border-collapse: collapse;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 0.6em 1em;
+      border: 1px solid #63627C;
+      text-align: center;
+    }
+    th {
+      background: #5A64BF;
+      color: #FFFFB8;
+    }
+    tr:nth-child(even) { background: #EAEEF4; }
+    tr:nth-child(odd) { background: #A7B7CF; }
+    .equation {
+      background: #FFFFB8;
+      color: #5A64BF;
+      padding: 0.5em;
+      border-radius: 5px;
+      margin: 1em auto;
+      width: fit-content;
+      font-size: 1.08em;
+    }
+    .toc { background: #63627C; color: #FFFFB8; border-radius:8px; padding:1em; width:93%; margin:1em auto; list-style:none;}
+    .toc li { color: #FFFFB8; margin-bottom:6px;}
+    p, ul, ol { width: 98%; margin: 1em auto; text-align: justify; }
+    @media print {
+      body, .main-container {
+        box-shadow: none !important;
+        background: #FFF !important;
+        color: #222 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="main-container">
+<style>
+  .portada {
+    background: #5A64BF;
+    color: #FFFFB8;
+    padding: 60px 0 50px 0;
+    border-radius: 0 0 18px 18px;
+    text-align: center;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    page-break-after: always;
+  }
+  .portada img {
+    max-height: 960px;
+    max-width: 480vw;
+    margin: 32px 0 40px 0;
+    object-fit: contain;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px 0 rgba(90,100,191,0.12);
+    background: #FFF;
+    padding: 8px;
+    display: block;
+  }
+  @media print {
+    .portada {
+      page-break-after: always;
+      min-height: 100vh !important;
+      height: 100vh !important;
+    }
+  }
+</style>
+
+<div class="portada">
+  <img src="Portada.png" alt="Imagen portada" />
+  
+  
+</div>
+
+
+<style>
+.toc-page {
+  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  page-break-after: always;
+  position: relative;
+  box-sizing: border-box;
+}
+.toc-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 900px;
+  height: 100vh;
+  z-index: 1;
+  object-fit: cover;
+  opacity: 0.25; /* menor valor para que texto sea legible */
+}
+.toc-content {
+  position: relative;
+  z-index: 2;
+  max-width: 670px;
+  width: 84vw;
+  margin: 0 auto;
+  background: rgba(90, 100, 191, 0.08);
+  border-radius: 18px;
+  padding: 60px 42px;
+  box-shadow: 0 2px 14px 0 rgba(90,100,191,0.08);
+}
+.toc-content h2 {
+  color: #5A64BF;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.toc-list {
+  background: none;
+  color: #63627C;
+  font-size: 1.22em;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+.toc-list li {
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+@media print {
+  .toc-page {
+    page-break-after: always !important;
+    min-height: 100vh !important;
+    height: 100vh !important;
+    background: transparent !important;
+  }
+  .toc-background {
+    opacity: 0.18 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .toc-content {
+    background: rgba(255,255,255,0.08) !important;
+    box-shadow: none !important;
+    color: #273142 !important;
+  }
+}
+</style>
+<div class="toc-page">
+  <img class="toc-background" src="tabla_de_contenidos.jpg" width="640" height="480" alt="Fondo de tabla de contenidos">
+  <div class="toc-content">
+    <h2>Tabla de Contenidos</h2>
+    <ul class="toc-list">
+      <li>1. Objetivo</li>
+      <li>2. Cálculos Justificativos - Análisis de Cargas</li>
+      <li>3. Instalación Eléctrica</li>
+      <li>4. Cálculo de Intensidades de Corriente</li>
+      <li>5. Cálculo de Alimentadores y Conductores</li>
+      <li>6. Cálculo de Canalizaciones</li>
+      <li>7. Cálculo de Caídas de Tensión</li>
+      <li>8. Cálculo Cortocircuito</li>
+      <li>9. Cálculo Protecciones</li>
+      <li>10. Interruptores Generales y Derivaciones</li>
+    </ul>
+  </div>
+</div>
+
+
+<h2>1. Objetivo</h2>
+<p>
+El objetivo de la presente memoria es analizar, calcular y justificar el diseño eléctrico, según la normativa vigente, para el suministro de cinco laboratorios y un pasillo de circulación en el edificio, garantizando seguridad y funcionalidad en la operación.
+</p>
+
+<h2>2. Cálculos Justificativos - Análisis de Cargas</h2>
+
+<p>En el diseño de la instalación eléctrica del edificio se ha considerado la funcionalidad y uso específico de cada espacio, lo que se refleja tanto en la distribución de las cargas como en el dimensionamiento de los circuitos. El pasillo principal únicamente demanda energía para iluminación, instalándose seis luminarias de 30 W cada una. </p>
+
+<p>Los laboratorios 1, 2, 3 y 4 presentan un esquema homogéneo de consumo, cada uno equipado con seis luminarias de 48 W, ocho enchufes de 10A y ocho enchufes de 16A, distribuidos en circuitos independientes que permiten un balance equilibrado de la carga y una mayor seguridad operativa. Este diseño facilita la protección selectiva de cada circuito y la flexibilidad para futuras ampliaciones o modificaciones en el equipamiento de estos laboratorios, dado que los tableros secundarios dedicados permiten una gestión segmentada y eficiente.</p>
+
+<p>Por su parte, el laboratorio 5 se diferencia del resto al incorporar, además de luminarias y enchufes monofásicos, cuatro enchufes de 16A y cuatro enchufes trifásicos dedicados a equipos de mayor potencia. Esta particularidad incrementa la demanda eléctrica y requiere una mayor capacidad en los conductores y protecciones asociados, así como una configuración especial del tablero secundario.</p>
+
+<p>
+Se determina la carga total a partir de la distribución y cantidad de luminarias y enchufes especificada:
+</p>
+<h3>Resumen de cargas por espacio</h3>
+<table>
+  <tr>
+    <th>Espacio</th><th>Luminarias</th><th>Total (W)</th><th>Enchufes 10A</th><th>Total (W)</th><th>Enchufes 16A</th><th>Total (W)</th><th>Enchufes Trifásicos</th><th>Total (W)</th>
+  </tr>
+  <tr>
+    <td>Pasillo</td><td>6×30</td><td>180</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+  </tr>
+  <tr>
+    <td>Lab 1-4</td><td>6×48</td><td>288</td><td>8×250</td><td>2000</td><td>8×500</td><td>4000</td><td>-</td><td>-</td>
+  </tr>
+  <tr>
+    <td>Lab 5</td><td>6×48</td><td>288</td><td>8×250</td><td>2000</td><td>4×500</td><td>2000</td><td>4×3000</td><td>12000</td>
+  </tr>
+</table>
+
+<h2>3. Instalación Eléctrica</h2>
+
+<p>La instalación eléctrica del edificio se articula en torno a un tablero general que actúa como centro de distribución de energía para todos los sectores, incluyendo los cinco laboratorios y el pasillo. Desde este tablero parten las alimentaciones principales, dimensionadas de acuerdo con la demanda total prevista y estableciendo las protecciones necesarias para garantizar la seguridad tanto del equipamiento como de los usuarios. La ubicación estratégica del tablero general facilita la organización y el mantenimiento del sistema, permitiendo el acceso rápido a los dispositivos de corte y protección en caso de emergencia.</p>
+
+<p>Cada laboratorio cuenta con su propio tablero secundario, el cual recibe energía a través de una derivación independiente desde el tablero general. Esta configuración asegura que cada espacio tenga autonomía eléctrica y permite efectuar maniobras de aislamiento sin afectar al resto de los recintos. Además, los tableros secundarios alojan las protecciones específicas para cada circuito (luminarias, enchufes de 10A, enchufes de 16A y, en el caso del laboratorio 5, enchufes trifásicos), proporcionando así un nivel adicional de seguridad y facilitando la identificación y resolución de fallas en forma sectorizada.</p>
+
+<p></p>
+
+
+<h3>Tableros y circuitos</h3>
+<table>
+  <tr>
+    <th>Laboratorio</th><th>Tablero Propio</th><th>Circuitos Independientes</th>
+  </tr>
+  <tr>
+    <td>1</td><td>Sí</td><td>Luminarias, Enchufes de 10A, Enchufes de  16A</td>
+  </tr>
+  <tr>
+    <td>2</td><td>Sí</td><td>Luminarias, Enchufes de 10A, Enchufes de 16A</td>
+  </tr>
+  <tr>
+    <td>3</td><td>Sí</td><td>Luminarias, Enchufes de 10A, Enchufes de 16A</td>
+  </tr>
+  <tr>
+    <td>4</td><td>Sí</td><td>Luminarias, Enchufes de 10A, Enchufes de 16A</td>
+  </tr>
+  <tr>
+    <td>5</td><td>Sí</td><td>Luminarias, Enchufes de 10A, Enchufes de 16A, Enchufes Trifásicos</td>
+  </tr>
+</table>
+
+<h2>4. Cálculo de Intensidades de Corriente</h2>
+
+<p>El cálculo de las intensidades de corriente constituye un paso fundamental para dimensionar correctamente los conductores y seleccionar las protecciones adecuadas en cada sector del edificio. Para cada circuito, la corriente se determinó dividiendo la potencia total demandada entre la tensión de alimentación correspondiente, considerando el uso específico de cada espacio. Esta metodología permite reflejar con precisión el comportamiento eléctrico real de luminarias, enchufes y equipos especiales, asegurando que la instalación soporte de forma segura la carga conectada durante el funcionamiento normal.</p>
+
+<p>En el caso del pasillo, la demanda está compuesta únicamente por seis luminarias de 30 W, lo que resulta en una corriente relativamente baja y un dimensionamiento sencillo de los conductores. En cambio, los laboratorios 1 a 4 presentan una mayor diversidad de cargas, con consumos tanto para iluminación como para enchufes de 10A y 16A, lo que exige un cálculo separado para cada tipo de circuito. Estos valores permiten definir no solo el calibre de los cables, sino también el tipo y capacidad de los interruptores automáticos a instalar en los tableros secundarios, previniendo así el sobrecalentamiento de los conductores y el disparo innecesario de las protecciones.</p>
+
+<p>El laboratorio 5, por su parte, demanda un análisis especial debido a la presencia de enchufes trifásicos de alta potencia, que requieren calcular la corriente considerando la tensión de línea entre fases. Este ejercicio implica la utilización de fórmulas específicas para el sistema trifásico, diferenciándolo del resto de los recintos. El resultado de estos cálculos garantiza que tanto los alimentadores principales como las derivaciones internas tengan capacidad suficiente para soportar la carga prevista sin exceder los límites permitidos por la normativa eléctrica vigente, contribuyendo de esta manera a la seguridad y confiabilidad del sistema.</p>
+
+
+<p>Cálculo de corriente por circuito típico:</p>
+<div class="equation">\(
+I_{pasillo} = \frac{180\,\text{W}}{220\,\text{V}} = 0.82\,\text{A}
+\)</div>
+<div class="equation">\(
+I_{luminarias} = \frac{288\,\text{W}}{220\,\text{V}} = 1.31\,\text{A}
+\)</div>
+<div class="equation">\(
+I_{enchufes\,10A} = \frac{2000\,\text{W}}{220\,\text{V}} = 9.09\,\text{A}
+\)</div>
+<div class="equation">\(
+I_{enchufes\,16A} = \frac{4000\,\text{W}}{220\,\text{V}} = 18.18\,\text{A}
+\)</div>
+<div class="equation">\(
+I_{enf\,Lab5\,16A} = \frac{2000\,\text{W}}{220\,\text{V}} = 9.09\,\text{A}
+\)</div>
+<div class="equation">\(
+I_{trifásico\,Lab5} = \frac{12000\,\text{W}}{\sqrt{3} \times 380\,\text{V}} \approx 18.24\,\text{A}
+\)</div>
+
+
+<h2>5. Cálculo de Alimentadores y Conductores</h2>
+
+<p>La selección del tipo, material y sección mínima de los conductores empleados en el proyecto se realizó conforme a las exigencias del Pliego Técnico RIC N° 04, asegurando así el cumplimiento normativo y la seguridad operativa. Para cada circuito se consideró la corriente máxima de diseño, utilizando las fórmulas establecidas y consultando la Tabla N4.4 y N4.5 del pliego, que indican la capacidad de transporte de corriente admisible según la sección, tipo de aislamiento y métodos de instalación.</p>
+
+<p>Adicionalmente, se aplicaron los factores de corrección por cantidad de conductores dentro de un mismo ducto (Tabla N4.6) y por temperatura ambiente (Tabla N4.7), asegurando que la sección seleccionada garantice una operación libre de sobrecalentamientos aun en las condiciones más severas previstas por el proyecto. Una atención especial se dedicó al dimensionamiento de los alimentadores en el laboratorio 5, donde la presencia de cargas trifásicas impone mayores exigencias en la capacidad de conducción y en el equilibrio del sistema. Para todos los casos, se verificó que la caída de tensión no exceda el 3% recomendado, conforme a las fórmulas de cálculo y las recomendaciones del RIC, lo que contribuye a la eficiencia eléctrica y a la protección de los equipos conectados.</p>
+
+<p>Las canalizaciones fueron seleccionadas de acuerdo al capítulo 7 y las Tablas N4.8 y N4.9 del pliego, eligiendo ductos rígidos de PVC de diámetro adecuado para contener la cantidad y tipo de conductores exigidos por cada circuito (Tablas N4.17 a N4.21). Además, se han respetado los radios mínimos de curvatura para el tendido (N4.22) y las normas de señalización e identificación de conductores (6.2.7), en cumplimiento con los requisitos para una instalación ordenada, accesible y fácil de mantener en el tiempo.</p>
+
+<p> Siguiendo la recomendación de la normativa chilena y el pliego RIC, la sección mínima de un conductor se puede verificar mediante las siguientes expresiones, dependiendo del tipo de circuito: </p> <p><b>Para circuitos monofásicos:</b></p> <div class="equation">\( S = \frac{\rho \cdot L \cdot I}{V_d} \)</div> <p><b>Para circuitos trifásicos:</b></p> <div class="equation">\( S = \frac{\sqrt{3} \cdot \rho \cdot L \cdot I}{V_d} \)</div> <p> Donde: </p> <ul> <li>\( S \) = sección mínima del conductor (mm²)</li> <li>\( \rho \) = resistividad del material del conductor (Ω·mm²/m; para cobre aproximado: 0,018)</li> <li>\( L \) = longitud total del circuito (m)</li> <li>\( I \) = corriente proyectada del circuito (A)</li> <li>\( V_d \) = caída de tensión admisible (V)</li> </ul> <p> Estas fórmulas permiten establecer la sección de conductor que asegure que la caída de tensión no exceda los límites normativos, normalmente establecidos en un 3% para instalaciones interiores, considerando la distancia, el tipo de carga y la corriente del circuito. Su uso, junto a la verificación de la capacidad de corriente según tablas RIC, garantiza un diseño eléctrico seguro y eficiente. </p>
+
+
+<p> Estos factores, obtenidos de las Tablas N4.6 y N4.7 del pliego, garantizan la seguridad térmica del sistema y aseguran que el conductor seleccionado opere sin riesgos de sobrecalentamiento incluso en condiciones exigentes. Es necesario comparar la sección resultante del cálculo de caída de tensión con la que exige la norma por capacidad de corriente, adoptando siempre la mayor de ambas para cumplir con ambos criterios de diseño. </p> 
+
+
+<p>
+En instalaciones eléctricas normadas es fundamental preferir conductores tipo <b>THHN</b> (cobre con aislamiento en PVC y revestimiento de nylon) por sobre cables con aislamiento EVA. El THHN tiene aislamiento de <b>PVC flexible</b>, pensado para soportar condiciones térmicas y eléctricas exigentes, ofrece elevada resistencia al fuego y al envejecimiento. Además, el revestimiento adicional de nylon del THHN le proporciona mayor robustez frente a la abrasión y permite su uso en canalizaciones internas y tableros.
+</p>
+
+
+<p> En la tabla siguiente se resumen los valores adoptados para cada circuito del proyecto, se consideró el cálculo de sección por caída de tensión: </p> 
+
+<table> 
+  <tr> 
+    <th>Circuito</th>
+    <th>Corriente Máxima (A)</th>
+    <th>Sección Recomendada (mm²)</th>
+    <th>Tipo de Cable</th> 
+  </tr> 
+  <tr> 
+    <td>Luminarias</td>
+    <td>1.31</td>
+    <td>2.5</td>
+    <td>Cable THHN</td> 
+  </tr> 
+  <tr> 
+    <td>Enchufes 10A</td>
+    <td>9.09</td>
+    <td>2.5</td>
+    <td>Cable THHN</td> 
+  </tr> 
+  <tr> 
+    <td>Enchufes 16A</td>
+    <td>18.18</td>
+    <td>4</td>
+    <td>Cable THHN</td> 
+  </tr> 
+  <tr> 
+    <td>Trifásicos Lab 5</td>
+    <td>18.24</td>
+    <td>6</td>
+    <td>Cable THHN</td> 
+  </tr> 
+</table> 
+
+<p> De este modo, se verifica que, para cada circuito, la sección seleccionada cumple simultáneamente con el mínimo normativo por capacidad de corriente, considerando los factores de corrección, y con la limitación de caída de tensión establecida por la normativa. (Pliego RIC-Nº4 sección 5.4)</p>
+
+<section id="calculo-canalizaciones">
+  <h2>Cálculo de canalizaciones eléctricas - Cable H07Z1-K</h2>
+  <p>
+    Para determinar el dimensionamiento de las canalizaciones eléctricas en los laboratorios y áreas especificadas, se consideraron los siguientes parámetros por circuito:
+    <ul>
+      <li><strong>Sección del conductor:</strong> Según la carga eléctrica de cada circuito.</li>
+      <li><strong>Tamaño aproximado del cable (mm):</strong> Diámetro externo considerado del conductor.</li>
+      <li><strong>Área ocupada en el ducto (mm²):</strong> Área requerida en función del número de cables por circuito.</li>
+      <li><strong>Sección nominal del ducto (mm):</strong> Diámetro interno del ducto propuesto, de acuerdo con la cantidad y sección de los cables.</li>
+      <li><strong>Tipo de tubería:</strong> Según requerimiento de protección y facilidad de instalación (curvable y no metálica, excepto acometida).</li>
+      <li><strong>Código de material:</strong> Para referencia logística. (Pliego RIC Nº 4 - anexo 4.12)</li>
+    </ul>
+  </p>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Canalización</th>
+        <th>Sección del conductor (mm²)</th>
+        <th>Tamaño de cable (mm)</th>
+        <th>Área ocupada (mm²)</th>
+        <th>Sección ducto (mm)</th>
+        <th>Tipo de tubería</th>
+        <th>Características</th>
+        <th>Código</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Alumbrado Lab 1</td>
+        <td>1.5</td>
+        <td>3</td>
+        <td>7</td>
+        <td>20</td>
+        <td>No metálica</td>
+        <td>Curvable</td>
+        <td>432222540010</td>
+      </tr>
+      <tr>
+        <td>Enchufes 10A Lab 1-4</td>
+        <td>2.5</td>
+        <td>3.7</td>
+        <td>11</td>
+        <td>20</td>
+        <td>No metálica</td>
+        <td>Curvable</td>
+        <td>432222540010</td>
+      </tr>
+      <tr>
+        <td>Enchufes 16A Lab 1-4</td>
+        <td>2.5</td>
+        <td>3.7</td>
+        <td>11</td>
+        <td>20</td>
+        <td>No metálica</td>
+        <td>Curvable</td>
+        <td>432222540010</td>
+      </tr>
+      <tr>
+        <td>Alumbrado Lab 5</td>
+        <td>1.5</td>
+        <td>3</td>
+        <td>7</td>
+        <td>20</td>
+        <td>No metálica</td>
+        <td>Curvable</td>
+        <td>432222540010</td>
+      </tr>
+      <tr>
+        <td>Enchufes 10A Lab 5</td>
+        <td>2.5</td>
+        <td>3.7</td>
+        <td>11</td>
+        <td>20</td>
+        <td>No metálica</td>
+        <td>Curvable</td>
+        <td>432222540010</td>
+      </tr>
+      <tr>
+        <td>Enchufes 16A Lab 5</td>
+        <td>2.5</td>
+        <td>3.7</td>
+        <td>11</td>
+        <td>20</td>
+        <td>No metálica</td>
+        <td>Curvable</td>
+        <td>432222540010</td>
+      </tr>
+      <tr>
+        <td>Enchufes 20A Lab 5</td>
+        <td>2.5</td>
+        <td>3.7</td>
+        <td>11</td>
+        <td>20</td>
+        <td>No metálica</td>
+        <td>Curvable</td>
+        <td>432222540010</td>
+      </tr>
+      <tr>
+        <td>Pasillo</td>
+        <td>1.5</td>
+        <td>3</td>
+        <td>7</td>
+        <td>20</td>
+        <td>No metálica</td>
+        <td>Curvable</td>
+        <td>432222540010</td>
+      </tr>
+      <tr>
+        <td>Acometida</td>
+        <td>4.0</td>
+        <td>4.2</td>
+        <td>14</td>
+        <td>20</td>
+        <td>Metálica</td>
+        <td>Curvable</td>
+        <td>332241542010</td>
+      </tr>
+    </tbody>
+  </table>
+
+</section>
+
+<section id="calculo-caida-tension">
+  <h2>7. Cálculo de Caídas de Tensión</h2>
+  <p>
+    En toda instalación eléctrica es fundamental asegurar que la caída de tensión generada en los alimentadores y circuitos finales no supere el límite del 3% establecido por la normativa vigente. Este requisito es clave para preservar la eficiencia de los equipos conectados, evitar pérdidas excesivas y garantizar condiciones seguras de operación durante el uso diario.
+  </p>
+
+  <h3>Fórmulas de cálculo</h3>
+  <p>
+    Para calcular la caída de tensión se emplean las siguientes expresiones, considerando un voltaje nominal de <strong>220 V (monofásico)</strong> y <strong>380 V (trifásico)</strong>:
+  </p>
+
+  <p><strong>Circuitos monofásicos:</strong></p>
+  <div class="equation">\(\Delta V = \frac{2 \cdot I \cdot \rho \cdot L}{S}\)</div>
+
+  <p><strong>Circuitos trifásicos:</strong></p>
+  <div class="equation">\(\Delta V = \frac{\sqrt{3} \cdot I \cdot \rho \cdot L}{S}\)</div>
+
+  <p style="margin-top: 15px;">
+    Donde: <strong>I</strong> = corriente (A), <strong>ρ</strong> = resistividad del conductor (0.0175 Ω·mm²/m para cobre), <strong>L</strong> = longitud del conductor (m), <strong>S</strong> = sección del conductor (mm²). El factor 2 en monofásico representa la ida y vuelta del conductor, mientras que √3 en trifásico corresponde al cálculo entre tensiones de línea.
+  </p>
+
+  <h3>Ejemplo de cálculo de la caída de tensión</h3>
+  <p>
+    En estos ejemplos se utiliza cable de cobre de <b>1.5 mm² para luminarias</b> y <b>2.5 mm² para enchufes</b>, con una longitud de 6 m por laboratorio (considerando ida y vuelta en la fórmula).
+  </p>
+  
+  <table border="1" cellpadding="4" style="border-collapse:collapse;">
+    <tr style="background:#E6E6FA;">
+      <th>Circuito</th>
+      <th>Corriente (A)</th>
+      <th>Longitud (m)</th>
+      <th>Sección (mm²)</th>
+      <th>Voltaje (V)</th>
+      <th>Caída (V)</th>
+      <th>% sobre nominal</th>
+    </tr>
+    <tr>
+      <td>Luminarias</td>
+      <td>1.31</td>
+      <td>6</td>
+      <td>1.5</td>
+      <td>220</td>
+      <td>0.18</td>
+      <td>0.08%</td>
+    </tr>
+    <tr>
+      <td>Enchufes 10A</td>
+      <td>9.09</td>
+      <td>6</td>
+      <td>2.5</td>
+      <td>220</td>
+      <td>0.76</td>
+      <td>0.35%</td>
+    </tr>
+    <tr>
+      <td>Enchufes 16A</td>
+      <td>18.18</td>
+      <td>6</td>
+      <td>2.5</td>
+      <td>220</td>
+      <td>1.53</td>
+      <td>0.69%</td>
+    </tr>
+    <tr>
+      <td>Trifásicos Lab 5</td>
+      <td>31.58</td>
+      <td>6</td>
+      <td>2.5</td>
+      <td>380</td>
+      <td>2.65</td>
+      <td>0.70%</td>
+    </tr>
+  </table>
+
+  <p style="font-style:italic; color:#2c5aa0; margin-top: 15px;">
+    <b>Nota técnica:</b> Al seleccionar la sección del conductor, se debe verificar que la caída de tensión calculada permanezca bajo los límites normativos: menos del 3% para iluminación y menos del 5% para circuitos de fuerza o especiales. Dado que los resultados se encuentran muy por debajo de estos máximos para las distancias típicas de los laboratorios, no es necesario emplear secciones superiores, a menos que se prevean mayores distancias, cargas elevadas o agrupamientos que requieran mayor capacidad de conductor.
+  </p>
+</section>
+
+
+
+
+
+<section id="calculo-cortocircuito-caso-estudio">
+  <h2>8. Cálculo de Cortocircuito</h2>
+  <p>
+    El valor de cortocircuito en cada tablero se estima considerando la impedancia total entre el transformador y el tablero del laboratorio. La impedancia total se calcula con la siguiente expresión, formulada por la normativa IEC 60909 (Short-circuit currents in three-pase A.C. systems):
+
+    <p></p>
+    <span class="equation">\(
+Z_{tot} = Z_{trafo} + Z_{cable} + Z_{conex}
+\)</span>
+    donde:
+    <ul>
+      <li><strong>Z<sub>trafo</sub></strong> = Impedancia interna del transformador (<em>valor típico: 0.15&nbsp;Ω</em>)</li>
+      <li><strong>Z<sub>cable</sub></strong> = Impedancia de los cables de alimentación, función de longitud, sección y material (<em>valor típico: 0.12–0.18&nbsp;Ω</em> para 20 m con cobre)</li>
+      <li><strong>Z<sub>conex</sub></strong> = Impedancia residual de conexiones y empalmes (<em>valor típico: 0.04–0.07&nbsp;Ω</em>)</li>
+    </ul>
+    Así, el cálculo de cada tablero se expresa como <span class="equation">\(
+I_{cc} = \frac{V_{nom}}{Z_{tot}}
+\)</span> y, para trifásico, <span class="equation">\(
+I_{cc,\,3\phi} = \frac{V_{nom}}{\sqrt{3} \cdot Z_{tot}}
+\)</span>.
+  </p>
+
+  <h3>Cálculo de impedancia total</h3>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+      <th>Ubicación</th>
+      <th>Z<sub>trafo</sub> (Ω)</th>
+      <th>Z<sub>cable</sub> (Ω)</th>
+      <th>Z<sub>conex</sub> (Ω)</th>
+      <th>Z<sub>tot</sub> (Ω)</th>
+    </tr>
+    <tr>
+      <td>Lab 1</td>
+      <td>0.15</td>
+      <td>0.13</td>
+      <td>0.05</td>
+      <td>0.33</td>
+    </tr>
+    <tr>
+      <td>Lab 2</td>
+      <td>0.15</td>
+      <td>0.12</td>
+      <td>0.05</td>
+      <td>0.32</td>
+    </tr>
+    <tr>
+      <td>Lab 3</td>
+      <td>0.15</td>
+      <td>0.19</td>
+      <td>0.05</td>
+      <td>0.39</td>
+    </tr>
+    <tr>
+      <td>Lab 4</td>
+      <td>0.15</td>
+      <td>0.16</td>
+      <td>0.05</td>
+      <td>0.36</td>
+    </tr>
+    <tr>
+      <td>Lab 5 (Trifásico)</td>
+      <td>0.15</td>
+      <td>0.09</td>
+      <td>0.05</td>
+      <td>0.29</td>
+    </tr>
+    <tr>
+      <td>Pasillo</td>
+      <td>0.15</td>
+      <td>0.25</td>
+      <td>0.05</td>
+      <td>0.45</td>
+    </tr>
+  </table>
+
+  <h3>Cálculo de cortocircuito</h3>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+      <th>Ubicación</th>
+      <th>Voltaje (V)</th>
+      <th>Z<sub>tot</sub> (Ω)</th>
+      <th>Fórmula</th>
+      <th>Cortocircuito estimado (A)</th>
+    </tr>
+    <tr>
+      <td>Lab 1</td>
+      <td>220</td>
+      <td>0.33</td>
+      <td>\(I_{cc} = \frac{220}{0.33}\)</td>
+      <td>~667</td>
+    </tr>
+    <tr>
+      <td>Lab 2</td>
+      <td>220</td>
+      <td>0.32</td>
+      <td>\(I_{cc} = \frac{220}{0.32}\)</td>
+      <td>~688</td>
+    </tr>
+    <tr>
+      <td>Lab 3</td>
+      <td>220</td>
+      <td>0.39</td>
+      <td>\(I_{cc} = \frac{220}{0.39}\)</td>
+      <td>~564</td>
+    </tr>
+    <tr>
+      <td>Lab 4</td>
+      <td>220</td>
+      <td>0.36</td>
+      <td>\(I_{cc} = \frac{220}{0.36}\)</td>
+      <td>~611</td>
+    </tr>
+    <tr>
+      <td>Lab 5 (Trifásico)</td>
+      <td>380</td>
+      <td>0.29</td>
+      <td>\(I_{cc,3\phi} = \frac{380}{\sqrt{3} \cdot 0.29}\)</td>
+      <td>~757</td>
+    </tr>
+    <tr>
+      <td>Pasillo</td>
+      <td>220</td>
+      <td>0.45</td>
+      <td>\(I_{cc} = \frac{220}{0.45}\)</td>
+      <td>~489</td>
+    </tr>
+  </table>
+</section>
+
+
+
+
+
+<h2>9. Cálculo de Protecciones</h2>
+<p>
+  En el cálculo de las protecciones se seleccionaron interruptores termomagnéticos y diferenciales adecuados para cada circuito, de acuerdo con la corriente de diseño, la sección de los conductores y las condiciones de servicio. Los interruptores termomagnéticos se dimensionaron para que su corriente nominal I<sub>n</sub> sea igual o ligeramente superior a la corriente de carga del circuito, garantizando la protección de disparo térmico por sobrecargas y el disparo magnético por cortocircuitos, y de esa manera permitir una gestión sin disparos intempestivos. Además, se consideran las curvas de disparo y el poder de corte como compatibles con la corriente de cortocircuito presunta en el punto de instalación.
+</p>
+<p>
+  Para la protección diferencial se seleccionaron dispositivos con sensibilidad adecuada al tipo de circuito y al entorno. Estos interruptores diferenciales se coordinan con los termomagnéticos "aguas abajo", buscando una adecuada selectividad vertical para que, ante un defecto, se desconecte solo el tramo afectado y se mantenga la continuidad del resto de la instalación.
+</p>
+<p>
+Para la correcta distribución de la carga en el tablero, es esencial seleccionar una barra de distribución para el riel DIN que soporte la suma de las corrientes máximas de todos los circuitos conectados. El tamaño de la barra debe considerar el número de líneas, la corriente total proyectada y la capacidad nominal de los interruptores utilizados. Normalmente, las barras de cobre o latón para riel DIN se comercializan en secciones como 10&nbsp;mm², 16&nbsp;mm² y 25&nbsp;mm², recomendando seleccionar el valor inmediatamente superior a la corriente total calculada. Por ejemplo, si en un laboratorio el total de corriente proyectada por todos los circuitos es de 120&nbsp;A, se recomienda emplear una barra de al menos 16&nbsp;mm² (que soporta hasta 130&nbsp;A) o 25&nbsp;mm² para mayor margen y mejor disipación térmica.
+</p>
+<p>
+Además, es importante que la barra sea adecuada para el número de polos (fases y neutro) requeridos, permitiendo la conexión directa sobre el riel DIN mediante terminales de presión estándar o peines modulares, según la configuración del tablero. Se debe verificar que el sistema de distribución cumpla con la normativa aplicable (IEC&nbsp;61439) y que cada línea esté correctamente identificada y aislada para evitar contactos involuntarios o sobrecalentamientos debido a una mala conexión.
+</p>
+<table border="1" cellpadding="4" style="border-collapse:collapse;">
+  <tr style="background:#E6E6FA;">
+    <th>Laboratorio</th>
+    <th>Corriente Total (A)</th>
+    <th>Sección Recomendada de Barra (mm²)</th>
+    <th>Líneas/Polos</th>
+  </tr>
+  <tr>
+    <td>Lab 1-4</td>
+    <td>120</td>
+    <td>16</td>
+    <td>Monofásico (2 - 3)</td>
+  </tr>
+  <tr>
+    <td>Lab 5</td>
+    <td>150</td>
+    <td>25</td>
+    <td>Trifásico (4)</td>
+  </tr>
+</table>
+
+
+
+
+
+
+<h2>10. Interruptores Generales y Derivaciones</h2>
+
+<div style="overflow-x:auto; max-width:1048px; border-radius:8px; border:1px solid #bbb; background:#f8f8fa; box-shadow:0 0 8px #e9e9e9;">
+<table border="1" cellpadding="3" style="border-collapse:collapse; font-size:0.95em; width:100%;">
+  <caption style="caption-side:top; font-weight:bold; color:#63627C">
+    Esquema de distribución: Laboratorios 1-4 (Monofásico) y Laboratorio 5 (Trifásico)
+  </caption>
+  <tr style="background:#E6E6FA;">
+    <th>Lab</th>
+    <th>Tipo</th>
+    <th>Barra</th>
+    <th>Interruptor</th>
+    <th>Circuitos</th>
+    <th>Sub-Circuitos</th>
+    <th>I Subcirc. (A)</th>
+    <th>Sección (mm²)</th>
+    <th>Enchufes/Subcirc.</th>
+    
+  </tr>
+  <!-- Laboratorios 1-4 -->
+  <tr>
+    <td>1-4</td><td>Monofásico</td><td>10A</td><td>16A</td><td>Enchufes 10A</td><td>4</td><td>10</td><td>2.5</td><td>4</td>
+    
+  </tr>
+  <tr>
+    <td>1-4</td><td>Monofásico</td><td>16A</td><td>25A</td><td>Enchufes 16A</td><td>2</td><td>16</td><td>4</td><td>3</td>
+    
+  </tr>
+  <tr>
+    <td>1-4</td><td>Monofásico</td><td>Luz</td><td>6A</td><td>Iluminación</td><td>1</td><td>6</td><td>1.5</td><td>5</td>
+    
+  </tr>
+  <!-- Laboratorio 5 -->
+  <tr>
+    <td>5</td><td>Trifásico</td><td>10A</td><td>16A</td><td>Enchufes 10A</td><td>2</td><td>10</td><td>2.5</td><td>4</td>
+    
+  </tr>
+  <tr>
+    <td>5</td><td>Trifásico</td><td>16A</td><td>16A</td><td>Enchufes 16A</td><td>2</td><td>16</td><td>2.5</td><td>3</td>
+    
+  </tr>
+  <tr>
+    <td>5</td><td>Trifásico</td><td>20A</td><td>20A</td><td>Enchufes 20A</td><td>1</td><td>20</td><td>4</td><td>2</td>
+    
+  </tr>
+  <tr>
+    <td>5</td><td>Trifásico</td><td>Luz</td><td>6A</td><td>Iluminación</td><td>1</td><td>6</td><td>1.5</td><td>5</td>
+    
+  </tr>
+</table>
+</div>
+
+<div style="margin-top:16px; font-size:1em; color:#2c5aa0;">
+  <h3 style="color:#63627C;">Justificación técnica para cada derivación</h3>
+  <p>
+    La distribución de los circuitos eléctricos mediante barras especializadas y sub-circuitos independientes responde a criterios de seguridad, eficiencia y facilidad de mantenimiento. Por cada laboratorio se ha realizado el siguiente análisis de diseño:
+  </p>
+  <ul>
+    <li>
+      <b>Barras de 10A:</b> Cada barra de 10A alimenta sub-circuitos independientes para enchufes de baja carga, y está protegida por un interruptor de 16A para asegurar un margen ante picos ocasionales o corrientes de corta duración. Cada sub-circuito de 10A limita la cantidad máxima de enchufes conectados (generalmente 4) y permite mantener la protección selectiva en caso de falla o sobrecarga, evitando que afecte al resto de la instalación.
+    </li>
+    <li>
+      <b>Barras de 16A:</b> Las barras de 16A distribuyen la energía a enchufes de uso general y mediana carga, protegidos por interruptores de 25A (monofásico) o 16A (trifásico según laboratorio), esto dado que a mayor voltaje menor intensidad de corriente. Entonces para sistema trifásico se puede elegir uno de menor capacidad nominal de corriente. Con esta configuración, se garantiza que ningún circuito sobrepase el límite de capacidad del cableado ni del interruptor, cumpliendo ambos con los parámetros de seguridad y permitiendo activar únicamente el tramo afectado ante cualquier fallo.
+    </li>
+    <li>
+      <b>Barras de 20A (Laboratorio 5):</b> En el laboratorio trifásico, la barra de 20A está dedicada a enchufes de mayor potencia, controlados por un interruptor exclusivo de 20A y cable de sección reforzada (habitualmente 4 mm²). Esto permite soportar cargas elevadas, como motores o equipos de laboratorio cuyo régimen de trabajo exige corriente superior y protecciones específicas.
+    </li>
+    <li>
+      <b>Derivación para luminarias:</b> Las luminarias se derivan desde una barra dedicada, con interruptor de 6A y cableado de 1.5 mm². Este sistema protege tanto la instalación como a los usuarios, evitando riesgos por sobrecarga en los circuitos de iluminación y facilitando la desconexión ante cualquier incidencia.
+    </li>
+  </ul>
+  <p>
+    Cada configuración ha sido diseñada considerando las necesidades energéticas, el número de enchufes por sub-circuito y el tipo de protección requerida, asegurando una operación óptima y una respuesta rápida ante situaciones de emergencia. Además, este enfoque modular permite ampliar la instalación o realizar ajustes de manera sencilla, sin comprometer la seguridad ni la fiabilidad en el suministro eléctrico.
+  </p>
+</div>
+
+
+
+
+</div>
+</body>
+</html>

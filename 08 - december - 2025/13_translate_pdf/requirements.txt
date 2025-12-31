@@ -1,0 +1,39 @@
+# ============================================================================
+# Dependencias para Traductor de PDFs
+# ============================================================================
+# Instalar con: pip install -r requirements.txt
+# ============================================================================
+
+# Extracción de texto de PDFs
+# pdfplumber es más preciso que PyPDF2 para mantener el formato
+pdfplumber>=0.10.0
+
+# Generación de PDFs traducidos
+reportlab>=4.0.0
+
+# Servicios de traducción (Google, MyMemory, DeepL)
+deep-translator>=1.11.0
+
+# ============================================================================
+# DEPENDENCIAS OPCIONALES (para funcionalidades avanzadas)
+# ============================================================================
+
+# OCR para PDFs escaneados (imágenes)
+# Requiere instalar Tesseract OCR en el sistema:
+#   macOS:   brew install tesseract tesseract-lang
+#   Ubuntu:  sudo apt install tesseract-ocr tesseract-ocr-spa
+#   Windows: Descargar desde https://github.com/UB-Mannheim/tesseract/wiki
+# pytesseract>=0.3.10
+# Pillow>=10.0.0
+
+# Para procesamiento paralelo más avanzado (opcional)
+# concurrent-futures  # Incluido en Python 3.2+
+
+# ============================================================================
+# NOTAS
+# ============================================================================
+# - Python 3.8+ requerido
+# - tkinter viene incluido con Python en la mayoría de instalaciones
+#   Si falta en Linux: sudo apt install python3-tk
+# - Para usar DeepL, se necesita una API key (versión gratuita disponible)
+
