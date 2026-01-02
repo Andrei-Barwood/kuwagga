@@ -343,10 +343,10 @@ animated_progress_bar() {
         bar+="${C_DARK_FOREST}░${NC}"
     done
     
-    # Imprimir la barra
-    printf "\r    ${spinner} ${C_DARK_FOREST}[${NC}${bar}${C_DARK_FOREST}]${NC} "
-    printf "${C_LIME}%3d%%${NC} ${C_MEDIUM_GREEN}%s${NC} " "$percent" "$label"
-    printf "${C_YELLOW_GREEN}(%d/%d)${NC}  " "$current" "$total"
+    # Imprimir la barra (a stderr para no interferir con ffmpeg)
+    printf "\r    ${spinner} ${C_DARK_FOREST}[${NC}${bar}${C_DARK_FOREST}]${NC} " >&2
+    printf "${C_LIME}%3d%%${NC} ${C_MEDIUM_GREEN}%s${NC} " "$percent" "$label" >&2
+    printf "${C_YELLOW_GREEN}(%d/%d)${NC}  " "$current" "$total" >&2
 }
 
 # Animación de carga tipo "ecualizador"
@@ -375,7 +375,7 @@ equalizer_animation() {
         esac
     done
     
-    printf "\r    ${C_YELLOW_GREEN}🎧${NC} ${output} "
+    printf "\r    ${C_YELLOW_GREEN}🎧${NC} ${output} " >&2
 }
 
 # Spinner de carga estilo retro gaming
@@ -394,7 +394,7 @@ retro_spinner() {
     done
     dots=$(printf "%-3s" "$dots")
     
-    printf "\r    ${C_LIME}${spinner}${NC} ${C_LIGHT_GREEN}${message}${dots}${NC}  "
+    printf "\r    ${C_LIME}${spinner}${NC} ${C_LIGHT_GREEN}${message}${dots}${NC}  " >&2
 }
 
 # Barra de progreso con "tanque" móvil 🎮
@@ -410,28 +410,28 @@ tank_progress_bar() {
     local tanks=('🚂' '🚃' '🚃' '🎵')
     local tank_idx=$((current % ${#tanks[@]}))
     
-    printf "\r    "
+    printf "\r    " >&2
     
     # Pista recorrida
     for ((i=0; i<position; i++)); do
-        printf "${C_LIGHT_GREEN}═${NC}"
+        printf "${C_LIGHT_GREEN}═${NC}" >&2
     done
     
     # El tanque/tren musical
-    printf "${C_LIME}🎵${NC}"
+    printf "${C_LIME}🎵${NC}" >&2
     
     # Pista por recorrer
     for ((i=position; i<width; i++)); do
-        printf "${C_DARK_FOREST}─${NC}"
+        printf "${C_DARK_FOREST}─${NC}" >&2
     done
     
-    printf " ${C_LIME}%3d%%${NC}" "$percent"
+    printf " ${C_LIME}%3d%%${NC}" "$percent" >&2
     
     if [[ -n "$label" ]]; then
-        printf " ${C_MEDIUM_GREEN}${label}${NC}"
+        printf " ${C_MEDIUM_GREEN}${label}${NC}" >&2
     fi
     
-    printf "  "
+    printf "  " >&2
 }
 
 # Animación de "ondas de audio"
@@ -450,17 +450,17 @@ audio_wave_animation() {
         esac
     done
     
-    printf "\r    ${C_LIME}🎧${NC} "
+    printf "\r    ${C_LIME}🎧${NC} " >&2
     for ((i=0; i<${#waves[@]}; i++)); do
         local color_idx=$((i % 4))
         case $color_idx in
-            0) printf "${C_DARK_GREEN}${waves[$i]}${NC}" ;;
-            1) printf "${C_MEDIUM_GREEN}${waves[$i]}${NC}" ;;
-            2) printf "${C_LIGHT_GREEN}${waves[$i]}${NC}" ;;
-            3) printf "${C_LIME}${waves[$i]}${NC}" ;;
+            0) printf "${C_DARK_GREEN}${waves[$i]}${NC}" >&2 ;;
+            1) printf "${C_MEDIUM_GREEN}${waves[$i]}${NC}" >&2 ;;
+            2) printf "${C_LIGHT_GREEN}${waves[$i]}${NC}" >&2 ;;
+            3) printf "${C_LIME}${waves[$i]}${NC}" >&2 ;;
         esac
     done
-    printf " ${C_LIME}🎧${NC} "
+    printf " ${C_LIME}🎧${NC} " >&2
 }
 
 # Progreso estilo "loading de videojuego"
@@ -535,6 +535,9 @@ select_folder() {
         print_msg info "Navega a la carpeta deseada en ranger."
         echo "    ${C_YELLOW_GREEN}→ Presiona Shift-G cuando estés en la carpeta, luego Enter${NC}"
         echo "    ${C_YELLOW_GREEN}→ Sal de ranger con 'q'${NC}"
+        echo ""
+        echo -n "${C_MEDIUM_GREEN}Presiona Enter para abrir ranger...${NC}"
+        read -r
         echo ""
         
         ranger --choosedir="$TMP_FILE" "${HOME}"
@@ -1058,7 +1061,7 @@ process_album_to_unified_mp3() {
         local frame=0
         while true; do
             audio_wave_animation "$frame"
-            printf "${C_MEDIUM_GREEN}Uniendo pistas...${NC}  "
+            printf "${C_MEDIUM_GREEN}Uniendo pistas...${NC}  " >&2
             ((frame++))
             sleep 0.15
         done
@@ -1073,9 +1076,10 @@ process_album_to_unified_mp3() {
     
     local concat_result=$?
     
-    # Detener animación
+    # Detener animación y limpiar línea
     kill $anim_pid 2>/dev/null
     wait $anim_pid 2>/dev/null
+    printf "\r\033[K" >&2  # Limpiar línea de animación
     
     if [[ $concat_result -ne 0 || ! -f "$tmp_concat" ]]; then
         echo ""
@@ -1104,7 +1108,7 @@ process_album_to_unified_mp3() {
         while true; do
             local msg_idx=$((frame / 10 % ${#messages[@]}))
             equalizer_animation "$frame"
-            printf "${C_MEDIUM_GREEN}${messages[$msg_idx]}${NC}  "
+            printf "${C_MEDIUM_GREEN}${messages[$msg_idx]}${NC}  " >&2
             ((frame++))
             sleep 0.1
         done
@@ -1123,9 +1127,10 @@ process_album_to_unified_mp3() {
     
     local encode_result=$?
     
-    # Detener animación
+    # Detener animación y limpiar línea
     kill $encode_anim_pid 2>/dev/null
     wait $encode_anim_pid 2>/dev/null
+    printf "\r\033[K" >&2  # Limpiar línea de animación
     
     echo ""
     
@@ -1194,6 +1199,197 @@ process_album_to_unified_mp3() {
 # MODO 5: AUDIO → FLAC 96kHz/24-bit (Alta resolución)
 # ============================================================================
 
+# Convertir archivo de audio a 432Hz (frecuencia sanadora para música devocional)
+# Mantiene la duración original sin alterar el tempo
+convert_to_432hz() {
+    local input_file="$1"
+    local output_file="$2"
+    
+    if [[ ! -f "$input_file" ]]; then
+        print_msg error "El archivo no existe: $input_file"
+        return 1
+    fi
+    
+    # Detectar sample rate y bit depth del archivo original
+    local sample_rate bit_depth codec_name
+    sample_rate=$(ffprobe -v error -select_streams a:0 \
+        -show_entries stream=sample_rate \
+        -of default=noprint_wrappers=1:nokey=1 \
+        "$input_file" 2>/dev/null)
+    
+    bit_depth=$(ffprobe -v error -select_streams a:0 \
+        -show_entries stream=bits_per_sample \
+        -of default=noprint_wrappers=1:nokey=1 \
+        "$input_file" 2>/dev/null)
+    
+    if [[ -z "$sample_rate" ]]; then
+        print_msg error "No se pudo detectar el sample rate del archivo"
+        return 1
+    fi
+    
+    # Usar bit depth detectado o default a 24
+    bit_depth=${bit_depth:-24}
+    
+    # Determinar el formato de salida basado en la extensión
+    local output_ext="${output_file:e:l}"
+    local audio_codec="flac"
+    local sample_fmt="s32"
+    
+    # FLAC requiere sample format específico
+    if [[ $bit_depth -eq 16 ]]; then
+        sample_fmt="s16"
+    else
+        sample_fmt="s32"  # FLAC usa s32 para 24-bit y 32-bit
+    fi
+    
+    # Mostrar información de conversión
+    echo "    ${C_MEDIUM_GREEN}🎵 Conversión a frecuencia universal 432Hz${NC}"
+    echo "    ${C_DARK_FOREST}Sample Rate: ${sample_rate}Hz | Bit Depth: ${bit_depth}-bit${NC}"
+    echo "    ${C_DARK_FOREST}Procesando: 440Hz → 432Hz (manteniendo duración)${NC}"
+    
+    TMP_LOG="/tmp/ffmpeg_432hz_$$.txt"
+    
+    # Iniciar animación en background
+    (
+        local frame=0
+        local messages=("Ajustando frecuencia..." "Aplicando pitch shift..." "Re-muestreando audio..." "Casi listo...")
+        while true; do
+            local msg_idx=$((frame / 8 % ${#messages[@]}))
+            audio_wave_animation "$frame"
+            printf "${C_MEDIUM_GREEN}${messages[$msg_idx]}${NC}  " >&2
+            ((frame++))
+            sleep 0.12
+        done
+    ) &
+    local anim_pid=$!
+    
+    # Fórmula de conversión:
+    # asetrate = cambia el sample rate multiplicando por la relación 432/440
+    # aresample = reestablece el sample rate original
+    # atempo = ajusta el tempo para compensar y mantener la duración original
+    # Redirigir stdout a /dev/null para que -stats no interfiera con la animación
+    ffmpeg -hide_banner -loglevel warning -stats \
+        -i "$input_file" \
+        -af "asetrate=${sample_rate}*432/440,aresample=${sample_rate},atempo=440/432" \
+        -c:a flac \
+        -sample_fmt "$sample_fmt" \
+        -compression_level "$FLAC_COMPRESSION" \
+        -ar "$sample_rate" \
+        -y "$output_file" >/dev/null 2>"$TMP_LOG"
+    
+    local exit_code=$?
+    
+    # Detener animación y limpiar línea
+    kill $anim_pid 2>/dev/null
+    wait $anim_pid 2>/dev/null
+    printf "\r\033[K" >&2  # Limpiar línea de animación
+    
+    if [[ $exit_code -eq 0 && -f "$output_file" ]]; then
+        local original_size new_size
+        original_size=$(du -h "$input_file" | cut -f1)
+        new_size=$(du -h "$output_file" | cut -f1)
+        
+        print_msg success "Conversión a 432Hz completada: ${output_file:t}"
+        echo "    ${C_DARK_FOREST}Tamaño: ${original_size} → ${new_size}${NC}"
+        
+        # Limpiar log temporal
+        [[ -f "$TMP_LOG" ]] && rm -f "$TMP_LOG"
+        
+        return 0
+    else
+        print_msg error "Error durante la conversión a 432Hz"
+        [[ -f "$TMP_LOG" ]] && cat "$TMP_LOG" >&2
+        [[ -f "$TMP_LOG" ]] && rm -f "$TMP_LOG"
+        return 1
+    fi
+}
+
+# Procesar archivos FLAC a 432Hz (para música devocional sikh)
+process_flac_to_432hz() {
+    local input_dir="$1"
+    local output_dirname="${2:-flac_432hz}"
+    
+    cd "$input_dir" || {
+        print_msg error "No se puede acceder a: $input_dir"
+        return 1
+    }
+    
+    # Buscar archivos FLAC en el directorio
+    local flac_files=()
+    while IFS= read -r -d '' file; do
+        flac_files+=("$file")
+    done < <(find . -maxdepth 1 -type f -iname "*.flac" -print0 | sort -z)
+    
+    if [[ ${#flac_files[@]} -eq 0 ]]; then
+        print_msg error "No se encontraron archivos FLAC para convertir a 432Hz"
+        return 1
+    fi
+    
+    print_msg header "Conversión a frecuencia 432Hz - Música Devocional Sikh"
+    echo ""
+    echo "    ${C_LIME}╔════════════════════════════════════════════════════════════╗${NC}"
+    echo "    ${C_LIME}║${NC}  ${C_YELLOW_GREEN}🕉️  CONVERSIÓN A 432Hz - FRECUENCIA SANADORA 🕉️${NC}         ${C_LIME}║${NC}"
+    echo "    ${C_LIME}║${NC}  ${C_MEDIUM_GREEN}Wahe Guru Ji Ka Khalsa, Wahe Guru Ji Ki Fateh${NC}            ${C_LIME}║${NC}"
+    echo "    ${C_LIME}╚════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    print_msg info "Archivos FLAC encontrados: ${#flac_files[@]}"
+    for f in "${flac_files[@]}"; do
+        local dur
+        dur=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$f" 2>/dev/null)
+        local dur_fmt
+        dur_fmt=$(format_duration "${dur:-0}")
+        echo "    ${C_LIME}📄${NC} ${C_LIGHT_GREEN}${f:t}${NC} ${C_MEDIUM_GREEN}(${dur_fmt})${NC}"
+    done
+    echo ""
+    
+    if [[ $DRY_RUN -eq 1 ]]; then
+        print_msg info "[DRY-RUN] Se convertirían ${#flac_files[@]} archivos FLAC a 432Hz"
+        return 0
+    fi
+    
+    mkdir -p "$output_dirname"
+    
+    local success_count=0
+    local fail_count=0
+    local total=${#flac_files[@]}
+    local current=0
+    
+    for flac_file in "${flac_files[@]}"; do
+        # Verificar interrupción
+        if [[ $INTERRUPTED -eq 1 ]]; then
+            print_msg warning "Conversión interrumpida por el usuario"
+            break
+        fi
+        
+        ((current++))
+        local filename="${flac_file:t:r}"
+        local output_file="${output_dirname}/${filename}_432Hz.flac"
+        
+        echo "\n${BOLD}[${current}/${total}]${NC} ${flac_file:t}"
+        
+        if convert_to_432hz "$flac_file" "$output_file"; then
+            ((success_count++))
+        else
+            ((fail_count++))
+        fi
+    done
+    
+    echo ""
+    print_msg header "Conversión a 432Hz Completada"
+    echo ""
+    echo "    ${C_LIGHT_GREEN}╔════════════════════════════════════════════════════════╗${NC}"
+    echo "    ${C_LIGHT_GREEN}║${NC}  ${C_LIME}🎵 MÚSICA AHORA VIBRA EN FRECUENCIA UNIVERSAL 🎵${NC}        ${C_LIGHT_GREEN}║${NC}"
+    echo "    ${C_LIGHT_GREEN}║${NC}  ${C_MEDIUM_GREEN}Sat Nam - Verdad es mi Identidad${NC}                   ${C_LIGHT_GREEN}║${NC}"
+    echo "    ${C_LIGHT_GREEN}╚════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo "    ${C_LIGHT_GREEN}Exitosos:${NC} ${C_LIME}$success_count${NC}"
+    [[ $fail_count -gt 0 ]] && echo "    ${C_DARK_GREEN}Fallidos:${NC} ${C_YELLOW_GREEN}$fail_count${NC}"
+    echo "    ${C_LIME}Frecuencia:${NC} ${C_LIGHT_GREEN}432Hz (frecuencia sanadora)${NC}"
+    echo "    ${C_LIME}Salida:${NC}     ${C_LIGHT_GREEN}${input_dir}/${output_dirname}/${NC}"
+    echo ""
+}
+
 # Convertir un archivo individual a FLAC
 convert_to_flac() {
     local audio_file="$1"
@@ -1208,12 +1404,55 @@ convert_to_flac() {
     fi
     
     # Obtener información del archivo de entrada
-    local input_sr input_bd input_codec
+    local input_sr input_bd input_codec input_bd_actual
     input_sr=$(ffprobe -v error -select_streams a:0 -show_entries stream=sample_rate -of default=nw=1:nk=1 "$audio_file" 2>/dev/null)
     input_bd=$(ffprobe -v error -select_streams a:0 -show_entries stream=bits_per_raw_sample -of default=nw=1:nk=1 "$audio_file" 2>/dev/null)
+    input_bd_actual=$(ffprobe -v error -select_streams a:0 -show_entries stream=bits_per_sample -of default=nw=1:nk=1 "$audio_file" 2>/dev/null)
     input_codec=$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of default=nw=1:nk=1 "$audio_file" 2>/dev/null)
     
+    # Usar bits_per_sample si bits_per_raw_sample no está disponible
+    input_bd=${input_bd:-$input_bd_actual}
+    
     [[ $VERBOSE -eq 1 ]] && echo "    ${C_DARK_FOREST}Entrada: ${input_sr}Hz, ${input_bd:-?}bit, ${input_codec}${NC}"
+    
+    # Si el archivo ya es FLAC y tiene los mismos parámetros, copiar directamente
+    if [[ "$input_codec" == "flac" ]]; then
+        local needs_conversion=0
+        
+        # Verificar si necesita conversión
+        if [[ "$input_sr" != "$FLAC_SAMPLE_RATE" ]]; then
+            needs_conversion=1
+        fi
+        
+        # Comparar bit depth
+        local target_bd=$FLAC_BIT_DEPTH
+        # Normalizar bit depth: 24-bit y 32-bit en FLAC usan s32 internamente
+        local input_bd_norm="$input_bd"
+        local target_bd_norm="$target_bd"
+        [[ "$input_bd_norm" == "32" ]] && input_bd_norm="24"  # 32-bit FLAC se trata como 24-bit
+        [[ "$target_bd_norm" == "32" ]] && target_bd_norm="24"  # 32-bit target se trata como 24-bit
+        
+        if [[ "$input_bd_norm" != "$target_bd_norm" ]]; then
+            needs_conversion=1
+        fi
+        
+        if [[ $needs_conversion -eq 0 ]]; then
+            # No necesita conversión, copiar directamente
+            print_msg info "Archivo FLAC ya tiene parámetros deseados, copiando..."
+            cp "$audio_file" "$output_file"
+            if [[ -f "$output_file" ]]; then
+                local orig_size out_size
+                orig_size=$(du -h "$audio_file" | cut -f1)
+                out_size=$(du -h "$output_file" | cut -f1)
+                print_msg success "Copiado (sin re-codificación): ${output_file:t}"
+                echo "    ${C_DARK_FOREST}${orig_size} → ${out_size} | ${input_sr}Hz/${input_bd}bit${NC}"
+                return 0
+            fi
+        else
+            # Necesita conversión (sample rate o bit depth diferente)
+            print_msg info "FLAC requiere re-codificación (${input_sr}Hz/${input_bd}bit → ${FLAC_SAMPLE_RATE}Hz/${FLAC_BIT_DEPTH}bit)"
+        fi
+    fi
     
     TMP_LOG="/tmp/ffmpeg_$$_log.txt"
     
@@ -1226,15 +1465,35 @@ convert_to_flac() {
         *)  sample_fmt="s32" ;;
     esac
     
+    # Iniciar animación en background
+    (
+        local frame=0
+        local messages=("Procesando audio..." "Codificando FLAC..." "Aplicando compresión..." "Finalizando...")
+        while true; do
+            local msg_idx=$((frame / 8 % ${#messages[@]}))
+            equalizer_animation "$frame"
+            printf "${C_MEDIUM_GREEN}${messages[$msg_idx]}${NC}  " >&2
+            ((frame++))
+            sleep 0.12
+        done
+    ) &
+    local anim_pid=$!
+    
+    # Redirigir stdout a /dev/null para que -stats no interfiera con la animación
     ffmpeg -hide_banner -loglevel warning -stats \
         -i "$audio_file" \
         -c:a flac \
         -ar "$FLAC_SAMPLE_RATE" \
         -sample_fmt "$sample_fmt" \
         -compression_level "$FLAC_COMPRESSION" \
-        -y "$output_file" 2>"$TMP_LOG"
+        -y "$output_file" >/dev/null 2>"$TMP_LOG"
     
     local exit_code=$?
+    
+    # Detener animación y limpiar línea
+    kill $anim_pid 2>/dev/null
+    wait $anim_pid 2>/dev/null
+    printf "\r\033[K" >&2  # Limpiar línea de animación
     
     if [[ $exit_code -eq 0 && -f "$output_file" ]]; then
         local orig_size out_size out_sr out_bd
@@ -1355,6 +1614,29 @@ process_audio_to_flac() {
     echo "    ${C_MEDIUM_GREEN}   • Producción musical y masterización${NC}"
     echo "    ${C_MEDIUM_GREEN}   • Archivo de audio sin pérdida${NC}"
     echo "    ${C_MEDIUM_GREEN}   • Reproductores Hi-Fi y DACs${NC}"
+    echo ""
+    
+    # Preguntar si es música devocional sikh para conversión a 432Hz
+    if [[ $DRY_RUN -eq 0 && $success_count -gt 0 ]]; then
+        echo ""
+        echo "    ${C_LIME}╔════════════════════════════════════════════════════════════╗${NC}"
+        echo "    ${C_LIME}║${NC}  ${C_YELLOW_GREEN}🕉️  MÚSICA DEVOCIONAL SIKH 🕉️${NC}                              ${C_LIME}║${NC}"
+        echo "    ${C_LIME}╚════════════════════════════════════════════════════════════╝${NC}"
+        echo ""
+        echo "    ${C_MEDIUM_GREEN}¿Se trata de música devocional sikh (Kirtan, Shabad, etc.)?${NC}"
+        echo "    ${C_DARK_FOREST}Si es así, puedes convertir estos archivos FLAC a 432Hz${NC}"
+        echo "    ${C_DARK_FOREST}(frecuencia sanadora y armoniosa para música espiritual)${NC}"
+        echo ""
+        
+        if confirmar "¿Convertir los archivos FLAC a 432Hz?"; then
+            echo ""
+            # Convertir los archivos FLAC recién creados a 432Hz
+            process_flac_to_432hz "${SOURCE_DIR}/${output_dirname}" "flac_432hz"
+        else
+            echo ""
+            print_msg info "Conversión a 432Hz omitida. Los archivos FLAC permanecen en 440Hz."
+        fi
+    fi
     echo ""
 }
 
