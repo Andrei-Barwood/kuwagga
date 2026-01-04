@@ -1,5 +1,8 @@
 #!/bin/zsh
+set -euo pipefail
 
+# Conversor de Audio M4A a MP4/WAV a M4A
+# Utiliza ranger para selección de directorios
 # How To Use This Script
 
 # Run the script normally.
@@ -50,19 +53,29 @@ fi
 # Select folder with ranger
 TMP_FILE="/tmp/choosedir_$$"
 echo "${YELLOW}Navigate to the desired folder in ranger; when ready, Shift-G then Enter, then quit ranger with q.${NC}"
-ranger --choosedir="$TMP_FILE" "$HOME"
-SOURCE_DIR=$(cat "$TMP_FILE")
+if ! ranger --choosedir="$TMP_FILE" "$HOME" 2>/dev/null; then
+    echo "${RED}Error: ranger no pudo seleccionar el directorio.${NC}" >&2
+    rm -f "$TMP_FILE"
+    exit 1
+fi
+
+if [[ ! -f "$TMP_FILE" ]]; then
+    echo "${RED}No se seleccionó ningún directorio.${NC}" >&2
+    exit 1
+fi
+
+SOURCE_DIR=$(cat "$TMP_FILE" 2>/dev/null || echo "")
 rm -f "$TMP_FILE"
 
 if [[ -z "$SOURCE_DIR" ]] || [[ ! -d "$SOURCE_DIR" ]]; then
-    echo "${RED}No valid folder selected. Exiting.${NC}"
+    echo "${RED}No valid folder selected. Exiting.${NC}" >&2
     exit 1
 fi
 echo "${GREEN}Selected folder: $SOURCE_DIR${NC}"
-cd "$SOURCE_DIR" || {
-    echo "${RED}Error: Cannot enter $SOURCE_DIR${NC}"
+if ! cd "$SOURCE_DIR"; then
+    echo "${RED}Error: Cannot enter $SOURCE_DIR${NC}" >&2
     exit 1
-}
+fi
 
 # Ask for output directory name
 if [[ "$mode" == "1" ]]; then
@@ -98,36 +111,56 @@ if [[ "$mode" == "1" ]]; then
     fi
 
     success_count=0
-fail_count=0
+    fail_count=0
 
-for audio_file in "${m4a_files[@]}"; do
-    filename="${audio_file:r}"
-    output_file="${output_dirname}/${filename}.mp4"
-    # Get the audio duration in seconds
-    duration=$(ffprobe -i "$audio_file" -show_entries format=duration -v quiet -of csv="p=0")
-    # If duration is empty, skip this file
-    if [[ -z "$duration" ]]; then
-        echo "${RED}Couldn't determine duration for: $audio_file, skipping.${NC}"
-        ((fail_count++))
-        continue
-    fi
-    echo "${YELLOW}Converting: $audio_file (duration: $duration seconds)${NC}"
-    ffmpeg -loop 1 -framerate 1 -i "cover.png" -i "$audio_file" \
-        -c:v libx264 -preset slow -crf 18 \
-        -c:a aac -b:a 192k -ar 48000 \
-        -t "$duration" \
-        -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
-        -movflags +faststart \
-        -y "$output_file" \
-        -hide_banner -loglevel error
-    if [[ $? -eq 0 ]]; then
-        echo "${GREEN}✓ Successfully converted: $output_file${NC}"
-        ((success_count++))
-    else
-        echo "${RED}✗ Failed to convert: $audio_file${NC}"
-        ((fail_count++))
-    fi
-done
+    for audio_file in "${m4a_files[@]}"; do
+        filename="${audio_file:r}"
+        output_file="${output_dirname}/${filename}.mp4"
+        
+        # Verificar que el archivo existe
+        if [[ ! -f "$audio_file" ]]; then
+            echo "${RED}Archivo no encontrado: $audio_file${NC}" >&2
+            ((fail_count++))
+            continue
+        fi
+        
+        # Get the audio duration in seconds
+        duration=$(ffprobe -i "$audio_file" -show_entries format=duration -v quiet -of csv="p=0" 2>/dev/null || echo "")
+        # If duration is empty, skip this file
+        if [[ -z "$duration" ]]; then
+            echo "${RED}Couldn't determine duration for: $audio_file, skipping.${NC}" >&2
+            ((fail_count++))
+            continue
+        fi
+        
+        # Verificar que cover.png existe
+        if [[ ! -f "cover.png" ]]; then
+            echo "${RED}Error: cover.png no encontrado en el directorio actual${NC}" >&2
+            ((fail_count++))
+            continue
+        fi
+        
+        echo "${YELLOW}Converting: $audio_file (duration: $duration seconds)${NC}"
+        if ffmpeg -loop 1 -framerate 1 -i "cover.png" -i "$audio_file" \
+            -c:v libx264 -preset slow -crf 18 \
+            -c:a aac -b:a 192k -ar 48000 \
+            -t "$duration" \
+            -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
+            -movflags +faststart \
+            -y "$output_file" \
+            -hide_banner -loglevel error 2>&1; then
+            if [[ -f "$output_file" && -s "$output_file" ]]; then
+                echo "${GREEN}✓ Successfully converted: $output_file${NC}"
+                ((success_count++))
+            else
+                echo "${RED}✗ Archivo creado pero está vacío: $output_file${NC}" >&2
+                ((fail_count++))
+            fi
+        else
+            echo "${RED}✗ Failed to convert: $audio_file${NC}" >&2
+            ((fail_count++))
+        fi
+    done
 
 
     echo "\n${GREEN}=== MP4 Conversion Complete ===${NC}"
@@ -157,25 +190,48 @@ else
     success_count=0
     fail_count=0
     for file in "${wav_files[@]}"; do
+        # Verificar que el archivo existe
+        if [[ ! -f "$file" ]]; then
+            echo "${RED}Archivo no encontrado: $file${NC}" >&2
+            ((fail_count++))
+            continue
+        fi
+        
         filename=$(basename "$file")
         basename="${filename%.*}"
         output_file="${output_dirname}/${basename}.m4a"
         echo "${YELLOW}Converting: $filename${NC}"
+        
         if [[ "$QUALITY_MODE" == "vbr" ]]; then
-            ffmpeg -i "$file" \
+            if ffmpeg -i "$file" \
                 -c:a aac -q:a $VBR_QUALITY -ar 48000 "$output_file" \
-                -y -hide_banner -loglevel error
+                -y -hide_banner -loglevel error 2>&1; then
+                if [[ -f "$output_file" && -s "$output_file" ]]; then
+                    echo "${GREEN}✓ Successfully converted: $filename${NC}"
+                    ((success_count++))
+                else
+                    echo "${RED}✗ Archivo creado pero está vacío: $output_file${NC}" >&2
+                    ((fail_count++))
+                fi
+            else
+                echo "${RED}✗ Failed to convert: $filename${NC}" >&2
+                ((fail_count++))
+            fi
         else
-            ffmpeg -i "$file" \
+            if ffmpeg -i "$file" \
                 -c:a aac -b:a $CBR_BITRATE -ar 48000 "$output_file" \
-                -y -hide_banner -loglevel error
-        fi
-        if [[ $? -eq 0 ]]; then
-            echo "${GREEN}✓ Successfully converted: $filename${NC}"
-            ((success_count++))
-        else
-            echo "${RED}✗ Failed to convert: $filename${NC}"
-            ((fail_count++))
+                -y -hide_banner -loglevel error 2>&1; then
+                if [[ -f "$output_file" && -s "$output_file" ]]; then
+                    echo "${GREEN}✓ Successfully converted: $filename${NC}"
+                    ((success_count++))
+                else
+                    echo "${RED}✗ Archivo creado pero está vacío: $output_file${NC}" >&2
+                    ((fail_count++))
+                fi
+            else
+                echo "${RED}✗ Failed to convert: $filename${NC}" >&2
+                ((fail_count++))
+            fi
         fi
     done
 

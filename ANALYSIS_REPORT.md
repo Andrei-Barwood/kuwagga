@@ -361,6 +361,31 @@
    - ✅ Mejor manejo de errores en creación de archivos
    - ✅ Creación de directorio si no existe
 
+## Scripts de Conversión de Audio/Video Adicionales Corregidos
+
+61. **`01 - 2025/06 - October - 2025/m4a_to_mp4.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Mejor validación de ranger y selección de directorio
+   - ✅ Verificación de existencia de archivos antes de convertir
+   - ✅ Mejor manejo de errores en ffmpeg
+   - ✅ Verificación de archivos creados (no vacíos)
+   - ✅ Mejor manejo de errores en ffprobe
+
+## Scripts de Configuración/Instalación Corregidos
+
+62. **`01 - 2025/07 - november - 2025/01 - HTML to PDF/setup_weasyprint_mac_intel_silicon.zsh`**
+   - ✅ Completado `set -euo pipefail` (tenía solo `set -e`)
+   - ✅ Mejor manejo de errores en actualización de Homebrew
+
+63. **`01 - 2025/01 - Junio - 2025/20 de Junio - 2025/03_disk_guardian_reforzado_clean.sh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Validación de permisos
+   - ✅ Manejo mejorado de señales (SIGINT, SIGTERM, EXIT)
+   - ✅ Limpieza mejorada de procesos en background
+   - ✅ Verificación de existencia de archivo de sonido
+   - ✅ Mejor manejo de procesos hijos
+
 ## Problemas Comunes Detectados (Pendientes de Revisión)
 
 ### 1. Falta de `set -euo pipefail`

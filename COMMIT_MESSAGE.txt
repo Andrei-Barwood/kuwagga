@@ -1,35 +1,37 @@
-refactor: Mejorar scripts adicionales de monitoreo de disco macOS
+refactor: Mejorar scripts de conversión audio/video y configuración pendientes
 
-## Mejoras en Scripts de Monitoreo de Disco (8 scripts)
+## Mejoras en Conversión de Audio/Video (1 script)
 
-### Scripts de Disk Guard (3 scripts)
-- 02_disk_guard_plus.zsh: set -euo pipefail, validación de dependencias, mejor manejo de errores
-- 03_disk_guard_daemon.zsh: set -euo pipefail, validación de dependencias, creación de logs
-- 04_auditor_disco_macos.zsh: set -euo pipefail, validación de dependencias y permisos
+- m4a_to_mp4.zsh: set -euo pipefail, mejor validación de ranger, verificación de archivos
+  - Validación mejorada de selección de directorio con ranger
+  - Verificación de existencia de archivos antes de convertir
+  - Mejor manejo de errores en ffmpeg y ffprobe
+  - Verificación de archivos creados (no vacíos)
+  - Mejor manejo de errores en conversiones
 
-### Scripts de Monitoreo y Registro (5 scripts)
-- 01_registro_espacio_libre.zsh: set -euo pipefail, validación de dependencias
-- 02_rastreador_cambios_disco.zsh: set -euo pipefail, validación de dependencias
-- 03_vigia_escritura_fisica.zsh: set -euo pipefail, manejo de señales, limpieza de procesos
-- 04_informe_volumenes.zsh: set -euo pipefail, validación de dependencias
-- 05_bloqueo_indexado_volumenes.zsh: set -euo pipefail, validación de permisos, mejor manejo de errores
+## Mejoras en Scripts de Configuración/Instalación (2 scripts)
+
+- setup_weasyprint_mac_intel_silicon.zsh: Completado set -euo pipefail, mejor manejo de errores
+- 03_disk_guardian_reforzado_clean.sh: set -euo pipefail, validaciones, mejor limpieza de procesos
 
 ## Mejoras Aplicadas
 
-- set -euo pipefail agregado en todos los scripts
-- Validación de dependencias (df, du, tmutil, diskutil, fs_usage, etc.)
+- set -euo pipefail agregado/completado en todos los scripts
+- Validación de dependencias (ffmpeg, ranger, brew, etc.)
 - Validación de permisos de administrador donde es necesario
-- Creación de directorios de logs si no existen
-- Manejo de señales (EXIT, INT, TERM) en scripts con procesos en background
-- Limpieza de procesos en background al salir
-- Mejor manejo de errores en operaciones de sistema
-- Verificación de existencia de directorios antes de operar
+- Mejor validación de selección de directorios
+- Verificación de existencia de archivos antes de operar
+- Mejor manejo de errores en conversiones (ffmpeg, ffprobe)
+- Verificación de archivos creados (no vacíos)
+- Manejo mejorado de señales (SIGINT, SIGTERM, EXIT)
+- Limpieza mejorada de procesos en background
+- Verificación de existencia de archivos de recursos (sonidos, imágenes)
 
 ## Estadísticas
 
-- 8 scripts modificados en esta sesión
-- Scripts de monitoreo de disco: 8 scripts
+- 3 scripts modificados en esta sesión
+- Conversión Audio/Video: 1 script
+- Configuración/Instalación: 2 scripts
 
-Estos cambios mejoran significativamente la robustez y confiabilidad de los
-scripts de monitoreo de disco, asegurando manejo adecuado de errores, validaciones
-y limpieza de recursos.
+Estos cambios completan las mejoras en scripts críticos de conversión y
+configuración, asegurando robustez y manejo adecuado de errores.

@@ -1,9 +1,10 @@
 #!/bin/zsh
+set -euo pipefail
+
 # setup_weasyprint_mac.zsh
 # Script para instalar y reparar dependencias de WeasyPrint en macOS
 # Compatible con Homebrew (Intel y Apple Silicon)
-
-set -e
+# Requiere: Homebrew instalado
 
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
@@ -31,7 +32,9 @@ else
 fi
 
 print_section "2. Actualizando Homebrew y fórmulas..."
-brew update && brew upgrade
+if ! brew update && brew upgrade; then
+    print_warn "Algunas actualizaciones fallaron, continuando..."
+fi
 
 print_section "3. Instalando dependencias del sistema para WeasyPrint..."
 brew install cairo pango gdk-pixbuf libffi pygobject3 gtk+3 || brew reinstall cairo pango gdk-pixbuf libffi pygobject3 gtk+3
