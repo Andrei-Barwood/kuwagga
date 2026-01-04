@@ -1,11 +1,12 @@
 #!/bin/zsh
+set -euo pipefail
 
 # Script para renombrar archivos .jpeg en orden numérico
 
 echo "=== Renombrador de archivos JPEG ==="
 echo ""
 echo "Por favor, pega la ruta del directorio (cópiala desde Finder):"
-read -r directorio
+read -r directorio || exit 1
 
 # Eliminar posibles comillas o espacios extra
 directorio="${directorio//\'/}"
@@ -41,18 +42,31 @@ fi
 
 # Renombrar archivos
 contador=1
+renombrados=0
+errores=0
+
 for archivo in *.jpeg(N); do
     [[ -f "$archivo" ]] || continue
     nuevo_nombre=$(printf "%03d.jpeg" $contador)
     
     # Evitar sobrescribir si ya existe
     if [[ "$archivo" != "$nuevo_nombre" ]]; then
-        mv "$archivo" "$nuevo_nombre"
-        echo "Renombrado: $archivo -> $nuevo_nombre"
+        if mv "$archivo" "$nuevo_nombre" 2>/dev/null; then
+            echo "✓ Renombrado: $archivo -> $nuevo_nombre"
+            ((renombrados++))
+        else
+            echo "✗ Error renombrando: $archivo" >&2
+            ((errores++))
+        fi
     fi
     
     ((contador++))
 done
 
 echo ""
-echo "¡Renombrado completado! Total: $((contador - 1)) archivos."
+if [[ $errores -eq 0 ]]; then
+    echo "¡Renombrado completado! Total: $renombrados archivos."
+else
+    echo "Renombrado completado con errores: $renombrados exitosos, $errores fallidos." >&2
+    exit 1
+fi

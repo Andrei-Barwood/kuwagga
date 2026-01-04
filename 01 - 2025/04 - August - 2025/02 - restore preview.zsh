@@ -1,21 +1,39 @@
 #!/bin/zsh
+set -euo pipefail
+
+# Script para restaurar la aplicación Preview de macOS
+# Resetea las preferencias y el estado guardado de Preview
 
 # Quit Preview app if running
-osascript -e 'tell application "Preview" to quit'
-
-# Wait a moment to ensure it quits
-sleep 2
+if pgrep -x "Preview" > /dev/null; then
+  osascript -e 'tell application "Preview" to quit' || true
+  # Wait a moment to ensure it quits
+  sleep 2
+fi
 
 # Remove Preview preferences plist (resets Preview settings)
-rm -f ~/Library/Preferences/com.apple.Preview.plist
+if [[ -f ~/Library/Preferences/com.apple.Preview.plist ]]; then
+  rm -f ~/Library/Preferences/com.apple.Preview.plist
+  echo "✓ Preferencias eliminadas"
+fi
 
 # Remove Preview saved state
-rm -rf ~/Library/Saved\ Application\ State/com.apple.Preview.savedState
+if [[ -d ~/Library/Saved\ Application\ State/com.apple.Preview.savedState ]]; then
+  rm -rf ~/Library/Saved\ Application\ State/com.apple.Preview.savedState
+  echo "✓ Estado guardado eliminado"
+fi
 
 # Optional: Clear the Quick Look cache (can help with thumbnail/previews)
-qlmanage -r cache
+if command -v qlmanage &> /dev/null; then
+  qlmanage -r cache 2>/dev/null || true
+  echo "✓ Caché de Quick Look limpiado"
+fi
 
 # Relaunch Preview app
-open -a Preview
-
-echo "Preview app has been reset and relaunched."
+if open -a Preview 2>/dev/null; then
+  echo "✓ Preview reiniciado"
+  echo "Preview app has been reset and relaunched."
+else
+  echo "Error: No se pudo abrir Preview" >&2
+  exit 1
+fi

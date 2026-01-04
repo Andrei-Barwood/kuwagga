@@ -1,6 +1,26 @@
 #!/bin/zsh
+set -euo pipefail
+
+# Script para encontrar y eliminar archivos duplicados
+# Requiere: shasum, bc (para cálculos de tamaño)
+
+# Verificar dependencias
+for cmd in shasum bc; do
+  if ! command -v "$cmd" &> /dev/null; then
+    echo "Error: $cmd no está instalado." >&2
+    echo "Instálalo con: brew install $cmd" >&2
+    exit 1
+  fi
+done
 
 SEARCH_DIR="${1:-$HOME}"
+
+# Validar directorio de búsqueda
+if [[ ! -d "$SEARCH_DIR" ]]; then
+  echo "Error: El directorio no existe: $SEARCH_DIR" >&2
+  exit 1
+fi
+
 extensions=(
   "aif" "caf" "wav" "mp3" "mov" "mp4" "m4a" "flac" "bwf" "logicx" "fcpbundle" "fcpxml" "midi" "proj" "xml"
   "jpg" "jpeg" "png" "gif" "tiff" "bmp" "heic" "webp" "raw" "cr2" "nef" "dng"

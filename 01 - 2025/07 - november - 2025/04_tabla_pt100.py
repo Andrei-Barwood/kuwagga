@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""
+Script para generar tablas de resistencia PT100/PT1000 según estándar IEC 60751
+"""
+
 import sys
 import os
 
@@ -14,10 +19,31 @@ def calcular_resistencia_pt(temp, tipo='PT100'):
         return R0 * (1 + A*t + B*t**2 + C*(t-100)*t**3)
 
 # Solicitar parámetros al usuario
-ti = float(input("Temperatura inicial (°C): "))
-tf = float(input("Temperatura final (°C): "))
-step = float(input("Subdivisión en grados (elija 1, 2, 5, 10, 20): "))
-tipo = input("Sensor (PT100/PT1000): ").strip().upper()
+try:
+    ti = float(input("Temperatura inicial (°C): "))
+    tf = float(input("Temperatura final (°C): "))
+    step = float(input("Subdivisión en grados (elija 1, 2, 5, 10, 20): "))
+    tipo = input("Sensor (PT100/PT1000): ").strip().upper()
+    
+    # Validaciones
+    if tf <= ti:
+        print("Error: La temperatura final debe ser mayor que la inicial.", file=sys.stderr)
+        sys.exit(1)
+    
+    if step <= 0:
+        print("Error: El paso debe ser mayor que cero.", file=sys.stderr)
+        sys.exit(1)
+    
+    if tipo not in ['PT100', 'PT1000']:
+        print("Error: Tipo de sensor debe ser PT100 o PT1000.", file=sys.stderr)
+        sys.exit(1)
+        
+except ValueError as e:
+    print(f"Error: Entrada inválida: {e}", file=sys.stderr)
+    sys.exit(1)
+except KeyboardInterrupt:
+    print("\nOperación cancelada por el usuario.", file=sys.stderr)
+    sys.exit(1)
 
 # Generar filas para la tabla
 rows = []
@@ -60,12 +86,23 @@ html = f"""<!DOCTYPE html>
 """
 
 nombrehtml = "tabla_rtd.html"
-with open(nombrehtml, "w", encoding="utf-8") as f:
-    f.write(html)
+try:
+    with open(nombrehtml, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"✓ Tabla generada: {nombrehtml}")
+except IOError as e:
+    print(f"Error: No se pudo escribir el archivo: {e}", file=sys.stderr)
+    sys.exit(1)
 
-if sys.platform == "darwin":
-    os.system(f'open "{nombrehtml}"')         # macOS
-elif sys.platform.startswith("win"):
-    os.startfile(nombrehtml)                  # Windows
-else:
-    os.system(f'xdg-open "{nombrehtml}"')     # Linux
+# Abrir el archivo en el navegador
+try:
+    if sys.platform == "darwin":
+        os.system(f'open "{nombrehtml}"')         # macOS
+    elif sys.platform.startswith("win"):
+        os.startfile(nombrehtml)                  # Windows
+    else:
+        os.system(f'xdg-open "{nombrehtml}"')     # Linux
+    print(f"✓ Abriendo {nombrehtml} en el navegador...")
+except Exception as e:
+    print(f"Advertencia: No se pudo abrir el archivo automáticamente: {e}", file=sys.stderr)
+    print(f"Por favor, abre manualmente: {os.path.abspath(nombrehtml)}")

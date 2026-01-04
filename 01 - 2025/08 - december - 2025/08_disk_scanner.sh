@@ -36,6 +36,11 @@ log_msg "--- Current APFS snapshots ---"
 diskutil apfs listSnapshots / 2>&1 | tee -a "$LOG"
 
 log_msg "--- Open-but-deleted files (first 40) ---"
-sudo lsof -nP +L1 2>/dev/null | head -n 40 | tee -a "$LOG"
+if sudo -n true 2>/dev/null; then
+  sudo lsof -nP +L1 2>/dev/null | head -n 40 | tee -a "$LOG" || log_msg "No se pudieron obtener archivos abiertos-eliminados"
+else
+  log_msg "Se requieren permisos de administrador para listar archivos abiertos-eliminados"
+fi
 
 log_msg "Done. Review $LOG"
+echo "Log guardado en: $LOG"

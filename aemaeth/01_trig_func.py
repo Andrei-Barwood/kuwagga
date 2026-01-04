@@ -1,6 +1,21 @@
-# Importar las bibliotecas necesarias
+#!/usr/bin/env python3
+"""
+Script para visualizar funciones trigonométricas y sus recíprocas
+Requiere: numpy, matplotlib
+"""
+
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
+
+# Verificar dependencias
+try:
+    import numpy as np
+    import matplotlib.pyplot as plt
+except ImportError as e:
+    print(f"Error: Faltan dependencias: {e}", file=sys.stderr)
+    print("Instálalas con: pip install numpy matplotlib", file=sys.stderr)
+    sys.exit(1)
 
 # Crear el array de ángulos de 10 a 360 grados con incrementos de 10
 grados = np.arange(10, 370, 10)

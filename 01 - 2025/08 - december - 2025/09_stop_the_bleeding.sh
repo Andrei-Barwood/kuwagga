@@ -18,8 +18,14 @@ log "Pausing Time Machine auto-backups"
 sudo tmutil disable | tee -a "$LOG"
 
 log "Deleting OS update snapshot if present: $OS_SNAP"
-if diskutil apfs listSnapshots / | grep -q "$OS_SNAP"; then
-  sudo diskutil apfs deleteSnapshot disk3s3s1 -uuid "$OS_SNAP" | tee -a "$LOG"
+if diskutil apfs listSnapshots / 2>/dev/null | grep -q "$OS_SNAP"; then
+  # Intentar obtener el dispositivo correcto automáticamente
+  DEVICE=$(diskutil apfs listSnapshots / 2>/dev/null | grep "$OS_SNAP" | head -1 | awk '{print $NF}' || echo "")
+  if [[ -n "$DEVICE" ]]; then
+    sudo diskutil apfs deleteSnapshot "$DEVICE" -uuid "$OS_SNAP" 2>&1 | tee -a "$LOG" || log "Error al eliminar snapshot (puede que ya no exista)"
+  else
+    log "No se pudo determinar el dispositivo del snapshot"
+  fi
 else
   log "Snapshot not found; skipping delete."
 fi
