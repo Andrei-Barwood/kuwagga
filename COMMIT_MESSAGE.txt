@@ -1,46 +1,32 @@
-refactor: Mejorar scripts de configuración y limpieza
+refactor: Mejorar script de conversión wiki a PDF
 
-## Mejoras en Scripts de Configuración (1 script)
+## Mejoras en Scripts de Conversión de Documentos (1 script)
 
-- setup_project.sh: Mejoras significativas en manejo de errores
-  - Cambiado de `set -e` a `set -euo pipefail`
-  - Validación mejorada de versión de Python3
-  - Manejo de EOF/KeyboardInterrupt en entrada del usuario
-  - Validación de existencia de archivos antes de operar
-  - Mejor manejo de errores en creación de entorno virtual
-  - Validación de activación del entorno virtual
-  - Mejor manejo de errores en instalación de dependencias
-  - Validación de creación de archivos (.env, run_conversion.sh)
-
-## Mejoras en Scripts de Limpieza (2 scripts)
-
-- 11_hunter.zsh: Mejor manejo de entrada del usuario
-  - Manejo de EOF/KeyboardInterrupt en todas las lecturas
-  - Manejo mejorado de confirmaciones de eliminación
-
-- 07_disk_guard.zsh: Mejor manejo de entrada del usuario
-  - Manejo de EOF/KeyboardInterrupt en entrada del usuario
-
-## Scripts Verificados (1 script)
-
-- setup_project.zsh: Ya tiene set -euo pipefail, bien estructurado
+- 12_wiki_to_pdf.zsh: Mejoras significativas en validación y manejo de errores
+  - Ya tenía `set -euo pipefail`
+  - Mejor manejo de creación de directorio temporal (validación de éxito)
+  - Validación de creación de directorio de salida
+  - Validación de existencia de binarios ejecutables (Chrome, wkhtmltopdf)
+  - Validación de creación de archivos PDF después de conversión
+  - Mejor manejo de errores en funciones convert_with_chrome y convert_with_wkhtml
+  - Validación de lectura del archivo de URLs
+  - Manejo mejorado de directorios en funciones de conversión
+  - Validación de archivo vacío con mensaje apropiado
 
 ## Mejoras Aplicadas
 
-- Cambio de `set -e` a `set -euo pipefail` para robustez completa
-- Manejo de EOF/KeyboardInterrupt en todas las lecturas de usuario
-- Validación de existencia de archivos y directorios antes de operar
-- Mejor manejo de errores en operaciones críticas
-- Validación de versiones y dependencias
-- Validación de creación de archivos y scripts
+- Validación de creación de directorios temporales y de salida
+- Verificación de existencia y ejecutabilidad de binarios
+- Validación de creación exitosa de archivos PDF
+- Mejor manejo de errores en todas las funciones de conversión
+- Validación de lectura de archivos de entrada
+- Manejo mejorado de directorios en operaciones de archivo
 
 ## Estadísticas
 
-- 1 script modificado en esta sesión (setup_project.sh)
-- 2 scripts mejorados (hunter.zsh, disk_guard.zsh)
-- 1 script verificado (setup_project.zsh)
-- Configuración/Instalación: 1 script mejorado
-- Limpieza: 2 scripts mejorados
+- 1 script modificado en esta sesión
+- Conversión de Documentos: 1 script mejorado
 
-Estos cambios mejoran la robustez de los scripts de configuración
-y limpieza, asegurando manejo adecuado de errores y entrada del usuario.
+Estos cambios mejoran la robustez del script de conversión de wiki a PDF,
+asegurando validación adecuada de todas las operaciones críticas y mejor
+manejo de errores en caso de fallos.

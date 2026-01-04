@@ -427,6 +427,18 @@
    - ✅ Ya tenía `set -euo pipefail`
    - ✅ Mejor manejo de EOF/KeyboardInterrupt en entrada del usuario
 
+## Scripts de Conversión de Documentos Mejorados
+
+73. **`01 - 2025/08 - december - 2025/12_wiki_to_pdf.zsh`**
+   - ✅ Ya tenía `set -euo pipefail`
+   - ✅ Mejor manejo de creación de directorio temporal
+   - ✅ Validación de creación de directorio de salida
+   - ✅ Validación de existencia de binarios ejecutables
+   - ✅ Validación de creación de archivos PDF
+   - ✅ Mejor manejo de errores en funciones de conversión
+   - ✅ Validación de lectura del archivo de URLs
+   - ✅ Manejo mejorado de directorios en funciones de conversión
+
 ## Scripts de Configuración Verificados
 
 72. **`01 - 2025/07 - november - 2025/setup_project.zsh`**

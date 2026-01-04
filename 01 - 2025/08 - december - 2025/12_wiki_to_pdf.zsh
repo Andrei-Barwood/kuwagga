@@ -26,11 +26,15 @@ set -euo pipefail
 
 USE_READER_MODE=${WIKI_READER_MODE:-1}
 
-tmp_root=$(mktemp -d -t wiki2pdf.XXXXXX 2>/dev/null || echo "")
+tmp_root=""
+if ! tmp_root=$(mktemp -d -t wiki2pdf.XXXXXX 2>/dev/null); then
+  print -u2 "Error: Failed to create temporary directory"
+  exit 1
+fi
 
 cleanup_tmp() {
   if [[ -n "${tmp_root:-}" && -d "${tmp_root:-}" ]]; then
-    rm -rf "$tmp_root"
+    rm -rf "$tmp_root" 2>/dev/null || true
   fi
 }
 
@@ -81,7 +85,10 @@ if [[ ! -r "$urls_file" ]]; then
   exit 1
 fi
 
-mkdir -p "$output_dir"
+if ! mkdir -p "$output_dir" 2>/dev/null; then
+  print -u2 "Error: Failed to create output directory: $output_dir"
+  exit 1
+fi
 
 ###############################################################################
 # Detect HTML -> PDF engine
@@ -198,12 +205,24 @@ make_fandom_reader_html() {
   local html_path="$2"
 
   if [[ -z "$tmp_root" || ! -d "$tmp_root" ]]; then
+    print -u2 "Error: Temporary directory not available"
     return 1
   fi
 
   if ! command -v python3 &>/dev/null; then
     print -u2 "python3 not found; cannot use Fandom reader mode for: $url"
     return 1
+  fi
+
+  if [[ ! -f "$html_path" ]]; then
+    # Ensure parent directory exists
+    local html_dir="${html_path%/*}"
+    if [[ -n "$html_dir" && "$html_dir" != "$html_path" ]]; then
+      mkdir -p "$html_dir" 2>/dev/null || {
+        print -u2 "Error: Failed to create directory for HTML file"
+        return 1
+      }
+    fi
   fi
 
   python3 - "$url" "$html_path" << 'PY'
@@ -312,24 +331,68 @@ convert_with_chrome() {
   local url="$1"
   local pdf_path="$2"
 
+  if [[ ! -x "$chrome_bin" ]]; then
+    print -u2 "Error: Chrome binary is not executable: $chrome_bin"
+    return 1
+  fi
+
+  # Ensure output directory exists
+  local pdf_dir="${pdf_path%/*}"
+  if [[ -n "$pdf_dir" && "$pdf_dir" != "$pdf_path" ]]; then
+    mkdir -p "$pdf_dir" 2>/dev/null || {
+      print -u2 "Error: Failed to create directory for PDF: $pdf_dir"
+      return 1
+    }
+  fi
+
   # --disable-gpu is mostly for older setups; harmless on macOS
-  "$chrome_bin" \
+  if ! "$chrome_bin" \
     --headless \
     --disable-gpu \
     --print-to-pdf="$pdf_path" \
     --print-to-pdf-no-header \
-    "$url"
+    "$url" 2>/dev/null; then
+    print -u2 "Error: Chrome failed to convert URL to PDF"
+    return 1
+  fi
+
+  if [[ ! -f "$pdf_path" ]]; then
+    print -u2 "Error: PDF file was not created: $pdf_path"
+    return 1
+  fi
 }
 
 convert_with_wkhtml() {
   local url="$1"
   local pdf_path="$2"
 
-  "$wkhtml_bin" \
+  if [[ ! -x "$wkhtml_bin" ]]; then
+    print -u2 "Error: wkhtmltopdf binary is not executable: $wkhtml_bin"
+    return 1
+  fi
+
+  # Ensure output directory exists
+  local pdf_dir="${pdf_path%/*}"
+  if [[ -n "$pdf_dir" && "$pdf_dir" != "$pdf_path" ]]; then
+    mkdir -p "$pdf_dir" 2>/dev/null || {
+      print -u2 "Error: Failed to create directory for PDF: $pdf_dir"
+      return 1
+    }
+  fi
+
+  if ! "$wkhtml_bin" \
     --print-media-type \
     --enable-local-file-access \
     "$url" \
-    "$pdf_path"
+    "$pdf_path" 2>/dev/null; then
+    print -u2 "Error: wkhtmltopdf failed to convert URL to PDF"
+    return 1
+  fi
+
+  if [[ ! -f "$pdf_path" ]]; then
+    print -u2 "Error: PDF file was not created: $pdf_path"
+    return 1
+  fi
 }
 
 ###############################################################################
@@ -345,7 +408,15 @@ success_count=0
 fail_count=0
 
 # Read all lines from the URLs file into an array (split on newlines)
-urls=("${(@f)$(< "$urls_file")}")
+if ! urls=("${(@f)$(< "$urls_file")}"); then
+  print -u2 "Error: Failed to read URLs file: $urls_file"
+  exit 1
+fi
+
+if (( ${#urls[@]} == 0 )); then
+  print -u2 "Warning: URLs file is empty: $urls_file"
+  exit 0
+fi
 
 for url in "${urls[@]}"; do
   # Remove comments (anything after #)
