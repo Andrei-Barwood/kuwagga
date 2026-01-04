@@ -5,7 +5,7 @@
 # Uso: bash setup_project.sh
 # Este script configura todo el proyecto automáticamente
 
-set -e  # Salir si algún comando falla
+set -euo pipefail  # Salir si algún comando falla, variables no definidas, o errores en pipes
 
 # Colores para output
 RED='\033[0;31m'
@@ -37,7 +37,11 @@ if ! command -v python3 &> /dev/null; then
     print_error "Python3 no está instalado"
     exit 1
 fi
-PYTHON_VERSION=$(python3 --version | cut -d' ' -f2)
+PYTHON_VERSION=$(python3 --version 2>/dev/null | cut -d' ' -f2 || echo "unknown")
+if [[ -z "$PYTHON_VERSION" || "$PYTHON_VERSION" == "unknown" ]]; then
+    print_error "No se pudo determinar la versión de Python3"
+    exit 1
+fi
 print_success "Python3 encontrado: $PYTHON_VERSION"
 
 if ! command -v pip3 &> /dev/null; then
@@ -78,15 +82,25 @@ print_info "Paso 4: Creando entorno virtual..."
 
 if [ -d "venv" ]; then
     print_warning "Entorno virtual ya existe"
-    read -p "¿Deseas recrearlo? (s/n) " -n 1 -r
+    read -p "¿Deseas recrearlo? (s/n) " -n 1 -r || {
+        echo ""
+        print_error "Entrada cancelada por el usuario"
+        exit 1
+    }
     echo
     if [[ $REPLY =~ ^[Ss]$ ]]; then
         rm -rf venv
-        python3 -m venv venv
+        if ! python3 -m venv venv; then
+            print_error "Error al crear el entorno virtual"
+            exit 1
+        fi
         print_success "Entorno virtual recreado"
     fi
 else
-    python3 -m venv venv
+    if ! python3 -m venv venv; then
+        print_error "Error al crear el entorno virtual"
+        exit 1
+    fi
     print_success "Entorno virtual creado"
 fi
 
@@ -95,7 +109,15 @@ fi
 # ============================================================================
 print_info "Paso 5: Activando entorno virtual..."
 
-source venv/bin/activate
+if [[ ! -f "venv/bin/activate" ]]; then
+    print_error "El archivo de activación del entorno virtual no existe"
+    exit 1
+fi
+
+source venv/bin/activate || {
+    print_error "Error al activar el entorno virtual"
+    exit 1
+}
 print_success "Entorno virtual activado"
 
 # ============================================================================
@@ -103,7 +125,10 @@ print_success "Entorno virtual activado"
 # ============================================================================
 print_info "Paso 6: Actualizando pip y setuptools..."
 
-pip install --upgrade pip setuptools wheel > /dev/null 2>&1
+if ! pip install --upgrade pip setuptools wheel > /dev/null 2>&1; then
+    print_error "Error al actualizar pip, setuptools y wheel"
+    exit 1
+fi
 print_success "pip, setuptools y wheel actualizados"
 
 # ============================================================================
@@ -115,24 +140,35 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     print_info "Sistema operativo: Linux"
     if command -v apt-get &> /dev/null; then
         print_info "Instalando dependencias de sistema (requiere sudo)..."
-        sudo apt-get update > /dev/null 2>&1
-        sudo apt-get install -y \
-            libcairo2-dev \
-            libpango-1.0-0 \
-            libpango-cairo-1.0-0 \
-            libgdk-pixbuf2.0-0 \
-            libffi-dev \
-            fonts-liberation \
-            fonts-noto \
-            2>/dev/null || true
-        print_success "Dependencias de sistema instaladas"
+        if sudo apt-get update > /dev/null 2>&1; then
+            if sudo apt-get install -y \
+                libcairo2-dev \
+                libpango-1.0-0 \
+                libpango-cairo-1.0-0 \
+                libgdk-pixbuf2.0-0 \
+                libffi-dev \
+                fonts-liberation \
+                fonts-noto \
+                2>/dev/null; then
+                print_success "Dependencias de sistema instaladas"
+            else
+                print_warning "Algunas dependencias no se pudieron instalar (puede continuar)"
+            fi
+        else
+            print_warning "No se pudo actualizar apt-get (puede continuar)"
+        fi
+    else
+        print_warning "apt-get no encontrado (puede continuar)"
     fi
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     print_info "Sistema operativo: macOS"
     if command -v brew &> /dev/null; then
         print_info "Instalando dependencias con Homebrew..."
-        brew install cairo pango gdk-pixbuf libffi > /dev/null 2>&1 || true
-        print_success "Dependencias instaladas"
+        if brew install cairo pango gdk-pixbuf libffi > /dev/null 2>&1; then
+            print_success "Dependencias instaladas"
+        else
+            print_warning "Algunas dependencias no se pudieron instalar (puede continuar)"
+        fi
     else
         print_warning "Homebrew no encontrado. Instálalo desde: https://brew.sh"
     fi
@@ -146,12 +182,18 @@ fi
 print_info "Paso 8: Instalando requisitos de Python..."
 
 if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
+    if ! pip install -r requirements.txt; then
+        print_error "Error al instalar requisitos desde requirements.txt"
+        exit 1
+    fi
     print_success "Requisitos instalados"
 else
     print_warning "requirements.txt no encontrado"
     print_info "Instalando WeasyPrint manualmente..."
-    pip install weasyprint==61.0 requests lxml python-dotenv Pillow fonttools
+    if ! pip install weasyprint==61.0 requests lxml python-dotenv Pillow fonttools; then
+        print_error "Error al instalar dependencias manualmente"
+        exit 1
+    fi
     print_success "Dependencias instaladas"
 fi
 
@@ -174,7 +216,7 @@ fi
 print_info "Paso 10: Creando archivo de configuración..."
 
 if [ ! -f ".env" ]; then
-    cat > .env << 'EOF'
+    if ! cat > .env << 'EOF'
 # Configuración del proyecto HTML to PDF
 # Estos valores pueden ser modificados según necesidad
 
@@ -199,6 +241,10 @@ PDF_ZOOM=1.0
 # Presentational hints (true/false)
 PRESENTATIONAL_HINTS=true
 EOF
+    then
+        print_error "Error al crear el archivo .env"
+        exit 1
+    fi
     print_success ".env creado"
 else
     print_warning ".env ya existe"
@@ -244,7 +290,7 @@ echo ""
 # Paso 12: Crear script de lanzamiento rápido
 # ============================================================================
 if [ ! -f "run_conversion.sh" ]; then
-    cat > run_conversion.sh << 'EOF'
+    if ! cat > run_conversion.sh << 'EOF'
 #!/bin/bash
 # Script rápido para ejecutar conversiones
 
@@ -260,7 +306,14 @@ OUTPUT=${2:-"output/${INPUT%.html}.pdf"}
 
 python scripts/html_to_pdf_converter.py "data/$INPUT" -o "$OUTPUT"
 EOF
-    chmod +x run_conversion.sh
+    then
+        print_error "Error al crear el script run_conversion.sh"
+        exit 1
+    fi
+    if ! chmod +x run_conversion.sh; then
+        print_error "Error al hacer ejecutable run_conversion.sh"
+        exit 1
+    fi
     print_success "Script de lanzamiento creado: run_conversion.sh"
 fi
 

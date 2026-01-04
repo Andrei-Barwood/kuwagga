@@ -87,7 +87,11 @@ offer_os_update_snapshot_removal() {
   local os_snap="BAE3E18E-0D22-40CD-88C7-477AE31F427C"
   if diskutil apfs listSnapshots / | grep -q "$os_snap"; then
     echo
-    read -q "ans?Delete OS update snapshot $os_snap (can reclaim space)? [y/N] " || true
+    read -q "ans?Delete OS update snapshot $os_snap (can reclaim space)? [y/N] " || {
+      echo ""
+      log "Entrada cancelada por el usuario"
+      return
+    }
     echo
     if [[ "${ans:-n}" == [Yy] ]]; then
       log "Deleting OS update snapshot $os_snap ..."

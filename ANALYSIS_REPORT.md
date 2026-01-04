@@ -404,6 +404,35 @@
    - ✅ Mejor manejo de errores en creación de logs
    - ✅ Manejo mejorado de pipes y while loops
 
+## Scripts de Configuración/Instalación Mejorados
+
+69. **`01 - 2025/07 - november - 2025/01 - HTML to PDF/setup_project.sh`**
+   - ✅ Cambiado de `set -e` a `set -euo pipefail`
+   - ✅ Validación mejorada de versión de Python3
+   - ✅ Manejo de EOF/KeyboardInterrupt en entrada del usuario
+   - ✅ Validación de existencia de archivos antes de operar
+   - ✅ Mejor manejo de errores en creación de entorno virtual
+   - ✅ Validación de activación del entorno virtual
+   - ✅ Mejor manejo de errores en instalación de dependencias
+   - ✅ Validación de creación de archivos (.env, run_conversion.sh)
+
+## Scripts de Limpieza Mejorados
+
+70. **`01 - 2025/08 - december - 2025/11_hunter.zsh`**
+   - ✅ Ya tenía `set -euo pipefail`
+   - ✅ Mejor manejo de EOF/KeyboardInterrupt en entrada del usuario
+   - ✅ Manejo mejorado de confirmaciones de eliminación
+
+71. **`01 - 2025/08 - december - 2025/07_disk_guard.zsh`**
+   - ✅ Ya tenía `set -euo pipefail`
+   - ✅ Mejor manejo de EOF/KeyboardInterrupt en entrada del usuario
+
+## Scripts de Configuración Verificados
+
+72. **`01 - 2025/07 - november - 2025/setup_project.zsh`**
+   - ✅ Ya tiene `set -euo pipefail`
+   - ✅ Script bien estructurado con validaciones
+
 ## Scripts de Git Adicionales Verificados
 
 66. **`01 - 2025/04 - August - 2025/03 - undo git commit.zsh`**

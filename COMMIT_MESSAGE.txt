@@ -1,43 +1,46 @@
-refactor: Mejorar scripts de tags de audio y verificar scripts de Git
+refactor: Mejorar scripts de configuración y limpieza
 
-## Mejoras en Scripts de Tags de Audio (2 scripts)
+## Mejoras en Scripts de Configuración (1 script)
 
-- 01_m4a_mp3_flac_tags.zsh: Mejor manejo de entrada, validaciones, manejo de errores
+- setup_project.sh: Mejoras significativas en manejo de errores
+  - Cambiado de `set -e` a `set -euo pipefail`
+  - Validación mejorada de versión de Python3
   - Manejo de EOF/KeyboardInterrupt en entrada del usuario
-  - Limpieza mejorada de rutas desde Finder usando (Q)
-  - Verificación de existencia de archivos de portada
-  - Mejor manejo de errores en eyeD3, AtomicParsley, metaflac
-  - Validación de rangos de selección
+  - Validación de existencia de archivos antes de operar
+  - Mejor manejo de errores en creación de entorno virtual
+  - Validación de activación del entorno virtual
+  - Mejor manejo de errores en instalación de dependencias
+  - Validación de creación de archivos (.env, run_conversion.sh)
 
-- 02_tags_template_generator.zsh: Mejor manejo de entrada, validaciones
+## Mejoras en Scripts de Limpieza (2 scripts)
+
+- 11_hunter.zsh: Mejor manejo de entrada del usuario
+  - Manejo de EOF/KeyboardInterrupt en todas las lecturas
+  - Manejo mejorado de confirmaciones de eliminación
+
+- 07_disk_guard.zsh: Mejor manejo de entrada del usuario
   - Manejo de EOF/KeyboardInterrupt en entrada del usuario
-  - Limpieza mejorada de rutas desde Finder usando (Q)
-  - Validación de entrada numérica
-  - Mejor manejo de errores en creación de logs
-  - Manejo mejorado de pipes y while loops
 
-## Scripts de Git Verificados (3 scripts)
+## Scripts Verificados (1 script)
 
-- 03 - undo git commit.zsh: Ya tiene set -euo pipefail, bien estructurado
-- 04 - stop icloud automatic downloads.zsh: Ya tiene set -euo pipefail, bien estructurado
-- 18_observar_cambios_en_commits.sh: Ya tiene set -euo pipefail, bien estructurado
+- setup_project.zsh: Ya tiene set -euo pipefail, bien estructurado
 
 ## Mejoras Aplicadas
 
+- Cambio de `set -e` a `set -euo pipefail` para robustez completa
 - Manejo de EOF/KeyboardInterrupt en todas las lecturas de usuario
-- Limpieza mejorada de rutas desde Finder usando (Q) de zsh
-- Validación de entrada numérica y rangos
-- Verificación de existencia de archivos antes de operar
-- Mejor manejo de errores en herramientas de tags (eyeD3, AtomicParsley, metaflac)
-- Manejo mejorado de pipes y while loops con IFS y verificación de EOF
-- Validación de creación de archivos de log
+- Validación de existencia de archivos y directorios antes de operar
+- Mejor manejo de errores en operaciones críticas
+- Validación de versiones y dependencias
+- Validación de creación de archivos y scripts
 
 ## Estadísticas
 
-- 2 scripts modificados en esta sesión
-- 3 scripts verificados (ya estaban bien)
-- Tags de Audio: 2 scripts mejorados
+- 1 script modificado en esta sesión (setup_project.sh)
+- 2 scripts mejorados (hunter.zsh, disk_guard.zsh)
+- 1 script verificado (setup_project.zsh)
+- Configuración/Instalación: 1 script mejorado
+- Limpieza: 2 scripts mejorados
 
-Estos cambios mejoran la robustez de los scripts de tags de audio,
-asegurando manejo adecuado de entrada del usuario y errores en operaciones
-de etiquetado.
+Estos cambios mejoran la robustez de los scripts de configuración
+y limpieza, asegurando manejo adecuado de errores y entrada del usuario.

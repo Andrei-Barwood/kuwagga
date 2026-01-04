@@ -126,7 +126,10 @@ echo " 0. Exit without deleting anything"
 echo ""
 
 # Get user selection
-read "selection?Enter numbers to delete (comma-separated, e.g., 1,3,5) or 0 to exit: "
+read "selection?Enter numbers to delete (comma-separated, e.g., 1,3,5) or 0 to exit: " || {
+  echo "Entrada cancelada por el usuario." >&2
+  exit 1
+}
 
 if [[ "$selection" == "0" ]] || [[ -z "$selection" ]]; then
   echo "Exiting without deleting anything."
@@ -151,7 +154,11 @@ for sel in "${selections[@]}"; do
       echo "⚠️  WARNING: You selected a system-critical directory!"
       echo "   Path: $path"
       echo "   ${result#*|}"
-      read -q "confirm?Are you absolutely sure you want to delete this? (y/N): "
+      read -q "confirm?Are you absolutely sure you want to delete this? (y/N): " || {
+        echo ""
+        log "Entrada cancelada por el usuario para: $path"
+        continue
+      }
       echo ""
       if [[ "$confirm" == [Yy] ]]; then
         to_delete+=("$path")
@@ -179,7 +186,11 @@ for path in "${to_delete[@]}"; do
 done
 
 echo ""
-read -q "final_confirm?Proceed with deletion? (y/N): "
+read -q "final_confirm?Proceed with deletion? (y/N): " || {
+  echo ""
+  echo "Deletion cancelled."
+  exit 0
+}
 echo ""
 
 if [[ "$final_confirm" != [Yy] ]]; then
