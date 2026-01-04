@@ -1,7 +1,9 @@
 #!/bin/zsh
+set -euo pipefail
 
 # Script para desinstalar completamente Bass Master de Loop Masters
 # Compatible con macOS Sequoia
+# Requiere permisos de administrador para algunas operaciones
 
 echo "=========================================="
 echo "Desinstalador de Bass Master - Loop Masters"
@@ -17,21 +19,31 @@ NC='\033[0m' # Sin color
 # Función para eliminar archivos/directorios
 remove_item() {
     local item="$1"
-    if [ -e "$item" ]; then
+    if [[ -e "$item" ]]; then
         echo "${YELLOW}Eliminando:${NC} $item"
-        sudo rm -rf "$item"
-        echo "${GREEN}✓ Eliminado${NC}"
-        return 0
+        if sudo rm -rf "$item" 2>/dev/null; then
+            echo "${GREEN}✓ Eliminado${NC}"
+            return 0
+        else
+            echo "${RED}✗ Error al eliminar:${NC} $item" >&2
+            return 1
+        fi
     else
         echo "${RED}✗ No encontrado:${NC} $item"
         return 1
     fi
 }
 
+# Verificar permisos de administrador
+if [[ $EUID -ne 0 ]]; then
+  echo "${YELLOW}Advertencia: Algunas operaciones requieren permisos de administrador.${NC}"
+  echo "El script solicitará sudo cuando sea necesario."
+fi
+
 # Solicitar confirmación
 echo "${YELLOW}Este script eliminará completamente Bass Master y todas sus dependencias.${NC}"
-read "confirm?¿Deseas continuar? (s/n): "
-if [[ ! $confirm =~ ^[Ss]$ ]]; then
+read "confirm?¿Deseas continuar? (s/n): " || exit 1
+if [[ ! "$confirm" =~ ^[Ss]$ ]]; then
     echo "Cancelado por el usuario."
     exit 0
 fi

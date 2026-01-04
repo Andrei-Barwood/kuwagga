@@ -1,46 +1,48 @@
-refactor: Depurar y mejorar scripts de sistema macOS y conversión audio/video (alta prioridad)
+refactor: Depurar y mejorar scripts de limpieza, herramientas varias, Git y matemáticas
 
-## Mejoras en Herramientas de Sistema macOS (10 scripts)
+## Mejoras en Limpieza y Mantenimiento (5 scripts)
 
-### Scripts de Instalación/Upgrade (4 scripts)
-- 13_install_sequoia.sh: Validación de permisos y softwareupdate, mejor manejo de errores
-- 14_upgrade_legacy_macs.sh: Validación de dependencias y volúmenes USB, mejor manejo de errores
-- 15_from_lion_to_el_capitan.sh: Validación completa, confirmación antes de instalar
-- 16_from_el_capitan_to_high_sierra.sh: Validación completa, confirmación antes de instalar
+- 05_uninstall_bassmaster_loopmasters.zsh: Validación de permisos, mejor manejo de errores
+- 01 - Directory Finder.zsh: Validación de entrada, limpieza de espacios
+- 01_file_and_dirs_finder.zsh: Validación de entrada, manejo de EOF/KeyboardInterrupt
+- 01_eliminar_duplicados.py: Shebang, validación de Python, manejo de excepciones
+- 01_eliminar_duplicados_en_discos_externos.py: Shebang, validación de Python, manejo de excepciones
 
-### Scripts de Limpieza y Mantenimiento (6 scripts)
-- 05_limpiar_cryptex.zsh: Validación de permisos y directorio Preboot
-- 06_revisar_purgeable_finder.zsh: Validación de dependencias
-- 07_bloquear_tethering_riesgoso.zsh: Validación de permisos y dependencias
-- 01_uninstall_cleanmymac.zsh: Validación de osascript
-- 02_liberar_snapshot.zsh: Validación de permisos, mejor manejo de snapshots
-- 10_remove_macOS_installer_leftovers.sh: Convertido a script ejecutable, validaciones completas
+## Mejoras en Herramientas Varias (3 scripts)
 
-## Mejoras en Conversión de Audio/Video (4 scripts)
+- 12_wiki_to_pdf.zsh: Completado set -euo pipefail
+- install_tank_theme.zsh: Validación de macOS y swiftc, verificación de ejecutable
+- test_tank_colors.zsh: Agregado set -euo pipefail y documentación
 
-- wav_to_m4a.zsh: Validación de configuración, mejor verificación de éxito
-- 12_m4a_to_mp3.zsh: Mejor manejo de errores de ffmpeg, verificación de archivos
-- 10_flac_to_mp4_converter.zsh: Validación de ffmpeg, limpieza de rutas desde Finder
-- 11_add_img_to_mp3.zsh: Validación de eyeD3, contadores de éxito/fallo
+## Mejoras en Herramientas de Git (1 script)
+
+- clean-git-history.sh: Validación de repositorio git y herramientas de filtrado
+
+## Mejoras en Herramientas Matemáticas/Educativas (5 scripts)
+
+- 05_teoria_de_conjuntos.py: Shebang, validación de dependencias (matplotlib, numpy)
+- 06_el_complemento_de_un_conjunto.py: Shebang, validación de dependencias
+- 07_union_de_conjuntos.py: Shebang, validación de dependencias
+- 08_interseccion_de_conjuntos.py: Shebang, validación de dependencias
+- 09_disyuncion_diferencia_y_diferencia_simetrica.py: Shebang, validación de dependencias
 
 ## Mejoras Aplicadas
 
-- set -euo pipefail agregado en todos los scripts
-- Validación de dependencias (ffmpeg, eyeD3, softwareupdate, etc.)
-- Validación de permisos de administrador donde es necesario
-- Validación de existencia de archivos/directorios antes de operar
-- Confirmaciones antes de operaciones destructivas
-- Mejor manejo de errores con mensajes descriptivos
-- Contadores de éxito/fallo en scripts de procesamiento
-- Limpieza de rutas desde Finder (eliminación de comillas)
+- set -euo pipefail agregado en todos los scripts shell
+- Validación de dependencias (Python, matplotlib, numpy, matplotlib-venn, swiftc)
+- Validación de permisos donde es necesario
+- Validación de entrada de usuario (espacios, vacíos, EOF)
+- Manejo de excepciones en scripts Python (EOFError, KeyboardInterrupt, ImportError)
+- Mejor manejo de errores en subprocess y operaciones de sistema
+- Shebang y documentación en scripts Python
+- Validación de versión de Python (3.6+)
+- Validación de entorno (macOS para scripts específicos)
 
 ## Estadísticas
 
-- 14 scripts modificados
-- 382 líneas agregadas, 54 eliminadas
-- 2 categorías de alta prioridad completadas
+- 14 scripts modificados en esta sesión
+- 300 líneas agregadas, 46 eliminadas
+- 4 categorías completadas: Limpieza, Herramientas Varias, Git, Matemáticas
 
-Estos cambios mejoran significativamente la robustez y seguridad de los scripts
-de sistema macOS y conversión de audio/video, siguiendo mejores prácticas de
-shell scripting.
-
+Estos cambios mejoran significativamente la robustez, seguridad y usabilidad
+de los scripts, siguiendo mejores prácticas de shell scripting y Python.

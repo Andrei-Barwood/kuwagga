@@ -178,6 +178,85 @@
    - ✅ Contadores de éxito/fallo
    - ✅ Mejor manejo de errores
 
+## Scripts de Limpieza y Mantenimiento Corregidos
+
+30. **`01 - 2025/08 - december - 2025/05_uninstall_bassmaster_loopmasters.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de permisos
+   - ✅ Mejor manejo de errores en eliminación
+
+31. **`01 - 2025/02 - Julio - 2025/05 - 21 de Julio/01 - Directory Finder.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de entrada vacía
+   - ✅ Limpieza de espacios en término de búsqueda
+
+32. **`01 - 2025/02 - Julio - 2025/06 - 22 de Julio/01_file_and_dirs_finder.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de entrada vacía
+   - ✅ Manejo de EOF/KeyboardInterrupt
+
+33. **`01 - 2025/02 - Julio - 2025/02 - 11 de Julio/01_eliminar_duplicados.py`**
+   - ✅ Agregado shebang y documentación
+   - ✅ Validación de versión de Python
+   - ✅ Manejo de excepciones (EOFError, KeyboardInterrupt)
+   - ✅ Mejor manejo de errores en subprocess
+
+34. **`01 - 2025/02 - Julio - 2025/03 - 12 de Julio/01_eliminar_duplicados_en_discos_externos.py`**
+   - ✅ Agregado shebang y documentación
+   - ✅ Validación de versión de Python
+   - ✅ Manejo de excepciones (EOFError, KeyboardInterrupt)
+   - ✅ Mejor manejo de errores en subprocess
+
+## Scripts de Herramientas Varias Corregidos
+
+35. **`01 - 2025/08 - december - 2025/12_wiki_to_pdf.zsh`**
+   - ✅ Agregado `set -e` (completando set -euo pipefail)
+
+36. **`01 - 2025/08 - december - 2025/install_tank_theme.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de macOS
+   - ✅ Validación de swiftc
+   - ✅ Verificación de ejecutable creado
+
+37. **`01 - 2025/08 - december - 2025/test_tank_colors.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Agregada documentación
+
+## Scripts de Git Corregidos
+
+38. **`02 - 2026/01 - enero/01 - reduce git repo size/clean-git-history.sh`**
+   - ✅ Agregado `set -uo pipefail` (completando set -euo pipefail)
+   - ✅ Validación de repositorio git
+   - ✅ Validación de git-filter-branch o git-filter-repo
+   - ✅ Mejor manejo de cancelación
+
+## Scripts de Herramientas Matemáticas/Educativas Corregidos
+
+39. **`01 - 2025/07 - november - 2025/05_teoria_de_conjuntos.py`**
+   - ✅ Agregado shebang y documentación
+   - ✅ Validación de dependencias (matplotlib, numpy)
+   - ✅ Manejo de ImportError
+
+40. **`01 - 2025/07 - november - 2025/06_el_complemento_de_un_conjunto.py`**
+   - ✅ Agregado shebang y documentación
+   - ✅ Validación de dependencias (matplotlib, matplotlib-venn)
+   - ✅ Manejo de ImportError
+
+41. **`01 - 2025/07 - november - 2025/07_union_de_conjuntos.py`**
+   - ✅ Agregado shebang y documentación
+   - ✅ Validación de dependencias (matplotlib, matplotlib-venn)
+   - ✅ Manejo de ImportError
+
+42. **`01 - 2025/07 - november - 2025/08_interseccion_de_conjuntos.py`**
+   - ✅ Agregado shebang y documentación
+   - ✅ Validación de dependencias (matplotlib, matplotlib-venn)
+   - ✅ Manejo de ImportError
+
+43. **`01 - 2025/07 - november - 2025/09_disyuncion_diferencia_y_diferencia_simetrica.py`**
+   - ✅ Agregado shebang y documentación
+   - ✅ Validación de dependencias (matplotlib, matplotlib-venn)
+   - ✅ Manejo de ImportError
+
 ## Problemas Comunes Detectados (Pendientes de Revisión)
 
 ### 1. Falta de `set -euo pipefail`

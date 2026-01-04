@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
+"""
+Script para encontrar archivos duplicados en directorios y discos externos
+Requiere: Python 3.6+
+"""
+
+import sys
 import os
 import hashlib
 import subprocess
 import textwrap
 import shutil
 from collections import defaultdict
+
+# Verificar versión de Python
+if sys.version_info < (3, 6):
+    print("Error: Se requiere Python 3.6 o superior.", file=sys.stderr)
+    sys.exit(1)
 
 # --- Configuración ---
 
@@ -86,11 +97,15 @@ def select_search_location() -> str:
             print(f"  {key}) {name}")
 
     while True:
-        choice = input("\nIngresa el número de tu elección: ")
-        if choice in paths:
-            print("-" * 20)
-            return paths[choice][1]
-        print("Opción no válida. Por favor, intenta de nuevo.")
+        try:
+            choice = input("\nIngresa el número de tu elección: ")
+            if choice in paths:
+                print("-" * 20)
+                return paths[choice][1]
+            print("Opción no válida. Por favor, intenta de nuevo.")
+        except (EOFError, KeyboardInterrupt):
+            print("\nOperación cancelada por el usuario.", file=sys.stderr)
+            sys.exit(1)
         
 # --- Lógica Principal ---
 
@@ -194,7 +209,12 @@ def prompt_to_open_finder(locations: list):
                 
                 selected_path = locations[choice - 1]
                 print(f"Abriendo {selected_path} en Finder...")
-                subprocess.run(["open", selected_path], check=True)
+                try:
+                    subprocess.run(["open", selected_path], check=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Error al abrir Finder: {e}", file=sys.stderr)
+                except FileNotFoundError:
+                    print("Error: El comando 'open' no está disponible (no estás en macOS?)", file=sys.stderr)
                 break
             else:
                 print("Número fuera de rango. Intenta de nuevo.")

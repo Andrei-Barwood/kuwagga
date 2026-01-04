@@ -10,20 +10,36 @@
 # ⚠️  ADVERTENCIA: Este script reescribe el historial de git permanentemente.
 #    Asegúrate de tener un backup antes de ejecutarlo.
 
-set -e
+set -euo pipefail
+
+# Script para limpiar el historial de git eliminando archivos grandes
+# ADVERTENCIA: Reescribe el historial permanentemente
 
 # Suprimir warning de git-filter-branch
 export FILTER_BRANCH_SQUELCH_WARNING=1
+
+# Verificar que estamos en un repositorio git
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "❌ Error: No estás en un repositorio git." >&2
+    exit 1
+fi
+
+# Verificar que git-filter-branch o git-filter-repo esté disponible
+if ! command -v git-filter-branch > /dev/null 2>&1 && ! command -v git-filter-repo > /dev/null 2>&1; then
+    echo "❌ Error: Se requiere git-filter-branch o git-filter-repo." >&2
+    echo "   Instala git-filter-repo: pip install git-filter-repo" >&2
+    exit 1
+fi
 
 echo "🧹 Limpiando historial de git..."
 echo ""
 echo "⚠️  ADVERTENCIA: Este script reescribirá el historial de git."
 echo "   Asegúrate de tener un backup antes de continuar."
 echo ""
-read -p "¿Continuar? (s/n): " confirmar
+read -p "¿Continuar? (s/n): " confirmar || exit 1
 if [[ ! "$confirmar" =~ ^[Ss]$ ]]; then
     echo "❌ Operación cancelada."
-    exit 1
+    exit 0
 fi
 
 # Crear backup del branch actual

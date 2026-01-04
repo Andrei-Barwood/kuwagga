@@ -1,4 +1,5 @@
 #!/bin/zsh
+set -euo pipefail
 
 #
 # A script to find a folder or a file by its approximate name across all connected drives on macOS.
@@ -17,7 +18,7 @@ echo "  1) A Directory (Folder)"
 echo "  2) A File"
 echo ""
 echo -n "Enter your choice [1 or 2]: "
-read choice
+read choice || exit 1
 
 # 2. Determine search parameters using an array for robustness
 # An array ensures that '-type' and its value ('d' or 'f') are passed as separate arguments.
@@ -40,11 +41,14 @@ esac
 
 # 3. Prompt for and store the search term
 echo ""
-read "SEARCH_TERM?Please enter the approximate name of the $SEARCH_TYPE_NAME: "
+read "SEARCH_TERM?Please enter the approximate name of the $SEARCH_TYPE_NAME: " || exit 1
 
 # 4. Check for user input
-if [ -z "$SEARCH_TERM" ]; then
-  echo "Error: The search term cannot be empty."
+SEARCH_TERM="${SEARCH_TERM#"${SEARCH_TERM%%[![:space:]]*}"}"
+SEARCH_TERM="${SEARCH_TERM%"${SEARCH_TERM##*[![:space:]]}"}"
+
+if [[ -z "$SEARCH_TERM" ]]; then
+  echo "Error: The search term cannot be empty." >&2
   exit 1
 fi
 

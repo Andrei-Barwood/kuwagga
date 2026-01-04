@@ -1,6 +1,19 @@
-import matplotlib.pyplot as plt
-from matplotlib_venn import venn2
+#!/usr/bin/env python3
+"""
+Script educativo para visualizar el complemento de un conjunto
+Requiere: matplotlib, matplotlib-venn
+"""
+
+import sys
 import random
+
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib_venn import venn2
+except ImportError as e:
+    print(f"Error: Falta la dependencia requerida: {e}", file=sys.stderr)
+    print("Instala con: pip install matplotlib matplotlib-venn", file=sys.stderr)
+    sys.exit(1)
 
 # UNIVERSO: elementos del 1 al 8
 universo = set(range(1, 9))

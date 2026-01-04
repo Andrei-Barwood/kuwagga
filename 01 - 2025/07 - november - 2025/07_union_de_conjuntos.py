@@ -1,6 +1,19 @@
-import matplotlib.pyplot as plt
-from matplotlib_venn import venn2, venn3
+#!/usr/bin/env python3
+"""
+Script educativo para visualizar la unión de conjuntos
+Requiere: matplotlib, matplotlib-venn
+"""
+
+import sys
 import random
+
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib_venn import venn2, venn3
+except ImportError as e:
+    print(f"Error: Falta la dependencia requerida: {e}", file=sys.stderr)
+    print("Instala con: pip install matplotlib matplotlib-venn", file=sys.stderr)
+    sys.exit(1)
 
 # UNIVERSO: elementos del 1 al 9
 universo = set(range(1, 10))

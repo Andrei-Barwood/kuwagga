@@ -1,7 +1,10 @@
 #!/bin/zsh
+set -euo pipefail
+
 # ============================================================================
 # TEST DE COLORES - TEMA TANK (FOREST GREEN)
 # ============================================================================
+# Script para probar la visualización de colores del tema Tank
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"

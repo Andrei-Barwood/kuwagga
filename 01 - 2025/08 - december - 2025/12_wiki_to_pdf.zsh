@@ -22,8 +22,7 @@
 #   - Requires: python3 and network access when generating PDFs
 #   - Disable this behavior by setting:  WIKI_READER_MODE=0
 
-set -u
-set -o pipefail
+set -euo pipefail
 
 USE_READER_MODE=${WIKI_READER_MODE:-1}
 

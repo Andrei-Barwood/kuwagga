@@ -1,5 +1,18 @@
-import matplotlib.pyplot as plt
-import numpy as np
+#!/usr/bin/env python3
+"""
+Script educativo para visualizar intervalos matemáticos
+Requiere: matplotlib, numpy
+"""
+
+import sys
+
+try:
+    import matplotlib.pyplot as plt
+    import numpy as np
+except ImportError as e:
+    print(f"Error: Falta la dependencia requerida: {e}", file=sys.stderr)
+    print("Instala con: pip install matplotlib numpy", file=sys.stderr)
+    sys.exit(1)
 
 # Paleta y diseño
 colors = ['#485199', '#63627C', '#A6A4D7', '#FFFF99', '#A7B7CF', '#EAEEF4']
