@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Archivos temporales
+*.tmp
+*.log
+*.swp
+*.swo
+*~
+
+# Reportes de verificación
+script_verification_report_*.txt
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+.venv
+
+# Archivos de revisión temporales
+REVIEW_SUMMARY.md
+

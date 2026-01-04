@@ -1,25 +1,19 @@
-feat: Script de verificación modular por categorías en Python3
+chore: Limpieza del repositorio - Eliminación de archivos innecesarios
 
-- Reimplementación completa del script de verificación en Python3
-- Sistema modular organizado por 12 categorías basadas en README.md
-- Menú interactivo para navegación por categorías
-- Verificación de scripts individuales o por categoría completa
-- Opción de corrección automática (fix) después de cada verificación
-- Funcionalidades de verificación:
-  * Shebang apropiado
-  * Sintaxis correcta (zsh/bash/python)
-  * Permisos ejecutables
-  * Tamaño de archivo
-  * Dependencias faltantes
-- Modos de ejecución:
-  * Modo interactivo (sin argumentos)
-  * --all: Verificar todas las categorías
-  * --fix-all: Verificar y corregir todas las categorías
-  * --help: Mostrar ayuda
-- Mejor manejo de rutas con pathlib
-- Interfaz más robusta y fácil de mantener que la versión Zsh
-- Mantiene compatibilidad con la estructura de categorías del README.md
+- Eliminados archivos temporales (*.tmp)
+- Eliminados reportes antiguos de verificación (script_verification_report_*.txt)
+- Eliminados directorios __pycache__ y archivos .pyc
+- Eliminados archivos .DS_Store
+- Creado .gitignore para prevenir archivos innecesarios en el futuro
+- Agregado script cleanup_repo.py para limpieza automatizada
 
-Archivos:
-- verify_scripts.py: Nueva implementación en Python3
-- verify_scripts.zsh: Versión anterior (mantenida para referencia)
+Archivos eliminados:
+- Archivos temporales: Finder.zsh.tmp, commit.zsh.tmp, downloads.zsh.tmp, preview.zsh.tmp, trash.zsh.tmp
+- Reportes de verificación antiguos (múltiples archivos)
+- Directorios __pycache__ en múltiples ubicaciones
+- Archivos .pyc compilados
+- Archivos .DS_Store de macOS
+
+Nuevos archivos:
+- .gitignore: Configuración para ignorar archivos temporales y cache
+- cleanup_repo.py: Script Python para limpieza automatizada del repositorio
