@@ -533,7 +533,7 @@ select_folder() {
     if command -v ranger &> /dev/null; then
         TMP_FILE="/tmp/choosedir_$$"
         print_msg info "Navega a la carpeta deseada en ranger."
-        echo "    ${C_YELLOW_GREEN}→ Presiona Shift-G cuando estés en la carpeta, luego Enter${NC}"
+        echo "    ${C_YELLOW_GREEN}→ Presiona Shift-G cuando estés en la carpeta${NC}"
         echo "    ${C_YELLOW_GREEN}→ Sal de ranger con 'q'${NC}"
         echo ""
         echo -n "${C_MEDIUM_GREEN}Presiona Enter para abrir ranger...${NC}"
