@@ -1,6 +1,16 @@
 #!/bin/zsh
-
 set -euo pipefail
+
+# Script para crear USBs bootables para actualizar Macs legacy
+# Requiere: 2 USBs de 16GB+, conexión a Internet, backup del Mac
+
+# Verificar dependencias
+for cmd in diskutil open; do
+  if ! command -v "$cmd" &> /dev/null; then
+    echo "Error: $cmd no está disponible." >&2
+    exit 1
+  fi
+done
 
 echo "🥾 SCRIPT BOOTABLE LEGACY: Lion 10.7 → High Sierra 10.13"
 echo "=================================================="
@@ -8,19 +18,28 @@ echo "⚠️  REQUIERE: 2 USB 16GB+, Internet, Backup del Mac objetivo."
 echo ""
 
 # 1. Detectar USBs (elige el mayor libre)
-disks=$(diskutil list external physical | grep -E '/dev/disk[0-9]+' | awk '{print $6}')
 echo "💾 USBs detectados:"
-diskutil list | grep -E 'external|disk[0-9]' | head -10
+diskutil list | grep -E 'external|disk[0-9]' | head -10 || echo "No se encontraron discos externos"
 echo ""
 read "usb_vol?Ingresa volumen USB (ej: /Volumes/MyUSB1) [ENTER para listar]: "
 if [[ -z "$usb_vol" ]]; then
   echo "Listando volúmenes montados..."
-  diskutil list | grep -E 'Apple|USB'
+  diskutil list | grep -E 'Apple|USB' || echo "No se encontraron volúmenes USB"
   read "usb_vol?Volumen USB1 para El Capitan (ej: /Volumes/USB1): "
 fi
 
+# Validar que el volumen existe
+if [[ ! -d "$usb_vol" ]]; then
+  echo "Error: El volumen no existe: $usb_vol" >&2
+  exit 1
+fi
+
 # Desmontar si necesario
-diskutil unmountDisk "${usb_vol%/}"
+if diskutil unmountDisk "${usb_vol%/}" 2>/dev/null; then
+  echo "✓ Volumen desmontado"
+else
+  echo "⚠️  No se pudo desmontar el volumen (puede que ya esté desmontado)"
+fi
 
 echo ""
 echo "📥 1. Descargando instaladores (si no existen)..."

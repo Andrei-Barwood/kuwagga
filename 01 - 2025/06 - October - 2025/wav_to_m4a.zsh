@@ -1,4 +1,5 @@
 #!/bin/zsh
+set -euo pipefail
 
 # WAV to M4A High-Quality Converter
 # Converts WAV files to M4A using AAC codec at maximum quality
@@ -17,13 +18,22 @@ NC='\033[0m' # No Color
 
 # Check if ffmpeg is installed
 if ! command -v ffmpeg &> /dev/null; then
-    echo "${RED}Error: ffmpeg is not installed${NC}"
-    echo "Install with: brew install ffmpeg"
+    echo "${RED}Error: ffmpeg is not installed${NC}" >&2
+    echo "Install with: brew install ffmpeg" >&2
+    exit 1
+fi
+
+# Validate quality settings
+if [[ "$QUALITY_MODE" != "vbr" && "$QUALITY_MODE" != "cbr" ]]; then
+    echo "${RED}Error: QUALITY_MODE must be 'vbr' or 'cbr'${NC}" >&2
     exit 1
 fi
 
 # Create output directory if it doesn't exist
-mkdir -p "$OUTPUT_DIR"
+if ! mkdir -p "$OUTPUT_DIR" 2>/dev/null; then
+    echo "${RED}Error: Cannot create output directory: $OUTPUT_DIR${NC}" >&2
+    exit 1
+fi
 
 # Function to convert a single file
 convert_file() {
@@ -52,10 +62,12 @@ convert_file() {
             -y -hide_banner -loglevel error
     fi
     
-    if [[ $? -eq 0 ]]; then
+    if [[ -f "$output_file" && -s "$output_file" ]]; then
         echo "${GREEN}✓ Successfully converted: $filename${NC}"
+        return 0
     else
-        echo "${RED}✗ Failed to convert: $filename${NC}"
+        echo "${RED}✗ Failed to convert: $filename${NC}" >&2
+        return 1
     fi
 }
 

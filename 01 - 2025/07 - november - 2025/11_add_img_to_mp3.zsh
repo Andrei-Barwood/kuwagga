@@ -1,10 +1,18 @@
 #!/usr/bin/env zsh
+set -euo pipefail
 
-# antes de ejecutar este script por favor instalar eyeD3 con brew o pip
-# brew install eye-d3
-
+# Script para agregar imágenes de portada a archivos MP3
+# Requiere: eyeD3 (instalar con: brew install eye-d3)
 
 setopt null_glob
+
+# Verificar dependencias
+if ! command -v eyeD3 &> /dev/null; then
+    echo "Error: eyeD3 no está instalado." >&2
+    echo "Instálalo con: brew install eye-d3" >&2
+    echo "O con pip: pip install eyeD3" >&2
+    exit 1
+fi
 
 # 0. Pedir ruta al usuario (pegada desde Finder)
 echo "Pega la RUTA del directorio (copiada desde Finder con 'Copiar como nombre de ruta') y pulsa Enter:"
@@ -59,10 +67,24 @@ if (( ${#mp3_files} == 0 )); then
   exit 0
 fi
 
+success_count=0
+failed_count=0
+
 for mp3 in "${mp3_files[@]}"; do
   echo "Añadiendo portada a: $mp3"
-  eyeD3 --add-image "${artwork}:FRONT_COVER:" "$mp3"
+  if eyeD3 --add-image "${artwork}:FRONT_COVER:" "$mp3" 2>/dev/null; then
+    echo "  ✓ Portada agregada exitosamente"
+    ((success_count++))
+  else
+    echo "  ✗ Error al agregar portada" >&2
+    ((failed_count++))
+  fi
 done
 
 echo
-echo "Proceso terminado."
+if [[ $failed_count -eq 0 ]]; then
+  echo "✓ Proceso completado exitosamente. $success_count archivos procesados."
+else
+  echo "⚠️  Proceso completado con errores: $success_count exitosos, $failed_count fallidos." >&2
+  exit 1
+fi

@@ -1,6 +1,18 @@
 #!/bin/zsh
+set -euo pipefail
+
+# Script para revisar espacio purgeable y reiniciar Spotlight
+# Requiere permisos de administrador para algunas operaciones
 
 LOGFILE="$HOME/Desktop/informe_finder_$(date +%Y%m%d_%H%M%S).log"
+
+# Verificar dependencias
+for cmd in diskutil df mdutil du; do
+  if ! command -v "$cmd" &> /dev/null; then
+    echo "Error: $cmd no está disponible." >&2
+    exit 1
+  fi
+done
 
 echo "📋 Iniciando auditoría Finder y espacio purgeable" | tee "$LOGFILE"
 echo "🕒 Fecha: $(date)" | tee -a "$LOGFILE"

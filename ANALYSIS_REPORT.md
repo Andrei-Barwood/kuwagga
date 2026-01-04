@@ -95,6 +95,89 @@
    - ✅ Detección automática del dispositivo
    - ✅ Mejor manejo de errores
 
+## Scripts de Sistema macOS Corregidos
+
+16. **`01 - 2025/07 - november - 2025/13_install_sequoia.sh`**
+   - ✅ Validación de permisos mejorada
+   - ✅ Validación de softwareupdate
+   - ✅ Mejor manejo de errores en descarga
+   - ✅ Verificación de existencia del instalador
+
+17. **`01 - 2025/07 - november - 2025/14_upgrade_legacy_macs.sh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Validación de existencia de volúmenes USB
+   - ✅ Mejor manejo de errores de desmontaje
+
+18. **`01 - 2025/07 - november - 2025/15_from_lion_to_el_capitan.sh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Validación de permisos
+   - ✅ Confirmación antes de instalar
+   - ✅ Validación de existencia del instalador
+
+19. **`01 - 2025/07 - november - 2025/16_from_el_capitan_to_high_sierra.sh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Confirmación antes de instalar
+   - ✅ Validación de existencia del instalador
+   - ✅ Mejor manejo de errores
+
+20. **`01 - 2025/01 - Junio - 2025/19 de junio - 2025/05_limpiar_cryptex.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de permisos de administrador
+   - ✅ Validación de existencia del directorio Preboot
+
+21. **`01 - 2025/01 - Junio - 2025/19 de junio - 2025/06_revisar_purgeable_finder.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+
+22. **`01 - 2025/01 - Junio - 2025/19 de junio - 2025/07_bloquear_tethering_riesgoso.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de permisos de administrador
+   - ✅ Validación de dependencias
+
+23. **`01 - 2025/01 - Junio - 2025/29 de junio - 2025/01_uninstall_cleanmymac.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de osascript
+
+24. **`01 - 2025/01 - Junio - 2025/29 de junio - 2025/02_liberar_snapshot.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de permisos de administrador
+   - ✅ Validación de dependencias
+   - ✅ Mejor manejo de snapshots (verificación de existencia)
+
+25. **`01 - 2025/08 - december - 2025/10_remove_macOS_installer_leftovers.sh`**
+   - ✅ Convertido a script ejecutable completo
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de permisos
+   - ✅ Validación de dependencias
+   - ✅ Mejor manejo de errores
+
+## Scripts de Conversión de Audio/Video Corregidos
+
+26. **`01 - 2025/06 - October - 2025/wav_to_m4a.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de configuración de calidad
+   - ✅ Validación de creación de directorio
+   - ✅ Mejor verificación de éxito de conversión
+
+27. **`01 - 2025/07 - november - 2025/12_m4a_to_mp3.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Mejor manejo de errores de ffmpeg
+   - ✅ Verificación de archivos creados
+
+28. **`01 - 2025/07 - november - 2025/10_flac_to_mp4_converter.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias (ffmpeg)
+   - ✅ Limpieza de rutas desde Finder
+
+29. **`01 - 2025/07 - november - 2025/11_add_img_to_mp3.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias (eyeD3)
+   - ✅ Contadores de éxito/fallo
+   - ✅ Mejor manejo de errores
+
 ## Problemas Comunes Detectados (Pendientes de Revisión)
 
 ### 1. Falta de `set -euo pipefail`

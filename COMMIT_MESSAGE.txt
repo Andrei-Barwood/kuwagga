@@ -1,0 +1,46 @@
+refactor: Depurar y mejorar scripts de sistema macOS y conversión audio/video (alta prioridad)
+
+## Mejoras en Herramientas de Sistema macOS (10 scripts)
+
+### Scripts de Instalación/Upgrade (4 scripts)
+- 13_install_sequoia.sh: Validación de permisos y softwareupdate, mejor manejo de errores
+- 14_upgrade_legacy_macs.sh: Validación de dependencias y volúmenes USB, mejor manejo de errores
+- 15_from_lion_to_el_capitan.sh: Validación completa, confirmación antes de instalar
+- 16_from_el_capitan_to_high_sierra.sh: Validación completa, confirmación antes de instalar
+
+### Scripts de Limpieza y Mantenimiento (6 scripts)
+- 05_limpiar_cryptex.zsh: Validación de permisos y directorio Preboot
+- 06_revisar_purgeable_finder.zsh: Validación de dependencias
+- 07_bloquear_tethering_riesgoso.zsh: Validación de permisos y dependencias
+- 01_uninstall_cleanmymac.zsh: Validación de osascript
+- 02_liberar_snapshot.zsh: Validación de permisos, mejor manejo de snapshots
+- 10_remove_macOS_installer_leftovers.sh: Convertido a script ejecutable, validaciones completas
+
+## Mejoras en Conversión de Audio/Video (4 scripts)
+
+- wav_to_m4a.zsh: Validación de configuración, mejor verificación de éxito
+- 12_m4a_to_mp3.zsh: Mejor manejo de errores de ffmpeg, verificación de archivos
+- 10_flac_to_mp4_converter.zsh: Validación de ffmpeg, limpieza de rutas desde Finder
+- 11_add_img_to_mp3.zsh: Validación de eyeD3, contadores de éxito/fallo
+
+## Mejoras Aplicadas
+
+- set -euo pipefail agregado en todos los scripts
+- Validación de dependencias (ffmpeg, eyeD3, softwareupdate, etc.)
+- Validación de permisos de administrador donde es necesario
+- Validación de existencia de archivos/directorios antes de operar
+- Confirmaciones antes de operaciones destructivas
+- Mejor manejo de errores con mensajes descriptivos
+- Contadores de éxito/fallo en scripts de procesamiento
+- Limpieza de rutas desde Finder (eliminación de comillas)
+
+## Estadísticas
+
+- 14 scripts modificados
+- 382 líneas agregadas, 54 eliminadas
+- 2 categorías de alta prioridad completadas
+
+Estos cambios mejoran significativamente la robustez y seguridad de los scripts
+de sistema macOS y conversión de audio/video, siguiendo mejores prácticas de
+shell scripting.
+

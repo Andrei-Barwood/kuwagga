@@ -1,7 +1,16 @@
 #!/bin/zsh
+set -euo pipefail
+
+# Script para desinstalar completamente CleanMyMac de macOS
+# Elimina aplicación, preferencias, cachés, launch agents, y más
 
 echo "🧼 Desinstalando CleanMyMac (cualquier versión)..."
 echo "==========================================="
+
+# Verificar que osascript esté disponible (para login items)
+if ! command -v osascript &> /dev/null; then
+  echo "Advertencia: osascript no está disponible. No se podrán eliminar login items." >&2
+fi
 
 # Buscar cualquier versión de la app
 echo "🔍 Buscando CleanMyMac en /Applications..."

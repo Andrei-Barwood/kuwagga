@@ -1,6 +1,25 @@
 #!/bin/zsh
+set -euo pipefail
+
+# Script para bloquear actualizaciones y conexiones a Apple cuando se detecta tethering
+# ADVERTENCIA: Requiere permisos de administrador y modifica configuración del sistema
 
 LOGFILE="$HOME/Desktop/bloqueo_red_$(date +%Y%m%d_%H%M%S).log"
+
+# Verificar permisos de administrador
+if [[ $EUID -ne 0 ]]; then
+  echo "Error: Este script requiere permisos de administrador." >&2
+  echo "Ejecuta con: sudo $0" >&2
+  exit 1
+fi
+
+# Verificar dependencias
+for cmd in softwareupdate defaults networksetup dig pfctl; do
+  if ! command -v "$cmd" &> /dev/null; then
+    echo "Error: $cmd no está disponible." >&2
+    exit 1
+  fi
+done
 
 echo "📋 Iniciando protección contra consumo inesperado de red..." | tee "$LOGFILE"
 

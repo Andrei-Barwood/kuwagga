@@ -1,6 +1,8 @@
 #!/bin/zsh
+set -euo pipefail
 
 # Script corregido - Limpia comillas de Finder automáticamente
+# Convierte archivos M4A a MP3 con preservación de metadatos y carátulas
 
 # Colores
 RED='\033[0;31m'
@@ -62,9 +64,8 @@ for m4a_file in "${m4a_files[@]}"; do
     
     echo "[$actual/$total] ${filename}"
     
-    ffmpeg -i "${m4a_file}" -q:a 2 -map_metadata 0 -id3v2_version 3 -write_id3v1 1 "${mp3_file}"
-    
-    if [[ $? -eq 0 && -s "${mp3_file}" ]]; then
+    if ffmpeg -i "${m4a_file}" -q:a 2 -map_metadata 0 -id3v2_version 3 -write_id3v1 1 "${mp3_file}" -y -hide_banner -loglevel error 2>&1; then
+        if [[ -f "${mp3_file}" && -s "${mp3_file}" ]]; then
         info "✓ ${filename}.mp3 creado"
         
         # Carátula
@@ -77,8 +78,11 @@ for m4a_file in "${m4a_files[@]}"; do
             rm -f "${temp_cover}"
             info "  Carátula agregada"
         fi
+        else
+            warn "✗ Archivo MP3 creado pero está vacío: ${filename}"
+        fi
     else
-        warn "✗ Falló: ${filename}"
+        warn "✗ Falló la conversión: ${filename}"
     fi
     echo
 done

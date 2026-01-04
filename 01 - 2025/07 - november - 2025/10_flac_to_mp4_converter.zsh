@@ -1,6 +1,8 @@
 #!/bin/zsh
+set -euo pipefail
 
 # Script para convertir FLAC a MP4 con metadatos e imagen - Versión Verbosa
+# Requiere: ffmpeg instalado
 
 # Colores para output
 RED='\033[0;31m'
@@ -64,6 +66,13 @@ log_verbose() {
     esac
 }
 
+# Verificar dependencias
+if ! command -v ffmpeg &> /dev/null; then
+    echo "${RED}Error: ffmpeg no está instalado${NC}" >&2
+    echo "Instálalo con: brew install ffmpeg" >&2
+    exit 1
+fi
+
 # Mostrar banner
 show_banner
 
@@ -71,7 +80,12 @@ show_banner
 echo "${YELLOW}┌────────────────────────────────────────────────────┐${NC}"
 echo "${YELLOW}│${NC} Pega la ruta de la carpeta con archivos FLAC:  ${YELLOW}│${NC}"
 echo "${YELLOW}└────────────────────────────────────────────────────┘${NC}"
-read -r FOLDER_PATH
+read -r FOLDER_PATH || exit 1
+
+# Limpiar la ruta (puede venir con comillas desde Finder)
+FOLDER_PATH="${(Q)FOLDER_PATH}"
+FOLDER_PATH="${FOLDER_PATH#"${FOLDER_PATH%%[![:space:]]*}"}"
+FOLDER_PATH="${FOLDER_PATH%"${FOLDER_PATH##*[![:space:]]}"}"
 
 # NO escaper la ruta - zsh la lee correctamente entre comillas
 log_verbose "INFO" "Validando ruta: $FOLDER_PATH"

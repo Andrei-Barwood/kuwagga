@@ -1,7 +1,24 @@
 #!/bin/zsh
+set -euo pipefail
+
+# Script para limpiar archivos duplicados en el directorio Preboot
+# ADVERTENCIA: Requiere permisos de administrador y puede afectar el sistema
 
 PREBOOT_DIR="/System/Volumes/Preboot"
 LOGFILE="$HOME/Desktop/limpieza_cryptex_$(date +%Y%m%d_%H%M%S).log"
+
+# Verificar permisos de administrador
+if [[ $EUID -ne 0 ]]; then
+  echo "Error: Este script requiere permisos de administrador." >&2
+  echo "Ejecuta con: sudo $0" >&2
+  exit 1
+fi
+
+# Verificar que el directorio existe
+if [[ ! -d "$PREBOOT_DIR" ]]; then
+  echo "Error: El directorio Preboot no existe: $PREBOOT_DIR" >&2
+  exit 1
+fi
 
 echo "🧼 Iniciando limpieza de duplicados en $PREBOOT_DIR" | tee "$LOGFILE"
 
