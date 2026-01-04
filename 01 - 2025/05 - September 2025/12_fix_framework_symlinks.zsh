@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 set -euo pipefail
 
 # Must be run from inside FLINT.framework directory

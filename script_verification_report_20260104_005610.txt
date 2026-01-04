@@ -1,0 +1,159 @@
+═══════════════════════════════════════════════════════════════
+Script Verification Report
+Generated: Sun Jan  4 00:56:17 -03 2026
+Repository: /Users/kirtantegsingh/Public/tools/kuwagga
+═══════════════════════════════════════════════════════════════
+
+SUMMARY
+───────────────────────────────────────────────────────────────
+Scripts verificados:    88
+Passed:                 37
+Warnings:               51
+Failed:                 0
+
+PASSED SCRIPTS
+───────────────────────────────────────────────────────────────
+✓ 01 - 2025/01 - Junio - 2025/29 de junio - 2025/01_uninstall_cleanmymac.zsh (6/6)
+✓ 01 - 2025/01 - Junio - 2025/29 de junio - 2025/02_liberar_snapshot.zsh (6/6)
+✓ 01 - 2025/01 - Junio - 2025/30 de Junio - 2025/01_registro_espacio_libre.zsh (6/6)
+✓ 01 - 2025/01 - Junio - 2025/30 de Junio - 2025/02_rastreador_cambios_disco.zsh (6/6)
+✓ 01 - 2025/01 - Junio - 2025/30 de Junio - 2025/03_vigia_escritura_fisica.zsh (6/6)
+✓ 01 - 2025/01 - Junio - 2025/30 de Junio - 2025/04_informe_volumenes.zsh (6/6)
+✓ 01 - 2025/01 - Junio - 2025/30 de Junio - 2025/05_bloqueo_indexado_volumenes.zsh (6/6)
+✓ 01 - 2025/02 - Julio - 2025/01 - 6 de Julio/01_desinstalador_de_apps.zsh (6/6)
+✓ 01 - 2025/02 - Julio - 2025/01 - 6 de Julio/02_eliminar_duplicados.zsh (6/6)
+✓ 01 - 2025/02 - Julio - 2025/03 - 12 de Julio/01_eliminar_duplicados_en_discos_externos.py (6/6)
+✓ 01 - 2025/02 - Julio - 2025/05 - 21 de Julio/01 - Directory Finder.zsh (6/6)
+✓ 01 - 2025/02 - Julio - 2025/06 - 22 de Julio/01_file_and_dirs_finder.zsh (6/6)
+✓ 01 - 2025/04 - August - 2025/03 - undo git commit.zsh (6/6)
+✓ 01 - 2025/04 - August - 2025/04 - stop icloud automatic downloads.zsh (6/6)
+✓ 01 - 2025/05 - September 2025/02_build_flint_w_dep_http2_framing.zsh (6/6)
+✓ 01 - 2025/05 - September 2025/03_build_flint_w_dep_http2_framing_mac_os_only.zsh (6/6)
+✓ 01 - 2025/05 - September 2025/07_build_flint_w_dep_http2_framing_apple_silicon_only.zsh (6/6)
+✓ 01 - 2025/05 - September 2025/08_build_flint_w_dep_http2_framing_apple_silicon_only.zsh (6/6)
+✓ 01 - 2025/05 - September 2025/09_build_flint_w_dep_http2_framing_apple_silicon_only.zsh (6/6)
+✓ 01 - 2025/05 - September 2025/10_build_flint_w_dep_http2_framing_apple_silicon_only.zsh (6/6)
+✓ 01 - 2025/05 - September 2025/11_build_flint_w_dep_http2_framing_apple_silicon_only.zsh (6/6)
+✓ 01 - 2025/05 - September 2025/12_fix_framework_symlinks.zsh (6/6)
+✓ 01 - 2025/06 - October - 2025/m4a_to_mp4.zsh (6/6)
+✓ 01 - 2025/06 - October - 2025/wav_to_m4a.zsh (6/6)
+✓ 01 - 2025/08 - december - 2025/02_tags_template_generator.zsh (6/6)
+✓ 01 - 2025/08 - december - 2025/05_uninstall_bassmaster_loopmasters.zsh (6/6)
+✓ 01 - 2025/08 - december - 2025/06_m4a_to_mp4.zsh (6/6)
+✓ 01 - 2025/08 - december - 2025/07_disk_guard.zsh (6/6)
+✓ 01 - 2025/08 - december - 2025/09_stop_the_bleeding.sh (6/6)
+✓ 01 - 2025/08 - december - 2025/11_hunter.zsh (6/6)
+✓ 01 - 2025/08 - december - 2025/12_wiki_to_pdf.zsh (6/6)
+✓ 01 - 2025/08 - december - 2025/install_tank_theme.zsh (6/6)
+✓ 01 - 2025/08 - december - 2025/test_tank_colors.zsh (6/6)
+✓ 02 - 2026/01 - enero/01 - reduce git repo size/clean-git-history.sh (6/6)
+✓ 02 - 2026/01 - enero/02 - md_to_pdf_converter/md_to_pdf.py (6/6)
+✓ aemaeth/01_trig_func.py (6/6)
+✓ verify_scripts.zsh (6/6)
+
+WARNINGS
+───────────────────────────────────────────────────────────────
+⚠  01 - 2025/01 - Junio - 2025/19 de junio - 2025/01_disk_guard.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/01 - Junio - 2025/19 de junio - 2025/02_disk_guard_plus.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/01 - Junio - 2025/19 de junio - 2025/03_disk_guard_daemon.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/01 - Junio - 2025/19 de junio - 2025/04_auditor_disco_macos.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/01 - Junio - 2025/19 de junio - 2025/05_limpiar_cryptex.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/01 - Junio - 2025/19 de junio - 2025/06_revisar_purgeable_finder.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/01 - Junio - 2025/19 de junio - 2025/07_bloquear_tethering_riesgoso.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/01 - Junio - 2025/20 de Junio - 2025/03_disk_guardian_reforzado_clean.sh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/02 - Julio - 2025/02 - 11 de Julio/01_eliminar_duplicados.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/04 - August - 2025/01 - put back from trash.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/04 - August - 2025/02 - restore preview.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/05 - September 2025/01_build_flint_w_dep.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/05 - September 2025/04_build_flint_w_dep_http2_framing_apple_silicon_only.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/05 - September 2025/05_build_flint_w_dep_http2_framing_apple_silicon_only.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/05 - September 2025/06_build_flint_w_dep_http2_framing_apple_silicon_only.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/05 - September 2025/memory_pressure_monitor_advanced_notification_features.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/05 - September 2025/memory_pressure_monitor_notification_center.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/05 - September 2025/memory_pressure_monitor_with_cron.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/05 - September 2025/memory_pressure_monitor.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/05 - September 2025/memory_pressure_simulator.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/01 - HTML to PDF/html_to_pdf_converter.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/01 - HTML to PDF/setup_project.sh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/01 - HTML to PDF/setup_weasyprint_mac_intel_silicon.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/01_data_recovery.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/02_data_recovery_installer.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/03_renombrar_imagenes.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/04_tabla_pt100.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/05_teoria_de_conjuntos.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/06_el_complemento_de_un_conjunto.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/07_union_de_conjuntos.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/08_interseccion_de_conjuntos.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/09_disyuncion_diferencia_y_diferencia_simetrica.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/10_flac_to_mp4_converter.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/11_add_img_to_mp3.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/12_m4a_to_mp3.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/13_install_sequoia.sh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/14_upgrade_legacy_macs.sh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/15_from_lion_to_el_capitan.sh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/16_from_el_capitan_to_high_sierra.sh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/18_observar_cambios_en_commits.sh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/07 - november - 2025/setup_project.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/08 - december - 2025/01_m4a_mp3_flac_tags.zsh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/08 - december - 2025/08_disk_scanner.sh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/08 - december - 2025/10_remove_macOS_installer_leftovers.sh
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/08 - december - 2025/13_translate_pdf/translate_pdf_cli.py
+   Issues: No es ejecutable (chmod +x)
+⚠  01 - 2025/08 - december - 2025/13_translate_pdf/translate_pdf.py
+   Issues: No es ejecutable (chmod +x)
+⚠  02 - 2026/01 - enero/02 - md_to_pdf_converter/md_to_pdf_auto.py
+   Issues: No es ejecutable (chmod +x)
+⚠  02 - 2026/01 - enero/02 - md_to_pdf_converter/md_to_pdf_pandoc.py
+   Issues: No es ejecutable (chmod +x) Dependencias faltantes: pypandoc
+⚠  02 - 2026/01 - enero/02 - md_to_pdf_converter/md_to_pdf_reportlab.py
+   Issues: No es ejecutable (chmod +x) Dependencias faltantes: reportlab reportlab reportlab reportlab reportlab
+⚠  02 - 2026/01 - enero/02 - md_to_pdf_converter/md_to_pdf_simple.py
+   Issues: No es ejecutable (chmod +x) Dependencias faltantes: md2pdf
+⚠  02 - 2026/01 - enero/02 - md_to_pdf_converter/md_to_pdf_weasyprint.py
+   Issues: No es ejecutable (chmod +x) Dependencias faltantes: weasyprint
+
+═══════════════════════════════════════════════════════════════

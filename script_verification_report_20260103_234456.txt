@@ -1,0 +1,27 @@
+═══════════════════════════════════════════════════════════════
+Script Verification Report
+Generated: Sat Jan  3 23:44:57 -03 2026
+Repository: /Users/kirtantegsingh/Public/tools/kuwagga
+═══════════════════════════════════════════════════════════════
+
+SUMMARY
+───────────────────────────────────────────────────────────────
+Total Scripts:     3
+Passed:           0
+Warnings:         0
+Failed:           3
+Skipped:          704
+
+FAILED SCRIPTS
+───────────────────────────────────────────────────────────────
+✗ aemaeth/01_trig_func.py
+   Critical: Error de sintaxis
+   Warnings: No es ejecutable (chmod +x)
+✗ patches/03/icloud_no_delay_reference.zsh
+   Critical: Falta shebang apropiado Error de sintaxis
+   Warnings: Falta 'set -euo pipefail' No es ejecutable (chmod +x)
+✗ verify_scripts.zsh
+   Critical: Error de sintaxis
+   Warnings: Dependencias faltantes: ]+) $cmd
+
+═══════════════════════════════════════════════════════════════

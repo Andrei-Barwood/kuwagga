@@ -97,7 +97,9 @@ create_template() {
   local dir="$1" template="$dir/tags.txt"
   typeset -a files=( "$dir"/*.{mp3,m4a,flac}(N) )
   files=("${(@on)files}")  # sort
-  if (( ${#files[@]} == 0 )); return; fi
+  if (( ${#files[@]} == 0 )); then
+    return
+  fi
   {
     echo "# Plantilla manual para: ${dir:t}"
     echo "# Edita: titulo|artista|album|genero|año"
