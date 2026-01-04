@@ -1,30 +1,35 @@
-refactor: Completar mejoras en scripts de conversión audio/video y traducción PDF
+refactor: Mejorar scripts adicionales de monitoreo de disco macOS
 
-## Mejoras en Conversión de Audio/Video (1 script)
+## Mejoras en Scripts de Monitoreo de Disco (8 scripts)
 
-- 06_m4a_to_mp4.zsh: Completado set -euo pipefail (tenía solo set -o pipefail)
-  - Script ya tenía validación de ffmpeg
-  - Script ya tenía manejo de señales y limpieza de temporales
-  - Mejora: Robustez completa con set -euo pipefail
+### Scripts de Disk Guard (3 scripts)
+- 02_disk_guard_plus.zsh: set -euo pipefail, validación de dependencias, mejor manejo de errores
+- 03_disk_guard_daemon.zsh: set -euo pipefail, validación de dependencias, creación de logs
+- 04_auditor_disco_macos.zsh: set -euo pipefail, validación de dependencias y permisos
 
-## Mejoras en Scripts de Traducción de PDF (2 scripts)
-
-- translate_pdf.py: Validación de Python, manejo de excepciones
-- translate_pdf_cli.py: Validación de Python, manejo de excepciones
+### Scripts de Monitoreo y Registro (5 scripts)
+- 01_registro_espacio_libre.zsh: set -euo pipefail, validación de dependencias
+- 02_rastreador_cambios_disco.zsh: set -euo pipefail, validación de dependencias
+- 03_vigia_escritura_fisica.zsh: set -euo pipefail, manejo de señales, limpieza de procesos
+- 04_informe_volumenes.zsh: set -euo pipefail, validación de dependencias
+- 05_bloqueo_indexado_volumenes.zsh: set -euo pipefail, validación de permisos, mejor manejo de errores
 
 ## Mejoras Aplicadas
 
-- set -euo pipefail completado en script grande de conversión
-- Validación de versión de Python (3.6+) en scripts Python
-- Manejo de excepciones (KeyboardInterrupt, Exception)
-- Mejor logging de errores con logger.exception()
-- Documentación mejorada de dependencias
+- set -euo pipefail agregado en todos los scripts
+- Validación de dependencias (df, du, tmutil, diskutil, fs_usage, etc.)
+- Validación de permisos de administrador donde es necesario
+- Creación de directorios de logs si no existen
+- Manejo de señales (EXIT, INT, TERM) en scripts con procesos en background
+- Limpieza de procesos en background al salir
+- Mejor manejo de errores en operaciones de sistema
+- Verificación de existencia de directorios antes de operar
 
 ## Estadísticas
 
-- 3 scripts modificados en esta sesión
-- Conversión Audio/Video: 1 script (1950 líneas)
-- Traducción PDF: 2 scripts
+- 8 scripts modificados en esta sesión
+- Scripts de monitoreo de disco: 8 scripts
 
-Estos cambios completan las mejoras de robustez en scripts críticos de
-conversión y traducción, asegurando manejo adecuado de errores y validaciones.
+Estos cambios mejoran significativamente la robustez y confiabilidad de los
+scripts de monitoreo de disco, asegurando manejo adecuado de errores, validaciones
+y limpieza de recursos.

@@ -1,7 +1,25 @@
 #!/bin/zsh
+set -euo pipefail
 
-LOGFILE="$HOME/Desktop/auditoria_disco_$(date +%Y%m%d_%H%M%S).log"
+# Auditor de Disco macOS - Análisis completo del uso de espacio
+# Requiere permisos de administrador para algunas operaciones
+
+LOGFILE="${HOME}/Desktop/auditoria_disco_$(date +%Y%m%d_%H%M%S).log"
 DISCO="/"
+
+# Verificar dependencias
+for cmd in df du tmutil diskutil fs_usage find awk sort grep; do
+  if ! command -v "$cmd" &> /dev/null; then
+    echo "Error: $cmd no está disponible." >&2
+    exit 1
+  fi
+done
+
+# Verificar permisos de administrador para operaciones que lo requieren
+if [[ $EUID -ne 0 ]]; then
+  echo "Advertencia: Algunas operaciones requieren permisos de administrador." >&2
+  echo "El script solicitará sudo cuando sea necesario." >&2
+fi
 
 echo "📋 Iniciando auditoría de disco: $DISCO" | tee -a "$LOGFILE"
 echo "🕒 Fecha: $(date)" | tee -a "$LOGFILE"

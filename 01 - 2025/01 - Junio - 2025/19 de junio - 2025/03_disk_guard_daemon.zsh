@@ -1,10 +1,23 @@
 #!/bin/zsh
+set -euo pipefail
 
+# Disk Guard Daemon - Monitoreo de disco en segundo plano
 # Configuración
 THRESHOLD_BYTES=$((87 * 1024 * 1024 * 1024))  # 87 GiB
 INTERVAL=60  # Intervalo de chequeo (segundos)
-LOGFILE="$HOME/Library/Logs/disk_guard.log"
-PIDFILE="$HOME/.disk_guard.pid"
+LOGFILE="${HOME}/Library/Logs/disk_guard.log"
+PIDFILE="${HOME}/.disk_guard.pid"
+
+# Verificar dependencias
+for cmd in df osascript launchctl killall qlmanage; do
+  if ! command -v "$cmd" &> /dev/null; then
+    echo "Error: $cmd no está disponible." >&2
+    exit 1
+  fi
+done
+
+# Crear directorio de logs si no existe
+mkdir -p "$(dirname "$LOGFILE")" 2>/dev/null || true
 
 # Evita ejecución duplicada
 if [[ -f "$PIDFILE" ]]; then
@@ -36,13 +49,17 @@ stop_icloud() {
 clean_caches() {
   log "🧹 Limpieza de cachés iniciada"
 
-  rm -rf ~/Library/Caches/com.apple.Safari/* 2>/dev/null
-  rm -rf ~/Library/Safari/History.db 2>/dev/null
-  rm -rf ~/Library/Developer/Xcode/DerivedData/* 2>/dev/null
-  rm -rf ~/Library/Developer/Xcode/Archives/* 2>/dev/null
-  rm -rf ~/Library/Caches/* 2>/dev/null
-  qlmanage -r cache &>/dev/null
-  sudo purge
+  [[ -d ~/Library/Caches/com.apple.Safari ]] && rm -rf ~/Library/Caches/com.apple.Safari/* 2>/dev/null || true
+  [[ -f ~/Library/Safari/History.db ]] && rm -rf ~/Library/Safari/History.db 2>/dev/null || true
+  [[ -d ~/Library/Developer/Xcode/DerivedData ]] && rm -rf ~/Library/Developer/Xcode/DerivedData/* 2>/dev/null || true
+  [[ -d ~/Library/Developer/Xcode/Archives ]] && rm -rf ~/Library/Developer/Xcode/Archives/* 2>/dev/null || true
+  [[ -d ~/Library/Caches ]] && rm -rf ~/Library/Caches/* 2>/dev/null || true
+  qlmanage -r cache &>/dev/null || true
+  
+  # Flush inactive memory (requiere sudo)
+  if command -v sudo &> /dev/null; then
+    sudo purge 2>/dev/null || true
+  fi
 }
 
 check_disk_usage() {

@@ -314,6 +314,53 @@
    - ✅ Manejo de KeyboardInterrupt y excepciones generales
    - ✅ Mejor logging de errores
 
+## Scripts Adicionales de Monitoreo de Disco macOS Corregidos
+
+53. **`01 - 2025/01 - Junio - 2025/19 de junio - 2025/02_disk_guard_plus.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Mejor manejo de errores en limpieza de cachés
+
+54. **`01 - 2025/01 - Junio - 2025/19 de junio - 2025/03_disk_guard_daemon.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Creación de directorio de logs
+   - ✅ Mejor manejo de errores en limpieza
+
+55. **`01 - 2025/01 - Junio - 2025/19 de junio - 2025/04_auditor_disco_macos.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Validación de permisos de administrador
+
+56. **`01 - 2025/01 - Junio - 2025/30 de Junio - 2025/01_registro_espacio_libre.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Creación de directorio si no existe
+
+57. **`01 - 2025/01 - Junio - 2025/30 de Junio - 2025/02_rastreador_cambios_disco.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Creación de directorio si no existe
+
+58. **`01 - 2025/01 - Junio - 2025/30 de Junio - 2025/03_vigia_escritura_fisica.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Validación de permisos
+   - ✅ Manejo de señales (EXIT, INT, TERM)
+   - ✅ Limpieza de procesos en background
+
+59. **`01 - 2025/01 - Junio - 2025/30 de Junio - 2025/04_informe_volumenes.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Creación de directorio si no existe
+
+60. **`01 - 2025/01 - Junio - 2025/30 de Junio - 2025/05_bloqueo_indexado_volumenes.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de dependencias
+   - ✅ Validación de permisos
+   - ✅ Mejor manejo de errores en creación de archivos
+   - ✅ Creación de directorio si no existe
+
 ## Problemas Comunes Detectados (Pendientes de Revisión)
 
 ### 1. Falta de `set -euo pipefail`

@@ -1,7 +1,19 @@
 #!/bin/zsh
+set -euo pipefail
 
+# Registro de Espacio Libre - Registra el espacio disponible diariamente
 # Archivo log (en carpeta Pública)
-LOGFILE="$HOME/Public/espacio_disco_$(date +%Y%m%d).log"
+
+LOGFILE="${HOME}/Public/espacio_disco_$(date +%Y%m%d).log"
+
+# Verificar dependencias
+if ! command -v df &> /dev/null; then
+  echo "Error: df no está disponible." >&2
+  exit 1
+fi
+
+# Crear directorio si no existe
+mkdir -p "$(dirname "$LOGFILE")" 2>/dev/null || true
 
 # Obtener espacio disponible actual
 timestamp=$(date "+%Y-%m-%d %H:%M:%S")

@@ -1,7 +1,22 @@
 #!/bin/zsh
+set -euo pipefail
+
+# Informe de Volúmenes - Genera informe detallado de volúmenes y uso de espacio
+# Requiere permisos de administrador para algunas operaciones
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-LOGFILE="$HOME/Public/informe_volumenes_$TIMESTAMP.log"
+LOGFILE="${HOME}/Public/informe_volumenes_${TIMESTAMP}.log"
+
+# Verificar dependencias
+for cmd in diskutil df du date sort; do
+  if ! command -v "$cmd" &> /dev/null; then
+    echo "Error: $cmd no está disponible." >&2
+    exit 1
+  fi
+done
+
+# Crear directorio si no existe
+mkdir -p "$(dirname "$LOGFILE")" 2>/dev/null || true
 
 echo "📦 Informe de volúmenes y uso de espacio – $TIMESTAMP" | tee "$LOGFILE"
 echo "======================================================" >> "$LOGFILE"
