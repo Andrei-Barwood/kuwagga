@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
-# Snocomm - 2025
-# instalador y orquestador de dependencias + automatizaciones.
+"""
+Instalador y orquestador de dependencias para backups móviles
+Requiere: Python 3.6+, permisos de administrador para instalar paquetes
+Autor: Snocomm - 2025
+"""
+
+import sys
+
+# Verificar versión de Python
+if sys.version_info < (3, 6):
+    print("Error: Se requiere Python 3.6 o superior.", file=sys.stderr)
+    sys.exit(1)
 
 import subprocess
 import shutil
@@ -12,7 +22,14 @@ import argparse
 from datetime import datetime
 
 def run(cmd, check=False, capture=False, shell=False):
-    return subprocess.run(cmd, check=check, text=True, capture_output=capture, shell=shell)
+    """Ejecuta un comando y retorna el resultado."""
+    try:
+        return subprocess.run(cmd, check=check, text=True, capture_output=capture, shell=shell)
+    except (OSError, ValueError) as e:
+        print(f"Error ejecutando comando: {e}", file=sys.stderr)
+        if check:
+            raise
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr=str(e))
 
 def which(cmd):
     return shutil.which(cmd) is not None
@@ -216,4 +233,11 @@ def main():
     sys.exit(0 if ok else 1)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nOperación cancelada por el usuario.", file=sys.stderr)
+        sys.exit(130)
+    except Exception as e:
+        print(f"Error inesperado: {e}", file=sys.stderr)
+        sys.exit(1)

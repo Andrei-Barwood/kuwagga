@@ -3,7 +3,7 @@
 # FLINT macOS Framework Builder with Static Dependencies
 # Builds FLINT 3.3.1 with GMP 6.3.0 and MPFR 4.2.2 statically linked for macOS only
 
-set -e
+set -euo pipefail
 
 # Configuration - Latest versions as of September 2025
 FLINT_VERSION="3.3.1"

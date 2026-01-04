@@ -257,6 +257,41 @@
    - ✅ Validación de dependencias (matplotlib, matplotlib-venn)
    - ✅ Manejo de ImportError
 
+## Scripts de Build Corregidos
+
+44. **`01 - 2025/05 - September 2025/01_build_flint_w_dep.zsh`**
+   - ✅ Agregado `set -uo pipefail` (completando set -euo pipefail)
+   - ✅ Función de verificación de dependencias (curl, tar, xcrun)
+   - ✅ Validación de Xcode Command Line Tools
+   - ✅ Mejor manejo de errores en creación de directorios
+
+45. **`01 - 2025/05 - September 2025/02_build_flint_w_dep_http2_framing.zsh`**
+   - ✅ Agregado `set -uo pipefail` (completando set -euo pipefail)
+
+46. **`01 - 2025/05 - September 2025/03-11_build_flint_w_dep_http2_framing_*.zsh` (9 scripts)**
+   - ✅ Agregado `set -uo pipefail` (completando set -euo pipefail) en todos
+
+47. **`01 - 2025/05 - September 2025/12_fix_framework_symlinks.zsh`**
+   - ✅ Agregado `set -euo pipefail`
+   - ✅ Validación de directorio de framework
+   - ✅ Verificación de creación de symlinks
+   - ✅ Mejor manejo de errores
+
+## Scripts de Recuperación de Datos Corregidos
+
+48. **`01 - 2025/07 - november - 2025/01_data_recovery.py`**
+   - ✅ Agregada documentación y shebang mejorado
+   - ✅ Validación de versión de Python (3.6+)
+   - ✅ Manejo de excepciones en función run()
+   - ✅ Manejo de KeyboardInterrupt y excepciones generales
+   - ✅ Mejor retorno de códigos de salida
+
+49. **`01 - 2025/07 - november - 2025/02_data_recovery_installer.py`**
+   - ✅ Agregada documentación y shebang mejorado
+   - ✅ Validación de versión de Python (3.6+)
+   - ✅ Manejo de excepciones en función run()
+   - ✅ Manejo de KeyboardInterrupt y excepciones generales
+
 ## Problemas Comunes Detectados (Pendientes de Revisión)
 
 ### 1. Falta de `set -euo pipefail`

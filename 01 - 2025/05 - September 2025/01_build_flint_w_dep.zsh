@@ -1,9 +1,9 @@
 #!/bin/zsh
+set -euo pipefail
 
 # FLINT Universal Framework Builder with Static Dependencies
 # Builds FLINT 3.3.1 with GMP 6.3.0 and MPFR 4.2.2 statically linked for iOS and macOS
-
-set -e
+# Requires: Xcode Command Line Tools, curl, tar, xcrun
 
 # Configuration - Latest versions as of September 2025
 FLINT_VERSION="3.3.1"
@@ -49,12 +49,35 @@ warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
+# Verify dependencies
+verify_dependencies() {
+    log "Verifying dependencies..."
+    local missing_deps=()
+    
+    for cmd in curl tar xcrun; do
+        if ! command -v "$cmd" &> /dev/null; then
+            missing_deps+=("$cmd")
+        fi
+    done
+    
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        error "Missing required dependencies: ${missing_deps[*]}"
+    fi
+    
+    # Verify Xcode tools
+    if ! xcrun --find clang &> /dev/null; then
+        error "Xcode Command Line Tools not found. Install with: xcode-select --install"
+    fi
+}
+
 # Clean and setup directories
 setup_directories() {
     log "Setting up build directories..."
     rm -rf "$BUILD_DIR"
-    mkdir -p "$BUILD_DIR" "$INSTALL_DIR" "$FRAMEWORK_DIR"
-    cd "$BUILD_DIR"
+    if ! mkdir -p "$BUILD_DIR" "$INSTALL_DIR" "$FRAMEWORK_DIR"; then
+        error "Failed to create build directories"
+    fi
+    cd "$BUILD_DIR" || error "Failed to change to build directory"
 }
 
 # Download and extract sources

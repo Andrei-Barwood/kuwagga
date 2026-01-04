@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
-# Snocomm - 2025
-# Propósito: Backup y recuperación rápida para Android (ADB) e iPhone (idevicebackup2) en Windows, con 7-Zip.
+"""
+Script de backup y recuperación para Android (ADB) e iPhone (idevicebackup2)
+Requiere: adb (Android), idevicebackup2/idevice_id (iOS), 7z (opcional)
+Autor: Snocomm - 2025
+"""
+
+import sys
+
+# Verificar versión de Python
+if sys.version_info < (3, 6):
+    print("Error: Se requiere Python 3.6 o superior.", file=sys.stderr)
+    sys.exit(1)
 
 import argparse
 import os
@@ -14,9 +24,14 @@ def check_cmd(name):
     return shutil.which(name) is not None
 
 def run(cmd, cwd=None, capture=False):
-    return subprocess.run(cmd, cwd=cwd, check=False, text=True,
-                          stdout=(subprocess.PIPE if capture else None),
-                          stderr=(subprocess.PIPE if capture else None))
+    """Ejecuta un comando y retorna el resultado."""
+    try:
+        return subprocess.run(cmd, cwd=cwd, check=False, text=True,
+                              stdout=(subprocess.PIPE if capture else None),
+                              stderr=(subprocess.PIPE if capture else None))
+    except (OSError, ValueError) as e:
+        print(f"Error ejecutando comando: {e}", file=sys.stderr)
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr=str(e))
 
 def ensure_dir(p: Path):
     p.mkdir(parents=True, exist_ok=True)
@@ -135,6 +150,15 @@ def main():
             sevenzip_encrypt(session_dir, args.zip_pass)
     else:
         print("No se generó ningún backup (verifica conexión, drivers y permisos).")
+        return 1
+    return 0
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        print("\nOperación cancelada por el usuario.", file=sys.stderr)
+        sys.exit(130)
+    except Exception as e:
+        print(f"Error inesperado: {e}", file=sys.stderr)
+        sys.exit(1)

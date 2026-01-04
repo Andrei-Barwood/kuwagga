@@ -1,9 +1,9 @@
 #!/bin/zsh
+set -euo pipefail
 
 # FLINT Universal Framework Builder with Static Dependencies
 # Builds FLINT 3.3.1 with GMP 6.3.0 and MPFR 4.2.2 statically linked for iOS and macOS
-
-set -e
+# Requires: Xcode Command Line Tools, curl, tar, xcrun
 
 # Configuration - Latest versions as of September 2025
 FLINT_VERSION="3.3.1"
