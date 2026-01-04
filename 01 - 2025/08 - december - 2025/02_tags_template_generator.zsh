@@ -9,8 +9,16 @@ if [[ ! -f "$CSV_FILE" ]]; then
 fi
 
 echo "Pega ruta de discografía:"
-read -r root_dir
-root_dir="${root_dir#\'}"; root_dir="${root_dir%\'}"; root_dir="${root_dir#\"}"; root_dir="${root_dir%\"}"; root_dir="${root_dir%/}"
+read -r root_dir || {
+  echo "❌ Entrada cancelada por el usuario." >&2
+  exit 1
+}
+
+# Limpiar la ruta (puede venir con comillas desde Finder)
+root_dir="${(Q)root_dir}"
+root_dir="${root_dir#"${root_dir%%[![:space:]]*}"}"
+root_dir="${root_dir%"${root_dir##*[![:space:]]}"}"
+root_dir="${root_dir%/}"
 
 
 #--------------------
@@ -40,12 +48,26 @@ echo "Subdirs encontrados: ${#subdirs[@]}"
 
 # Opción bulk?
 echo -n "¿Bulk para todos? (s/n): "
-read bulk_ans
+read bulk_ans || {
+  echo "❌ Entrada cancelada por el usuario." >&2
+  exit 1
+}
+
 if [[ "$bulk_ans" != [sSyY]* ]]; then
   echo "Elige [1-${#subdirs[@]}]:"
   for i ({1..${#subdirs[@]}} ) { echo "[$i] ${subdirs[i]:t}" }
-  read choice
-  (( choice >=1 && choice <= ${#subdirs[@]} )) || exit 1
+  read choice || {
+    echo "❌ Entrada cancelada por el usuario." >&2
+    exit 1
+  }
+  if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
+    echo "❌ Opción no válida." >&2
+    exit 1
+  fi
+  (( choice >=1 && choice <= ${#subdirs[@]} )) || {
+    echo "❌ Número fuera de rango." >&2
+    exit 1
+  }
   generate_tags "${subdirs[choice]}" "$CSV_FILE"
   exit
 fi
@@ -106,12 +128,20 @@ generate_tags() {
   fi
 
   # No match: log + sugerencias + manual template
-  echo "$album - Sin match exacto en CSV." >> "$log_file"
+  if [[ -f "$log_file" ]] || touch "$log_file" 2>/dev/null; then
+    echo "$album - Sin match exacto en CSV." >> "$log_file"
+  fi
   echo "  Sugerencias similares (grep en Release Name):"
-  awk -F, 'NR>1 {print $3}' "$csv" | grep -i -m5 "$album" | sort -u | while read sug; do
-    echo "    → '$sug'"
-  done
+  if awk -F, 'NR>1 {print $3}' "$csv" 2>/dev/null | grep -i -m5 "$album" 2>/dev/null | sort -u | while IFS= read -r sug || [[ -n "$sug" ]]; do
+    [[ -n "$sug" ]] && echo "    → '$sug'"
+  done; then
+    : # Sugerencias mostradas
+  else
+    echo "    (No se encontraron sugerencias similares)"
+  fi
   create_template "$dir"
-  echo "$album >> log mismatches.log" >> "$log_file"  # Dup to log
+  if [[ -f "$log_file" ]] || touch "$log_file" 2>/dev/null; then
+    echo "$album >> log mismatches.log" >> "$log_file"  # Dup to log
+  fi
 }
 

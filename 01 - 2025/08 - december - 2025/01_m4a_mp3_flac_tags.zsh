@@ -81,37 +81,48 @@ tag_file() {
   case "$ext" in
     mp3)
       # Limpia imágenes anteriores y aplica nueva portada + tags
-      if [[ -n "$cover" ]]; then
+      if [[ -n "$cover" && -f "$cover" ]]; then
         eyeD3 --remove-all-images "$file" >/dev/null 2>&1 || true
-        eyeD3 --add-image "${cover}:FRONT_COVER" "$file" >/dev/null
+        if ! eyeD3 --add-image "${cover}:FRONT_COVER" "$file" >/dev/null 2>&1; then
+          echo "    ⚠️  No se pudo agregar la portada" >&2
+        fi
       fi
-      eyeD3 \
+      if ! eyeD3 \
         --title "$title" \
         --artist "$artist" \
         --album "$album" \
         --genre "$genre" \
         ${year:+--year "$year"} \
-        "$file" >/dev/null
+        "$file" >/dev/null 2>&1; then
+        echo "    ⚠️  Error al aplicar tags" >&2
+        return 1
+      fi
       ;;
     m4a)
       # AtomicParsley reescribe el archivo con --overWrite
-      if [[ -n "$cover" ]]; then
-        AtomicParsley "$file" \
+      if [[ -n "$cover" && -f "$cover" ]]; then
+        if ! AtomicParsley "$file" \
           --title "$title" \
           --artist "$artist" \
           --album "$album" \
           --genre "$genre" \
           ${year:+--year "$year"} \
           --artwork "$cover" \
-          --overWrite >/dev/null
+          --overWrite >/dev/null 2>&1; then
+          echo "    ⚠️  Error al aplicar tags con portada" >&2
+          return 1
+        fi
       else
-        AtomicParsley "$file" \
+        if ! AtomicParsley "$file" \
           --title "$title" \
           --artist "$artist" \
           --album "$album" \
           --genre "$genre" \
           ${year:+--year "$year"} \
-          --overWrite >/dev/null
+          --overWrite >/dev/null 2>&1; then
+          echo "    ⚠️  Error al aplicar tags" >&2
+          return 1
+        fi
       fi
       ;;
     flac)
@@ -133,9 +144,9 @@ tag_file() {
         ${year:+--set-tag="DATE=$year"} \
         "$file"
 
-      if [[ -n "$cover" ]]; then
+      if [[ -n "$cover" && -f "$cover" ]]; then
         # Opcional: eliminar imágenes previas
-        metaflac --remove --block-type=PICTURE "$file" || true
+        metaflac --remove --block-type=PICTURE "$file" 2>/dev/null || true
 
         local mime="image/jpeg"
         case "${cover:e:l}" in
@@ -143,9 +154,11 @@ tag_file() {
           jpg|jpeg) mime="image/jpeg" ;;
         esac
 
-        metaflac \
+        if ! metaflac \
           --import-picture-from="|$mime|||$cover" \
-          "$file"
+          "$file" 2>/dev/null; then
+          echo "    ⚠️  Error al importar portada" >&2
+        fi
       fi
       ;;
     *)
@@ -230,13 +243,15 @@ process_album_dir() {
 # --- Entrada principal ---
 
 echo "Pega la ruta desde Finder (directorio raíz de tu discografía o un álbum específico):"
-read -r root_dir
+read -r root_dir || {
+  echo "❌ Entrada cancelada por el usuario." >&2
+  exit 1
+}
 
-# Quitar comillas simples, dobles y barra final (secuencial)
-root_dir="${root_dir#\'}"
-root_dir="${root_dir%\'}"
-root_dir="${root_dir#\"}"
-root_dir="${root_dir%\"}"
+# Limpiar la ruta (puede venir con comillas desde Finder)
+root_dir="${(Q)root_dir}"
+root_dir="${root_dir#"${root_dir%%[![:space:]]*}"}"
+root_dir="${root_dir%"${root_dir##*[![:space:]]}"}"
 root_dir="${root_dir%/}"
 
 if [[ ! -d "$root_dir" ]]; then
@@ -262,7 +277,10 @@ echo "Se encontraron ${#subdirs[@]} subdirectorios (posibles álbumes) en:"
 echo "  $root_dir"
 
 echo -n "¿Quieres actualizar los tags en BULK mode para TODOS los subdirectorios? (s/n): "
-read -r bulk_answer
+read -r bulk_answer || {
+  echo "❌ Entrada cancelada por el usuario." >&2
+  exit 1
+}
 
 if [[ "$bulk_answer" == [sS] ]]; then
   for d in "${subdirs[@]}"; do
@@ -279,15 +297,18 @@ for d in "${subdirs[@]}"; do
 done
 
 echo -n "Elige el número de un subdirectorio para procesar solo ese álbum: "
-read -r choice
+read -r choice || {
+  echo "❌ Entrada cancelada por el usuario." >&2
+  exit 1
+}
 
 if ! [[ "$choice" == <-> ]]; then
-  echo "❌ Opción no válida."
+  echo "❌ Opción no válida." >&2
   exit 1
 fi
 
 if (( choice < 1 || choice > ${#subdirs[@]} )); then
-  echo "❌ Número fuera de rango."
+  echo "❌ Número fuera de rango." >&2
   exit 1
 fi
 

@@ -386,6 +386,38 @@
    - ✅ Verificación de existencia de archivo de sonido
    - ✅ Mejor manejo de procesos hijos
 
+## Scripts de Tags de Audio Corregidos
+
+64. **`01 - 2025/08 - december - 2025/01_m4a_mp3_flac_tags.zsh`**
+   - ✅ Ya tenía `set -euo pipefail`
+   - ✅ Mejor manejo de entrada del usuario (EOF, validación)
+   - ✅ Limpieza mejorada de rutas desde Finder usando (Q)
+   - ✅ Verificación de existencia de archivos de portada
+   - ✅ Mejor manejo de errores en eyeD3, AtomicParsley, metaflac
+   - ✅ Validación de rangos de selección
+
+65. **`01 - 2025/08 - december - 2025/02_tags_template_generator.zsh`**
+   - ✅ Ya tenía `set -euo pipefail`
+   - ✅ Mejor manejo de entrada del usuario (EOF, validación)
+   - ✅ Limpieza mejorada de rutas desde Finder usando (Q)
+   - ✅ Validación de entrada numérica
+   - ✅ Mejor manejo de errores en creación de logs
+   - ✅ Manejo mejorado de pipes y while loops
+
+## Scripts de Git Adicionales Verificados
+
+66. **`01 - 2025/04 - August - 2025/03 - undo git commit.zsh`**
+   - ✅ Ya tiene `set -euo pipefail`
+   - ✅ Script bien estructurado con validaciones
+
+67. **`01 - 2025/04 - August - 2025/04 - stop icloud automatic downloads.zsh`**
+   - ✅ Ya tiene `set -euo pipefail`
+   - ✅ Script bien estructurado con manejo de señales
+
+68. **`01 - 2025/07 - november - 2025/18_observar_cambios_en_commits.sh`**
+   - ✅ Ya tiene `set -euo pipefail`
+   - ✅ Script bien estructurado
+
 ## Problemas Comunes Detectados (Pendientes de Revisión)
 
 ### 1. Falta de `set -euo pipefail`

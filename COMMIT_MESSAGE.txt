@@ -1,37 +1,43 @@
-refactor: Mejorar scripts de conversión audio/video y configuración pendientes
+refactor: Mejorar scripts de tags de audio y verificar scripts de Git
 
-## Mejoras en Conversión de Audio/Video (1 script)
+## Mejoras en Scripts de Tags de Audio (2 scripts)
 
-- m4a_to_mp4.zsh: set -euo pipefail, mejor validación de ranger, verificación de archivos
-  - Validación mejorada de selección de directorio con ranger
-  - Verificación de existencia de archivos antes de convertir
-  - Mejor manejo de errores en ffmpeg y ffprobe
-  - Verificación de archivos creados (no vacíos)
-  - Mejor manejo de errores en conversiones
+- 01_m4a_mp3_flac_tags.zsh: Mejor manejo de entrada, validaciones, manejo de errores
+  - Manejo de EOF/KeyboardInterrupt en entrada del usuario
+  - Limpieza mejorada de rutas desde Finder usando (Q)
+  - Verificación de existencia de archivos de portada
+  - Mejor manejo de errores en eyeD3, AtomicParsley, metaflac
+  - Validación de rangos de selección
 
-## Mejoras en Scripts de Configuración/Instalación (2 scripts)
+- 02_tags_template_generator.zsh: Mejor manejo de entrada, validaciones
+  - Manejo de EOF/KeyboardInterrupt en entrada del usuario
+  - Limpieza mejorada de rutas desde Finder usando (Q)
+  - Validación de entrada numérica
+  - Mejor manejo de errores en creación de logs
+  - Manejo mejorado de pipes y while loops
 
-- setup_weasyprint_mac_intel_silicon.zsh: Completado set -euo pipefail, mejor manejo de errores
-- 03_disk_guardian_reforzado_clean.sh: set -euo pipefail, validaciones, mejor limpieza de procesos
+## Scripts de Git Verificados (3 scripts)
+
+- 03 - undo git commit.zsh: Ya tiene set -euo pipefail, bien estructurado
+- 04 - stop icloud automatic downloads.zsh: Ya tiene set -euo pipefail, bien estructurado
+- 18_observar_cambios_en_commits.sh: Ya tiene set -euo pipefail, bien estructurado
 
 ## Mejoras Aplicadas
 
-- set -euo pipefail agregado/completado en todos los scripts
-- Validación de dependencias (ffmpeg, ranger, brew, etc.)
-- Validación de permisos de administrador donde es necesario
-- Mejor validación de selección de directorios
+- Manejo de EOF/KeyboardInterrupt en todas las lecturas de usuario
+- Limpieza mejorada de rutas desde Finder usando (Q) de zsh
+- Validación de entrada numérica y rangos
 - Verificación de existencia de archivos antes de operar
-- Mejor manejo de errores en conversiones (ffmpeg, ffprobe)
-- Verificación de archivos creados (no vacíos)
-- Manejo mejorado de señales (SIGINT, SIGTERM, EXIT)
-- Limpieza mejorada de procesos en background
-- Verificación de existencia de archivos de recursos (sonidos, imágenes)
+- Mejor manejo de errores en herramientas de tags (eyeD3, AtomicParsley, metaflac)
+- Manejo mejorado de pipes y while loops con IFS y verificación de EOF
+- Validación de creación de archivos de log
 
 ## Estadísticas
 
-- 3 scripts modificados en esta sesión
-- Conversión Audio/Video: 1 script
-- Configuración/Instalación: 2 scripts
+- 2 scripts modificados en esta sesión
+- 3 scripts verificados (ya estaban bien)
+- Tags de Audio: 2 scripts mejorados
 
-Estos cambios completan las mejoras en scripts críticos de conversión y
-configuración, asegurando robustez y manejo adecuado de errores.
+Estos cambios mejoran la robustez de los scripts de tags de audio,
+asegurando manejo adecuado de entrada del usuario y errores en operaciones
+de etiquetado.
