@@ -13,10 +13,16 @@ Uso:
 
 Autor: Generado automáticamente
 Fecha: Diciembre 2025
+Requiere: pdfplumber, reportlab, deep-translator
 """
 
 import os
 import sys
+
+# Verificar versión de Python
+if sys.version_info < (3, 6):
+    print("Error: Se requiere Python 3.6 o superior.", file=sys.stderr)
+    sys.exit(1)
 import argparse
 import logging
 import time
@@ -523,7 +529,15 @@ Idiomas soportados:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nOperación cancelada por el usuario.", file=sys.stderr)
+        sys.exit(130)
+    except Exception as e:
+        logger.exception("Error inesperado en la aplicación")
+        print(f"Error inesperado: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 

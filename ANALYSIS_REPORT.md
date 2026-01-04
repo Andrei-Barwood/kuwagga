@@ -292,6 +292,28 @@
    - ✅ Manejo de excepciones en función run()
    - ✅ Manejo de KeyboardInterrupt y excepciones generales
 
+## Scripts de Conversión de Audio/Video Corregidos (Continuación)
+
+50. **`01 - 2025/08 - december - 2025/06_m4a_to_mp4.zsh`**
+   - ✅ Completado `set -euo pipefail` (tenía solo `set -o pipefail`)
+   - ✅ Ya tiene validación de ffmpeg
+   - ✅ Ya tiene manejo de señales (SIGINT, SIGTERM)
+   - ✅ Ya tiene limpieza de archivos temporales
+
+## Scripts de Traducción de PDF Corregidos
+
+51. **`01 - 2025/08 - december - 2025/13_translate_pdf/translate_pdf.py`**
+   - ✅ Agregada validación de versión de Python (3.6+)
+   - ✅ Agregada documentación de dependencias
+   - ✅ Manejo de KeyboardInterrupt y excepciones generales
+   - ✅ Mejor logging de errores
+
+52. **`01 - 2025/08 - december - 2025/13_translate_pdf/translate_pdf_cli.py`**
+   - ✅ Agregada validación de versión de Python (3.6+)
+   - ✅ Agregada documentación de dependencias
+   - ✅ Manejo de KeyboardInterrupt y excepciones generales
+   - ✅ Mejor logging de errores
+
 ## Problemas Comunes Detectados (Pendientes de Revisión)
 
 ### 1. Falta de `set -euo pipefail`

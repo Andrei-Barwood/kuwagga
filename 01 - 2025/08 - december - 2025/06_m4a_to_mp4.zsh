@@ -20,7 +20,7 @@
 #   - ranger (opcional, para selección visual de carpeta)
 # ============================================================================
 
-set -o pipefail
+set -euo pipefail
 
 # ============================================================================
 # COLORES Y FORMATO (Paleta: Forest Green) - Con detección de terminal
