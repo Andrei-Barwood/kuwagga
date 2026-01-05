@@ -19,6 +19,7 @@ import tempfile
 import json
 import re
 import atexit
+from datetime import datetime
 
 # ============================================================================
 # CONFIGURACIÓN Y CONSTANTES
@@ -762,20 +763,20 @@ def convert_to_flac(audio_file: Path, output_dir: Path, sample_rate: int = FLAC_
         return False
 
 
-def convert_to_432hz(input_file: Path, output_file: Path) -> bool:
+def convert_to_432hz(input_file: Path, output_file: Path, output_sample_rate: int = 96000) -> bool:
     if not input_file.exists():
         print_error(f"El archivo no existe: {input_file}")
         return False
     info = get_audio_info(input_file)
-    sample_rate = info.get('sample_rate')
+    input_sample_rate = info.get('sample_rate')
     bit_depth = info.get('bit_depth', 24)
-    if not sample_rate:
+    if not input_sample_rate:
         print_error("No se pudo detectar el sample rate del archivo")
         return False
-    sample_rate = int(sample_rate)
+    input_sample_rate = int(input_sample_rate)
     sample_fmt = "s16" if bit_depth == 16 else "s32"
     print(f"    {Colors.MEDIUM_GREEN}🎵 Conversión a frecuencia universal 432Hz{Colors.NC}")
-    print(f"    {Colors.DARK_FOREST}Sample Rate: {sample_rate}Hz | Bit Depth: {bit_depth}-bit{Colors.NC}")
+    print(f"    {Colors.DARK_FOREST}Input: {input_sample_rate}Hz/{bit_depth}-bit → Output: {output_sample_rate}Hz/{bit_depth}-bit{Colors.NC}")
     print(f"    {Colors.DARK_FOREST}Procesando: 440Hz → 432Hz (manteniendo duración){Colors.NC}")
     stop_event = threading.Event()
     messages = ["Ajustando frecuencia...", "Aplicando pitch shift...", "Re-muestreando audio...", "Casi listo..."]
@@ -784,9 +785,9 @@ def convert_to_432hz(input_file: Path, output_file: Path) -> bool:
     try:
         cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
                '-i', str(input_file),
-               '-af', f'asetrate={sample_rate}*432/440,aresample={sample_rate},atempo=440/432',
+               '-af', f'asetrate={input_sample_rate}*432/440,aresample={output_sample_rate},atempo=440/432',
                '-c:a', 'flac', '-sample_fmt', sample_fmt,
-               '-compression_level', str(FLAC_COMPRESSION), '-ar', str(sample_rate),
+               '-compression_level', str(FLAC_COMPRESSION), '-ar', str(output_sample_rate),
                '-y', str(output_file)]
         result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         stop_event.set()
@@ -796,7 +797,7 @@ def convert_to_432hz(input_file: Path, output_file: Path) -> bool:
             orig_size = get_file_size(input_file)
             new_size = get_file_size(output_file)
             print_success(f"Conversión a 432Hz completada: {output_file.name}")
-            print(f"    {Colors.DARK_FOREST}Tamaño: {orig_size} → {new_size}{Colors.NC}")
+            print(f"    {Colors.DARK_FOREST}Tamaño: {orig_size} → {new_size} | {output_sample_rate}Hz/{bit_depth}-bit{Colors.NC}")
             return True
         else:
             if result.stderr:
@@ -1193,6 +1194,128 @@ def process_audio_to_flac(source_dir: Path, output_dirname: str = "flac_hires",
     return success_count > 0
 
 
+def select_sample_rate_for_432hz() -> Optional[int]:
+    """
+    Permite al usuario seleccionar el sample rate de salida para la conversión a 432Hz.
+    Retorna el sample rate seleccionado o None si se cancela.
+    """
+    print_header("Selecciona Resolución de Audio (Sample Rate)")
+    print()
+    print(f"    {Colors.LIME}🎚️  Resolución de salida para conversión a 432Hz{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}El sample rate determina la calidad y el tamaño del archivo final.{Colors.NC}")
+    print()
+    
+    sample_rates = {
+        "1": {"rate": 44100, "name": "44.1kHz (CD Quality)", "description": "Calidad de CD estándar. Archivos más pequeños, compatible universalmente."},
+        "2": {"rate": 48000, "name": "48kHz (Professional)", "description": "Estándar profesional para producción. Balance calidad/tamaño."},
+        "3": {"rate": 96000, "name": "96kHz (Hi-Res)", "description": "Alta resolución. Buena calidad, archivos más grandes."},
+        "4": {"rate": 192000, "name": "192kHz (Ultra Hi-Res) - Recomendado ⭐", "description": "Ultra alta resolución. Máxima calidad posible, archivos muy grandes. Ideal para música devocional."},
+    }
+    
+    # Mostrar opciones
+    for key, sr_info in sample_rates.items():
+        rec_mark = " ⭐" if "Recomendado" in sr_info["name"] else ""
+        print(f"  {Colors.LIME}{key}){Colors.NC} {sr_info['name']}{rec_mark}")
+        print(f"      {Colors.MEDIUM_GREEN}{sr_info['description']}{Colors.NC}")
+        print()
+    
+    # Solicitar selección
+    while True:
+        try:
+            choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona resolución (1-4) o Enter para 192kHz (recomendado): {Colors.NC}").strip()
+            
+            # Si es Enter (vacío), retornar 192kHz por defecto
+            if not choice:
+                print()
+                print_success(f"Resolución seleccionada: 192kHz (Ultra Hi-Res) - Recomendado")
+                print()
+                return 192000
+            
+            if choice in sample_rates:
+                selected = sample_rates[choice]
+                print()
+                print_success(f"Resolución seleccionada: {selected['name']}")
+                print()
+                return selected["rate"]
+            else:
+                print_error(f"Opción inválida. Selecciona un número del 1 al 4, o presiona Enter para 192kHz.")
+        except (EOFError, KeyboardInterrupt):
+            return None
+
+
+def select_audio_files_for_432hz(audio_files: List[Path]) -> Optional[List[Path]]:
+    """
+    Permite al usuario seleccionar archivos individuales o procesar todos.
+    Retorna:
+    - Lista de Paths de archivos seleccionados
+    - None si se cancela (Ctrl+C)
+    """
+    print_header("Selecciona Archivos para Conversión a 432Hz")
+    print()
+    print(f"    {Colors.LIME}🕉️  Conversión a frecuencia universal 432Hz{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}Convierte audio de 440Hz a 432Hz manteniendo la duración original.{Colors.NC}")
+    print()
+    print(f"    {Colors.LIME}📋 Selecciona archivos de la lista:{Colors.NC}")
+    print()
+    print(f"    {Colors.YELLOW_GREEN}💡 Puedes seleccionar múltiples archivos separados por comas (ej: 1,3,5){Colors.NC}")
+    print(f"    {Colors.YELLOW_GREEN}💡 O presiona Enter para convertir todos los archivos{Colors.NC}")
+    print()
+    
+    # Mostrar lista numerada de archivos
+    for i, audio_file in enumerate(audio_files, 1):
+        duration = get_audio_duration(audio_file)
+        duration_str = format_duration(duration) if duration else "N/A"
+        size_str = get_file_size(audio_file)
+        print(f"  {Colors.LIME}{i}){Colors.NC} {Colors.LIGHT_GREEN}{audio_file.name}{Colors.NC}")
+        print(f"      {Colors.MEDIUM_GREEN}Duración:{Colors.NC} {duration_str} | {Colors.MEDIUM_GREEN}Tamaño:{Colors.NC} {size_str}")
+    
+    print()
+    
+    # Solicitar selección
+    while True:
+        try:
+            choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona archivo(s) (1-{len(audio_files)}, separados por comas) o Enter para todos: {Colors.NC}").strip()
+            
+            # Si es Enter (vacío), retornar todos los archivos
+            if not choice:
+                print()
+                print_success(f"Procesando todos los archivos ({len(audio_files)})")
+                print()
+                return audio_files
+            
+            # Procesar selección múltiple
+            try:
+                selected_indices = []
+                parts = choice.split(',')
+                for part in parts:
+                    part = part.strip()
+                    if not part:
+                        continue
+                    index = int(part) - 1
+                    if 0 <= index < len(audio_files):
+                        if index not in selected_indices:
+                            selected_indices.append(index)
+                    else:
+                        print_error(f"Número inválido: {part}. Debe estar entre 1 y {len(audio_files)}.")
+                        break
+                else:
+                    # Si no hubo errores, retornar archivos seleccionados
+                    if selected_indices:
+                        selected_files = [audio_files[i] for i in sorted(selected_indices)]
+                        print()
+                        print_success(f"Archivos seleccionados: {len(selected_files)}")
+                        for f in selected_files:
+                            print(f"    {Colors.LIGHT_GREEN}• {f.name}{Colors.NC}")
+                        print()
+                        return selected_files
+                    else:
+                        print_error("No se seleccionaron archivos válidos.")
+            except ValueError:
+                print_error(f"Por favor ingresa números del 1 al {len(audio_files)}, separados por comas, o presiona Enter para todos.")
+        except (EOFError, KeyboardInterrupt):
+            return None
+
+
 def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
     output_dir = source_dir / output_dirname
     output_dir.mkdir(exist_ok=True)
@@ -1202,6 +1325,7 @@ def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
     if not audio_files:
         print_error("No se encontraron archivos de audio para convertir a 432Hz")
         return False
+    
     print_header("Conversión a frecuencia 432Hz - Música Devocional")
     print()
     print(f"    {Colors.LIME}╔════════════════════════════════════════════════════════════╗{Colors.NC}")
@@ -1209,26 +1333,132 @@ def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
     print(f"    {Colors.LIME}╚════════════════════════════════════════════════════════════╝{Colors.NC}")
     print()
     print_info(f"Archivos encontrados: {len(audio_files)}")
-    for f in audio_files:
-        dur = get_audio_duration(f)
-        dur_fmt = format_duration(dur) if dur else "00:00"
-        print(f"    {Colors.LIME}📄{Colors.NC} {Colors.LIGHT_GREEN}{f.name}{Colors.NC} {Colors.MEDIUM_GREEN}({dur_fmt}){Colors.NC}")
     print()
-    if not confirm(f"¿Convertir {len(audio_files)} archivos a 432Hz?"):
+    
+    # Permitir al usuario seleccionar archivos
+    selected_files = select_audio_files_for_432hz(audio_files)
+    if selected_files is None:
         print_warning("Conversión cancelada.")
         return False
+    
+    if not selected_files:
+        print_error("No se seleccionaron archivos para convertir.")
+        return False
+    
+    print()
+    
+    # Permitir al usuario seleccionar sample rate
+    output_sample_rate = select_sample_rate_for_432hz()
+    if output_sample_rate is None:
+        print_warning("Conversión cancelada.")
+        return False
+    
+    # Formatear sample rate para mostrar
+    sr_display = "96kHz" if output_sample_rate == 96000 else ("48kHz" if output_sample_rate == 48000 else ("44.1kHz" if output_sample_rate == 44100 else f"{output_sample_rate}Hz"))
+    
+    print()
+    if not confirm(f"¿Convertir {len(selected_files)} archivo(s) a 432Hz con resolución {sr_display}?"):
+        print_warning("Conversión cancelada.")
+        return False
+    
+    print()
+    print_header("Iniciando conversión a 432Hz")
+    print(f"    {Colors.LIME}Resolución de salida:{Colors.NC} {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}💡 Presiona Ctrl+C en cualquier momento para cancelar{Colors.NC}")
+    print()
+    
     success_count = 0
     fail_count = 0
-    for i, audio_file in enumerate(audio_files, 1):
+    skip_count = 0
+    existing_files = []
+    
+    # Verificar archivos existentes antes de procesar
+    for audio_file in selected_files:
+        output_file = output_dir / f"{audio_file.stem}_432Hz.flac"
+        if output_file.exists():
+            existing_files.append((audio_file, output_file))
+    
+    # Si hay archivos existentes, preguntar al usuario
+    if existing_files:
+        print()
+        print_warning(f"⚠️  Se encontraron {len(existing_files)} archivo(s) que ya existen en el directorio de salida:")
+        for audio_file, output_file in existing_files:
+            existing_size = get_file_size(output_file)
+            print(f"    {Colors.YELLOW_GREEN}• {output_file.name}{Colors.NC} ({existing_size}) - de {audio_file.name}")
+        print()
+        print(f"    {Colors.LIME}Opciones:{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}1) Sobrescribir archivos existentes{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}2) Saltar archivos existentes (mantener los actuales){Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}3) Agregar sufijo único a archivos nuevos (evitar sobrescritura){Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}4) Cancelar{Colors.NC}")
+        print()
+        
+        overwrite_mode = None
+        while overwrite_mode is None:
+            try:
+                choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona opción (1-4): {Colors.NC}").strip()
+                if choice == "1":
+                    overwrite_mode = "overwrite"
+                    print()
+                    print_warning("⚠️  Los archivos existentes serán SOBRESCRITOS")
+                    if not confirm("¿Continuar con sobrescritura?"):
+                        print_warning("Conversión cancelada.")
+                        return False
+                elif choice == "2":
+                    overwrite_mode = "skip"
+                    print()
+                    print_info(f"Se saltarán {len(existing_files)} archivo(s) existente(s)")
+                elif choice == "3":
+                    overwrite_mode = "unique"
+                    print()
+                    print_info("Se agregará un sufijo único a los archivos nuevos para evitar sobrescritura")
+                elif choice == "4":
+                    print_warning("Conversión cancelada.")
+                    return False
+                else:
+                    print_error("Opción inválida. Selecciona 1, 2, 3 o 4.")
+            except (EOFError, KeyboardInterrupt):
+                print_warning("Conversión cancelada.")
+                return False
+    else:
+        overwrite_mode = "overwrite"  # Por defecto, sobrescribir si no hay conflictos
+    
+    print()
+    
+    for i, audio_file in enumerate(selected_files, 1):
         if INTERRUPTED:
             print_warning("Conversión interrumpida por el usuario")
             break
-        print(f"\n{Colors.BOLD}[{i}/{len(audio_files)}]{Colors.NC} {audio_file.name}")
+        
         output_file = output_dir / f"{audio_file.stem}_432Hz.flac"
-        if convert_to_432hz(audio_file, output_file):
+        
+        # Verificar si el archivo ya existe y manejar según el modo seleccionado
+        if output_file.exists() and overwrite_mode == "skip":
+            skip_count += 1
+            existing_size = get_file_size(output_file)
+            print(f"\n    {Colors.YELLOW_GREEN}⊘{Colors.NC} {audio_file.name} → Saltado (ya existe: {existing_size})")
+            continue
+        elif output_file.exists() and overwrite_mode == "unique":
+            # Agregar sufijo único basado en timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}.flac"
+            # Si aún existe (muy improbable), agregar un número incremental
+            counter = 1
+            while output_file.exists():
+                output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}.flac"
+                counter += 1
+        
+        animated_progress_bar(i, len(selected_files), f"Convirtiendo: {audio_file.name[:25]}")
+        
+        if convert_to_432hz(audio_file, output_file, output_sample_rate):
             success_count += 1
+            orig_size = get_file_size(audio_file)
+            out_size = get_file_size(output_file)
+            print(f"\n    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
         else:
             fail_count += 1
+            print(f"\n    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+    
     print()
     print_header("Conversión a 432Hz Completada")
     print()
@@ -1237,6 +1467,8 @@ def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
     print(f"    {Colors.LIGHT_GREEN}╚════════════════════════════════════════════════════════╝{Colors.NC}")
     print()
     print(f"    {Colors.LIGHT_GREEN}Exitosos:{Colors.NC} {Colors.LIME}{success_count}{Colors.NC}")
+    if skip_count > 0:
+        print(f"    {Colors.YELLOW_GREEN}Saltados:{Colors.NC} {Colors.LIME}{skip_count}{Colors.NC}")
     if fail_count > 0:
         print(f"    {Colors.DARK_GREEN}Fallidos:{Colors.NC} {Colors.YELLOW_GREEN}{fail_count}{Colors.NC}")
     print(f"    {Colors.LIME}Frecuencia:{Colors.NC} {Colors.LIGHT_GREEN}432Hz (frecuencia sanadora){Colors.NC}")
