@@ -53,10 +53,17 @@ function print_header() {
 # Encuentra los datos asociados a una aplicación
 function find_associated_data() {
     local app_path="$1"
+    
+    # Verificar que el archivo existe
+    if [[ ! -e "$app_path" ]]; then
+        return 1
+    fi
+    
     local app_name=$(basename "$app_path" .app)
     
-    local bundle_id
-    bundle_id=$(mdls -name kMDItemCFBundleIdentifier -r "$app_path" 2>/dev/null)
+    local bundle_id=""
+    # Intentar obtener el bundle ID, pero no fallar si no se puede
+    bundle_id=$(mdls -name kMDItemCFBundleIdentifier -r "$app_path" 2>/dev/null || echo "")
 
     local search_paths=(
         "$HOME/Library/Application Support"
@@ -73,16 +80,19 @@ function find_associated_data() {
     local found_files=()
     local search_terms=("$app_name")
     
-    if [[ -n "$bundle_id" && "$bundle_id" != "(null)" ]]; then
+    if [[ -n "$bundle_id" && "$bundle_id" != "(null)" && "$bundle_id" != "" ]]; then
         search_terms+=("$bundle_id")
     fi
     
     for path in "${search_paths[@]}"; do
         if [[ -d "$path" ]]; then
             for term in "${search_terms[@]}"; do
-                while IFS= read -r line; do
-                    found_files+=("$line")
-                done < <(find "$path" -ipath "*${term}*" -maxdepth 2 2>/dev/null)
+                # Usar process substitution de forma segura
+                while IFS= read -r line || [ -n "$line" ]; do
+                    if [[ -n "$line" ]]; then
+                        found_files+=("$line")
+                    fi
+                done < <(find "$path" -ipath "*${term}*" -maxdepth 2 2>/dev/null || true)
             done
         fi
     done
@@ -103,8 +113,21 @@ function calculate_size() {
         return
     fi
     
+    # Filtrar solo archivos/directorios que existen
+    local existing_files=()
+    for file in "$@"; do
+        if [[ -e "$file" ]]; then
+            existing_files+=("$file")
+        fi
+    done
+    
+    if [ ${#existing_files[@]} -eq 0 ]; then
+        echo "0B"
+        return
+    fi
+    
     # Pasa los argumentos entre comillas a 'du' para manejar espacios.
-    total_size=$(du -shc "$@" 2>/dev/null | grep 'total$' | awk '{print $1}')
+    total_size=$(du -shc "${existing_files[@]}" 2>/dev/null | grep 'total$' | awk '{print $1}' || echo "0B")
     
     echo "${total_size:-0B}"
 }
@@ -140,26 +163,41 @@ main() {
 
     for app in "${all_apps[@]}"; do
         progress=$((progress + 1))
-        printf "\r${C_GREEN}Escaneando: [%-50s] %d/%d${C_RESET}" $(printf '#%.0s' $(seq 1 $((progress * 50 / total)))) $progress $total
+        # Mejor cálculo de la barra de progreso
+        local filled=$((progress * 50 / total))
+        local bar=$(printf '#%.0s' {1..$filled})
+        local empty=$(printf ' %.0s' {1..$((50 - filled))})
+        printf "\r${C_GREEN}Escaneando: [%s%s] %d/%d${C_RESET}" "$bar" "$empty" $progress $total
 
         local app_name=$(basename "$app" .app)
         
-        if [[ -n "${app_paths[$app_name]}" ]]; then
+        # CORRECCIÓN: Verifica si la clave existe sin causar error con set -u
+        if (( ${+app_paths[$app_name]} )); then
             continue
         fi
 
-        app_paths[$app_name]="$app"
-        
-        # CORRECCIÓN: Lee rutas separadas por nueva línea en un array.
-        local data_files=("${(@f)$(find_associated_data "$app")}")
-        
-        # CORRECCIÓN: Almacena el array como una cadena separada por nueva línea.
-        IFS=$'\n'
-        app_data_files[$app_name]="${data_files[*]}"
-        
-        # CORRECCIÓN: Pasa los argumentos entre comillas para manejar espacios.
-        local data_size=$(calculate_size "$app" "${data_files[@]}")
-        app_data_sizes[$app_name]=$data_size
+        # Manejo de errores: si algo falla con esta app, continuar con la siguiente
+        {
+            app_paths[$app_name]="$app"
+            
+            # CORRECCIÓN: Lee rutas separadas por nueva línea en un array.
+            local data_files=("${(@f)$(find_associated_data "$app" 2>/dev/null || echo "")}")
+            
+            # CORRECCIÓN: Almacena el array como una cadena separada por nueva línea.
+            local old_ifs=$IFS
+            IFS=$'\n'
+            app_data_files[$app_name]="${data_files[*]}"
+            IFS=$old_ifs
+            
+            # CORRECCIÓN: Pasa los argumentos entre comillas para manejar espacios.
+            local data_size=$(calculate_size "$app" "${data_files[@]}" 2>/dev/null || echo "0B")
+            app_data_sizes[$app_name]=$data_size
+        } || {
+            # Si hay un error, asignar valores por defecto y continuar
+            app_paths[$app_name]="$app"
+            app_data_files[$app_name]=""
+            app_data_sizes[$app_name]="0B"
+        }
     done
     
     printf "\n\n${C_GREEN}¡Escaneo completado!${C_RESET}\n\n"
@@ -201,36 +239,51 @@ main() {
     fi
 
     if [[ -z "$selections" ]]; then
-        echo "\nOperación cancelada. No se ha eliminado nada."
+        echo
+        echo "Operación cancelada. No se ha eliminado nada."
         exit 0
     fi
 
-    echo "\n${C_BOLD}Has seleccionado desinstalar:${C_RESET}"
+    echo
+    echo "${C_BOLD}Has seleccionado desinstalar:${C_RESET}"
     echo "$selections"
-    echo "\n${C_RED}${C_BOLD}¡ADVERTENCIA! ESTA ACCIÓN ES IRREVERSIBLE.${C_RESET}"
+    echo
+    echo "${C_RED}${C_BOLD}¡ADVERTENCIA! ESTA ACCIÓN ES IRREVERSIBLE.${C_RESET}"
     
     read "choice?¿Estás absolutamente seguro de que quieres continuar? (s/n): "
     echo
 
     if [[ "$choice" != "s" && "$choice" != "S" ]]; then
-        echo "\nDesinstalación cancelada por el usuario."
+        echo
+        echo "Desinstalación cancelada por el usuario."
         exit 0
     fi
 
-    echo "\nIniciando desinstalación..."
+    echo
+    echo "Iniciando desinstalación..."
     
     local selected_apps=(${(f)selections})
 
     for item in "${selected_apps[@]}"; do
         local app_name_to_delete=$(echo "$item" | sed 's/^([^)]*) - //')
         
-        echo "\n${C_PRIMARY}--- Desinstalando: $app_name_to_delete ---${C_RESET}"
+        echo
+        echo "${C_PRIMARY}--- Desinstalando: $app_name_to_delete ---${C_RESET}"
+
+        # Verificar que la app existe en el array antes de acceder
+        if ! (( ${+app_paths[$app_name_to_delete]} )); then
+            echo "${C_YELLOW}Advertencia: No se encontró información para '$app_name_to_delete'. Saltando...${C_RESET}"
+            continue
+        fi
 
         local app_file_path="${app_paths[$app_name_to_delete]}"
         
         # CORRECCIÓN: Recrea el array a partir de la cadena separada por nueva línea.
-        local data_files_to_delete=("${(@f)app_data_files[$app_name_to_delete]}")
-        
+        local data_files_to_delete=()
+        if (( ${+app_data_files[$app_name_to_delete]} )); then
+            data_files_to_delete=("${(@f)app_data_files[$app_name_to_delete]}")
+        fi
+
         local all_files_to_delete=("$app_file_path" "${data_files_to_delete[@]}")
 
         for file_path in "${all_files_to_delete[@]}"; do
@@ -248,7 +301,8 @@ main() {
         echo "${C_GREEN}¡'$app_name_to_delete' desinstalado con éxito!${C_RESET}"
     done
 
-    echo "\n${C_BOLD}Proceso de desinstalación finalizado.${C_RESET}"
+    echo
+    echo "${C_BOLD}Proceso de desinstalación finalizado.${C_RESET}"
 }
 
 main
