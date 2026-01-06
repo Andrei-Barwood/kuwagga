@@ -281,6 +281,101 @@ def format_time_estimate(minutes: float) -> str:
         return f"{hours}h {mins}m"
 
 
+def estimate_audio_output_size(duration_seconds: float, sample_rate: int, bit_depth: int,
+                               channels: int = 2, output_format: str = 'flac',
+                               compression_level: int = 8, codec: str = None) -> float:
+    """
+    Estima el tamaño del archivo de audio de salida en MB
+    
+    Args:
+        duration_seconds: Duración del audio en segundos
+        sample_rate: Sample rate de salida (Hz)
+        bit_depth: Bit depth de salida (16 o 24)
+        channels: Número de canales (default: 2 para estéreo)
+        output_format: 'wav', 'flac', o 'wav_compressed'
+        compression_level: Nivel de compresión (0-12 para FLAC, varía para WAV comprimido)
+        codec: Codec para WAV comprimido (ej: 'adpcm_ms', 'gsm_ms')
+    
+    Returns:
+        Tamaño estimado en MB
+    """
+    # Calcular tamaño base WAV sin comprimir (PCM)
+    bytes_per_sample = bit_depth // 8
+    wav_size_bytes = duration_seconds * sample_rate * bytes_per_sample * channels
+    wav_size_mb = wav_size_bytes / (1024 * 1024)
+    
+    if output_format == 'wav':
+        # WAV sin comprimir: tamaño completo
+        return wav_size_mb
+    elif output_format == 'wav_compressed':
+        # WAV comprimido: aplicar ratio según codec
+        compression_ratios = {
+            'adpcm_ms': 0.25,      # ~25% del tamaño PCM
+            'adpcm_ima_wav': 0.25,  # ~25% del tamaño PCM
+            'gsm_ms': 0.20,         # ~20% del tamaño PCM
+            'pcm_alaw': 0.50,        # ~50% del tamaño PCM
+            'pcm_mulaw': 0.50,       # ~50% del tamaño PCM
+        }
+        ratio = compression_ratios.get(codec, 0.30)  # Default: 30% si codec desconocido
+        return wav_size_mb * ratio
+    elif output_format == 'flac':
+        # FLAC: aplicar ratio según nivel de compresión
+        if compression_level <= 2:
+            ratio = 0.75  # ~70-80% del tamaño WAV
+        elif compression_level <= 5:
+            ratio = 0.65  # ~60-70% del tamaño WAV
+        elif compression_level <= 8:
+            ratio = 0.55  # ~50-60% del tamaño WAV
+        else:  # 9-12
+            ratio = 0.50  # ~45-55% del tamaño WAV
+        return wav_size_mb * ratio
+    else:
+        # Default: retornar tamaño WAV
+        return wav_size_mb
+
+
+def estimate_432hz_conversion_time(duration_seconds: float, output_format: str = 'flac',
+                                   compression_level: int = 8) -> float:
+    """
+    Estima el tiempo de conversión a 432Hz en minutos
+    
+    Args:
+        duration_seconds: Duración del audio en segundos
+        output_format: 'wav', 'flac', o 'wav_compressed'
+        compression_level: Nivel de compresión (afecta tiempo de encoding)
+    
+    Returns:
+        Tiempo estimado en minutos
+    """
+    duration_minutes = duration_seconds / 60.0
+    
+    # Factor base para procesamiento (pitch shift + resampling)
+    base_factor = 0.15  # ~15% de la duración del audio
+    
+    # Ajustar según formato de salida
+    if output_format == 'wav':
+        # WAV sin comprimir: más rápido (solo copia PCM)
+        encoding_factor = 0.05
+    elif output_format == 'wav_compressed':
+        # WAV comprimido: compresión rápida
+        encoding_factor = 0.10
+    elif output_format == 'flac':
+        # FLAC: tiempo depende del nivel de compresión
+        if compression_level <= 2:
+            encoding_factor = 0.10  # Compresión rápida
+        elif compression_level <= 5:
+            encoding_factor = 0.15  # Compresión media
+        elif compression_level <= 8:
+            encoding_factor = 0.20  # Compresión lenta
+        else:  # 9-12
+            encoding_factor = 0.30  # Compresión muy lenta
+    else:
+        encoding_factor = 0.15
+    
+    total_factor = base_factor + encoding_factor
+    return duration_minutes * total_factor
+
+
 def select_audio_file_for_estimation(m4a_files: List[Path]) -> Optional[Path]:
     """
     Permite al usuario seleccionar un archivo de la lista para usar como referencia en las estimaciones.
@@ -422,6 +517,116 @@ def show_batch_estimations(m4a_files: List[Path], resolution_profile: dict) -> N
     total_time_str = format_time_estimate(total_time_min)
     
     print(f"    {Colors.LIME}{'TOTALES':<30} {total_duration_str:<12} {'':<15} {total_size_str:<18} {total_time_str:<15}{Colors.NC}")
+    print()
+
+
+def show_432hz_estimations(audio_files: List[Path], output_format: str, sample_rate: int,
+                           bit_depth: int, compression_level: int = 8, codec: str = None) -> None:
+    """
+    Muestra estimaciones individuales y totales para conversión a 432Hz
+    
+    Args:
+        audio_files: Lista de archivos de audio a convertir
+        output_format: 'wav', 'flac', o 'wav_compressed'
+        sample_rate: Sample rate de salida (Hz)
+        bit_depth: Bit depth de salida (16 o 24)
+        compression_level: Nivel de compresión (0-12)
+        codec: Codec para WAV comprimido (opcional)
+    """
+    print_header("Estimaciones de Conversión a 432Hz")
+    print()
+    
+    # Mostrar configuración seleccionada
+    format_names = {
+        'wav': 'WAV (PCM sin comprimir)',
+        'wav_compressed': f'WAV Comprimido ({codec or "N/A"})',
+        'flac': 'FLAC'
+    }
+    sr_display = "96kHz" if sample_rate == 96000 else ("48kHz" if sample_rate == 48000 else ("44.1kHz" if sample_rate == 44100 else f"{sample_rate}Hz"))
+    
+    print(f"    {Colors.LIME}Formato:{Colors.NC}        {Colors.LIGHT_GREEN}{format_names.get(output_format, output_format)}{Colors.NC}")
+    print(f"    {Colors.LIME}Sample Rate:{Colors.NC}    {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    print(f"    {Colors.LIME}Bit Depth:{Colors.NC}      {Colors.LIGHT_GREEN}{bit_depth}-bit{Colors.NC}")
+    if output_format in ['flac', 'wav_compressed']:
+        print(f"    {Colors.LIME}Compresión:{Colors.NC}     {Colors.LIGHT_GREEN}Nivel {compression_level}{Colors.NC}")
+    print()
+    
+    total_duration_min = 0
+    total_original_size_mb = 0
+    total_estimated_size_mb = 0
+    total_time_min = 0
+    
+    # Calcular estimaciones para cada archivo
+    file_estimations = []
+    for audio_file in audio_files:
+        duration = get_audio_duration(audio_file)
+        if duration:
+            duration_min = duration / 60.0
+            original_size_mb = audio_file.stat().st_size / (1024 * 1024)
+            
+            # Estimar tamaño de salida
+            est_size_mb = estimate_audio_output_size(
+                duration, sample_rate, bit_depth, channels=2,
+                output_format=output_format, compression_level=compression_level,
+                codec=codec
+            )
+            
+            # Estimar tiempo de conversión
+            est_time_min = estimate_432hz_conversion_time(
+                duration, output_format, compression_level
+            )
+            
+            file_estimations.append({
+                'file': audio_file,
+                'duration': duration,
+                'duration_min': duration_min,
+                'original_size_mb': original_size_mb,
+                'estimated_size_mb': est_size_mb,
+                'estimated_time_min': est_time_min
+            })
+            
+            total_duration_min += duration_min
+            total_original_size_mb += original_size_mb
+            total_estimated_size_mb += est_size_mb
+            total_time_min += est_time_min
+    
+    # Mostrar tabla de estimaciones individuales
+    print(f"    {Colors.LIME}{'Archivo':<30} {'Duración':<12} {'Tamaño Orig.':<15} {'Tamaño Est.':<18} {'Tiempo Est.':<15}{Colors.NC}")
+    print(f"    {Colors.DARK_GREEN}{'-' * 90}{Colors.NC}")
+    
+    for est in file_estimations:
+        duration_str = format_duration(est['duration'])
+        original_size_str = get_file_size(est['file'])
+        
+        if est['estimated_size_mb'] < 1024:
+            estimated_size_str = f"{est['estimated_size_mb']:.1f}MB"
+        else:
+            estimated_size_str = f"{est['estimated_size_mb']/1024:.1f}GB"
+        
+        time_str = format_time_estimate(est['estimated_time_min'])
+        
+        file_name = est['file'].name[:28] + ".." if len(est['file'].name) > 30 else est['file'].name
+        print(f"    {Colors.LIGHT_GREEN}{file_name:<30}{Colors.NC} {duration_str:<12} {original_size_str:<15} {estimated_size_str:<18} {time_str:<15}")
+    
+    print()
+    print(f"    {Colors.DARK_GREEN}{'-' * 90}{Colors.NC}")
+    
+    # Mostrar totales
+    total_duration_str = format_time_estimate(total_duration_min)
+    
+    if total_original_size_mb < 1024:
+        total_original_str = f"{total_original_size_mb:.1f}MB"
+    else:
+        total_original_str = f"{total_original_size_mb/1024:.1f}GB"
+    
+    if total_estimated_size_mb < 1024:
+        total_estimated_str = f"{total_estimated_size_mb:.1f}MB"
+    else:
+        total_estimated_str = f"{total_estimated_size_mb/1024:.1f}GB"
+    
+    total_time_str = format_time_estimate(total_time_min)
+    
+    print(f"    {Colors.LIME}{'TOTALES':<30} {total_duration_str:<12} {total_original_str:<15} {total_estimated_str:<18} {total_time_str:<15}{Colors.NC}")
     print()
 
 
@@ -763,7 +968,19 @@ def convert_to_flac(audio_file: Path, output_dir: Path, sample_rate: int = FLAC_
         return False
 
 
-def convert_to_432hz(input_file: Path, output_file: Path, output_sample_rate: int = 96000) -> bool:
+def convert_to_432hz(input_file: Path, output_file: Path, output_sample_rate: int = 96000,
+                     output_format: str = 'flac', compression_level: int = 8, codec: str = None) -> bool:
+    """
+    Convierte audio a frecuencia 432Hz
+    
+    Args:
+        input_file: Archivo de entrada
+        output_file: Archivo de salida (debe tener extensión correcta: .wav o .flac)
+        output_sample_rate: Sample rate de salida (Hz)
+        output_format: 'wav', 'flac', o 'wav_compressed'
+        compression_level: Nivel de compresión (0-12 para FLAC)
+        codec: Codec para WAV comprimido (ej: 'adpcm_ms', 'gsm_ms')
+    """
     if not input_file.exists():
         print_error(f"El archivo no existe: {input_file}")
         return False
@@ -774,25 +991,61 @@ def convert_to_432hz(input_file: Path, output_file: Path, output_sample_rate: in
         print_error("No se pudo detectar el sample rate del archivo")
         return False
     input_sample_rate = int(input_sample_rate)
-    sample_fmt = "s16" if bit_depth == 16 else "s32"
+    
+    # Determinar formato de muestra según bit depth
+    if output_format == 'wav':
+        # WAV sin comprimir: usar PCM
+        if bit_depth == 16:
+            sample_fmt = "s16"
+            audio_codec = "pcm_s16le"
+        else:  # 24-bit
+            sample_fmt = "s32"
+            audio_codec = "pcm_s24le"
+    elif output_format == 'wav_compressed':
+        # WAV comprimido: usar codec especificado
+        audio_codec = codec or "adpcm_ms"
+        sample_fmt = "s16"  # La mayoría de codecs comprimidos usan 16-bit
+    else:  # flac
+        sample_fmt = "s16" if bit_depth == 16 else "s32"
+        audio_codec = "flac"
+    
     print(f"    {Colors.MEDIUM_GREEN}🎵 Conversión a frecuencia universal 432Hz{Colors.NC}")
     print(f"    {Colors.DARK_FOREST}Input: {input_sample_rate}Hz/{bit_depth}-bit → Output: {output_sample_rate}Hz/{bit_depth}-bit{Colors.NC}")
     print(f"    {Colors.DARK_FOREST}Procesando: 440Hz → 432Hz (manteniendo duración){Colors.NC}")
+    print(f"    {Colors.DARK_FOREST}Formato: {output_format.upper()}{Colors.NC}")
+    
     stop_event = threading.Event()
     messages = ["Ajustando frecuencia...", "Aplicando pitch shift...", "Re-muestreando audio...", "Casi listo..."]
     anim_thread = threading.Thread(target=animate_conversion, args=(input_file.name, stop_event, messages), daemon=True)
     anim_thread.start()
+    
     try:
+        # Construir comando base
         cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
                '-i', str(input_file),
                '-af', f'asetrate={input_sample_rate}*432/440,aresample={output_sample_rate},atempo=440/432',
-               '-c:a', 'flac', '-sample_fmt', sample_fmt,
-               '-compression_level', str(FLAC_COMPRESSION), '-ar', str(output_sample_rate),
+               '-c:a', audio_codec,
+               '-ar', str(output_sample_rate),
                '-y', str(output_file)]
+        
+        # Agregar parámetros específicos según formato
+        if output_format == 'wav':
+            # WAV sin comprimir: agregar formato de muestra
+            cmd.extend(['-sample_fmt', sample_fmt])
+        elif output_format == 'wav_compressed':
+            # WAV comprimido: algunos codecs pueden necesitar parámetros adicionales
+            # La mayoría funcionan con solo el codec
+            pass
+        elif output_format == 'flac':
+            # FLAC: agregar formato de muestra y nivel de compresión
+            cmd.extend(['-sample_fmt', sample_fmt])
+            cmd.extend(['-compression_level', str(compression_level)])
+        
         result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         stop_event.set()
         anim_thread.join(timeout=0.5)
         print("\r\033[K", end='', flush=True, file=sys.stderr)
+        
         if result.returncode == 0 and output_file.exists():
             orig_size = get_file_size(input_file)
             new_size = get_file_size(output_file)
@@ -1243,6 +1496,157 @@ def select_sample_rate_for_432hz() -> Optional[int]:
             return None
 
 
+def select_output_format_for_432hz() -> Optional[Dict]:
+    """
+    Permite al usuario seleccionar el formato de salida (WAV o FLAC) y nivel de compresión.
+    Retorna un dict con la configuración o None si se cancela.
+    """
+    print_header("Selecciona Formato de Salida")
+    print()
+    print(f"    {Colors.LIME}📦 Formato de archivo de salida para conversión a 432Hz{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}El formato determina la calidad, tamaño y compatibilidad del archivo.{Colors.NC}")
+    print()
+    
+    formats = {
+        "1": {
+            "name": "WAV (PCM sin comprimir)",
+            "format": "wav",
+            "description": "Sin pérdida, sin compresión. Máxima calidad, archivos muy grandes. Compatible universalmente."
+        },
+        "2": {
+            "name": "WAV Comprimido",
+            "format": "wav_compressed",
+            "description": "WAV con compresión (ADPCM). Menor tamaño que PCM, buena compatibilidad."
+        },
+        "3": {
+            "name": "FLAC (Recomendado ⭐)",
+            "format": "flac",
+            "description": "Sin pérdida con compresión. Excelente relación calidad/tamaño. Ideal para archivo maestro."
+        },
+    }
+    
+    # Mostrar opciones
+    for key, fmt_info in formats.items():
+        rec_mark = " ⭐" if "Recomendado" in fmt_info["name"] else ""
+        print(f"  {Colors.LIME}{key}){Colors.NC} {fmt_info['name']}{rec_mark}")
+        print(f"      {Colors.MEDIUM_GREEN}{fmt_info['description']}{Colors.NC}")
+        print()
+    
+    # Solicitar selección de formato
+    selected_format = None
+    while selected_format is None:
+        try:
+            choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona formato (1-3) o Enter para FLAC (recomendado): {Colors.NC}").strip()
+            
+            # Si es Enter (vacío), retornar FLAC por defecto
+            if not choice:
+                selected_format = formats["3"]
+                break
+            
+            if choice in formats:
+                selected_format = formats[choice]
+                break
+            else:
+                print_error(f"Opción inválida. Selecciona un número del 1 al 3, o presiona Enter para FLAC.")
+        except (EOFError, KeyboardInterrupt):
+            return None
+    
+    print()
+    print_success(f"Formato seleccionado: {selected_format['name']}")
+    print()
+    
+    # Si es WAV comprimido, seleccionar codec
+    codec = None
+    if selected_format["format"] == "wav_compressed":
+        print_header("Selecciona Codec de Compresión WAV")
+        print()
+        codecs = {
+            "1": {"codec": "adpcm_ms", "name": "ADPCM Microsoft", "description": "Compresión ~25% del tamaño PCM. Buena compatibilidad."},
+            "2": {"codec": "adpcm_ima_wav", "name": "ADPCM IMA", "description": "Compresión ~25% del tamaño PCM. Estándar IMA."},
+            "3": {"codec": "gsm_ms", "name": "GSM Microsoft", "description": "Compresión ~20% del tamaño PCM. Muy eficiente."},
+        }
+        
+        for key, codec_info in codecs.items():
+            print(f"  {Colors.LIME}{key}){Colors.NC} {codec_info['name']}")
+            print(f"      {Colors.MEDIUM_GREEN}{codec_info['description']}{Colors.NC}")
+            print()
+        
+        while codec is None:
+            try:
+                codec_choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona codec (1-3) o Enter para ADPCM Microsoft: {Colors.NC}").strip()
+                
+                if not codec_choice:
+                    codec = "adpcm_ms"
+                    break
+                
+                if codec_choice in codecs:
+                    codec = codecs[codec_choice]["codec"]
+                    break
+                else:
+                    print_error(f"Opción inválida. Selecciona un número del 1 al 3.")
+            except (EOFError, KeyboardInterrupt):
+                return None
+        
+        # Encontrar el nombre del codec seleccionado
+        codec_name = codec
+        for codec_info in codecs.values():
+            if codec_info['codec'] == codec:
+                codec_name = codec_info['name']
+                break
+        
+        print()
+        print_success(f"Codec seleccionado: {codec_name}")
+        print()
+    
+    # Si es FLAC o WAV comprimido, seleccionar nivel de compresión
+    compression_level = 8  # Default
+    if selected_format["format"] in ["flac", "wav_compressed"]:
+        print_header("Selecciona Nivel de Compresión")
+        print()
+        
+        if selected_format["format"] == "flac":
+            print(f"    {Colors.LIME}🎚️  Nivel de compresión FLAC (0-12){Colors.NC}")
+            print(f"    {Colors.MEDIUM_GREEN}Niveles más altos = mejor compresión pero más tiempo de procesamiento.{Colors.NC}")
+            print()
+            print(f"    {Colors.LIGHT_GREEN}0-2:{Colors.NC}   Compresión rápida, archivos más grandes")
+            print(f"    {Colors.LIGHT_GREEN}3-5:{Colors.NC}   Balance velocidad/tamaño")
+            print(f"    {Colors.LIGHT_GREEN}6-8:{Colors.NC}   Buen balance (recomendado)")
+            print(f"    {Colors.LIGHT_GREEN}9-12:{Colors.NC}  Máxima compresión, más lento")
+            print()
+        else:  # wav_compressed
+            print(f"    {Colors.LIME}🎚️  Nivel de compresión WAV{Colors.NC}")
+            print(f"    {Colors.MEDIUM_GREEN}Algunos codecs WAV comprimidos tienen niveles de compresión.{Colors.NC}")
+            print()
+        
+        while True:
+            try:
+                comp_input = input(f"{Colors.YELLOW_GREEN}▶ Nivel de compresión (0-12, Enter=8): {Colors.NC}").strip()
+                
+                if not comp_input:
+                    compression_level = 8
+                    break
+                
+                compression_level = int(comp_input)
+                if 0 <= compression_level <= 12:
+                    break
+                else:
+                    print_error("El nivel debe estar entre 0 y 12.")
+            except ValueError:
+                print_error("Por favor ingresa un número entre 0 y 12.")
+            except (EOFError, KeyboardInterrupt):
+                return None
+        
+        print()
+        print_success(f"Nivel de compresión seleccionado: {compression_level}")
+        print()
+    
+    return {
+        'format': selected_format["format"],
+        'compression': compression_level,
+        'codec': codec
+    }
+
+
 def select_audio_files_for_432hz(audio_files: List[Path]) -> Optional[List[Path]]:
     """
     Permite al usuario seleccionar archivos individuales o procesar todos.
@@ -1347,17 +1751,44 @@ def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
     
     print()
     
+    # Permitir al usuario seleccionar formato de salida
+    format_config = select_output_format_for_432hz()
+    if format_config is None:
+        print_warning("Conversión cancelada.")
+        return False
+    
+    output_format = format_config['format']
+    compression_level = format_config['compression']
+    codec = format_config['codec']
+    
+    print()
+    
     # Permitir al usuario seleccionar sample rate
     output_sample_rate = select_sample_rate_for_432hz()
     if output_sample_rate is None:
         print_warning("Conversión cancelada.")
         return False
     
+    # Obtener bit depth del primer archivo (asumimos que todos tienen el mismo)
+    # O usar 24-bit por defecto
+    first_file_info = get_audio_info(selected_files[0])
+    output_bit_depth = first_file_info.get('bit_depth', 24) or 24
+    if output_bit_depth not in [16, 24]:
+        output_bit_depth = 24  # Default a 24-bit si no es 16 o 24
+    
     # Formatear sample rate para mostrar
     sr_display = "96kHz" if output_sample_rate == 96000 else ("48kHz" if output_sample_rate == 48000 else ("44.1kHz" if output_sample_rate == 44100 else f"{output_sample_rate}Hz"))
     
     print()
-    if not confirm(f"¿Convertir {len(selected_files)} archivo(s) a 432Hz con resolución {sr_display}?"):
+    
+    # Mostrar tabla de estimaciones
+    show_432hz_estimations(
+        selected_files, output_format, output_sample_rate,
+        output_bit_depth, compression_level, codec
+    )
+    
+    print()
+    if not confirm(f"¿Convertir {len(selected_files)} archivo(s) a 432Hz con formato {output_format.upper()} y resolución {sr_display}?"):
         print_warning("Conversión cancelada.")
         return False
     
@@ -1372,9 +1803,12 @@ def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
     skip_count = 0
     existing_files = []
     
+    # Determinar extensión según formato
+    output_ext = ".wav" if output_format in ['wav', 'wav_compressed'] else ".flac"
+    
     # Verificar archivos existentes antes de procesar
     for audio_file in selected_files:
-        output_file = output_dir / f"{audio_file.stem}_432Hz.flac"
+        output_file = output_dir / f"{audio_file.stem}_432Hz{output_ext}"
         if output_file.exists():
             existing_files.append((audio_file, output_file))
     
@@ -1430,7 +1864,7 @@ def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
             print_warning("Conversión interrumpida por el usuario")
             break
         
-        output_file = output_dir / f"{audio_file.stem}_432Hz.flac"
+        output_file = output_dir / f"{audio_file.stem}_432Hz{output_ext}"
         
         # Verificar si el archivo ya existe y manejar según el modo seleccionado
         if output_file.exists() and overwrite_mode == "skip":
@@ -1441,16 +1875,18 @@ def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
         elif output_file.exists() and overwrite_mode == "unique":
             # Agregar sufijo único basado en timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}.flac"
+            output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}{output_ext}"
             # Si aún existe (muy improbable), agregar un número incremental
             counter = 1
             while output_file.exists():
-                output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}.flac"
+                output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}{output_ext}"
                 counter += 1
         
         animated_progress_bar(i, len(selected_files), f"Convirtiendo: {audio_file.name[:25]}")
         
-        if convert_to_432hz(audio_file, output_file, output_sample_rate):
+        if convert_to_432hz(audio_file, output_file, output_sample_rate,
+                           output_format=output_format, compression_level=compression_level,
+                           codec=codec):
             success_count += 1
             orig_size = get_file_size(audio_file)
             out_size = get_file_size(output_file)
@@ -1471,7 +1907,9 @@ def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
         print(f"    {Colors.YELLOW_GREEN}Saltados:{Colors.NC} {Colors.LIME}{skip_count}{Colors.NC}")
     if fail_count > 0:
         print(f"    {Colors.DARK_GREEN}Fallidos:{Colors.NC} {Colors.YELLOW_GREEN}{fail_count}{Colors.NC}")
+    print(f"    {Colors.LIME}Formato:{Colors.NC}     {Colors.LIGHT_GREEN}{output_format.upper()}{Colors.NC}")
     print(f"    {Colors.LIME}Frecuencia:{Colors.NC} {Colors.LIGHT_GREEN}432Hz (frecuencia sanadora){Colors.NC}")
+    print(f"    {Colors.LIME}Resolución:{Colors.NC}   {Colors.LIGHT_GREEN}{sr_display}/{output_bit_depth}-bit{Colors.NC}")
     print(f"    {Colors.LIME}Salida:{Colors.NC}     {Colors.LIGHT_GREEN}{output_dir}/{Colors.NC}")
     return success_count > 0
 
