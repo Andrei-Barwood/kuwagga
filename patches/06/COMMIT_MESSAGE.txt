@@ -1,0 +1,57 @@
+feat: Add macOS Threat Detection & Response Framework (MTDRF)
+
+Implement comprehensive Python3 security framework for detection, prevention,
+mitigation, and forensic analysis of macOS stealer malware and ad-hoc signed
+threats. Designed for security researchers and incident response teams.
+
+## Features
+
+- Modular architecture with independent modules for focused analysis
+- Multiple detection methods: binary analysis, process monitoring, file access
+  monitoring, Keychain monitoring, network monitoring
+- Prevention capabilities: file protection, network firewall rules, Keychain
+  protection
+- Mitigation tools: quarantine, cleanup, and recovery procedures
+- Forensic analysis: deep binary analysis, process tree analysis, log analysis
+- Dual mode operation: user-level and admin-level with graceful degradation
+- Multiple output formats: CLI with custom color palette and JSON output
+
+## Project Structure
+
+- Main CLI orchestrator (mtdrf.py) with commands: detect, prevent, mitigate,
+  forensic, scan, monitor, report
+- Detectors: binary_analyzer, process_monitor, file_monitor, keychain_monitor,
+  network_monitor
+- Preventers: file_protection, network_firewall, keychain_protection
+- Mitigators: quarantine, cleanup, recovery
+- Forensic tools: binary_forensics, process_analyzer, log_analyzer
+- Utilities: colors (custom palette), output (CLI/JSON), permissions, system_info
+- Configuration management with customizable detection thresholds
+
+## Technical Details
+
+- Uses native macOS tools (codesign, strings, log, fsevents, etc.)
+- Custom color palette for CLI output (#FFFFB8, #FFFF99, #DEDDFA, #A6A4D7, etc.)
+- Rich library for true-color terminal support with fallback to colorama
+- Click framework for CLI interface
+- Comprehensive error handling and logging
+- Read-only operations by default with explicit confirmation for destructive ops
+- Quarantine before deletion with audit trail
+
+## Threat Model
+
+Detects:
+1. Ad-hoc signed binaries (adhoc, linker-signed, no TeamIdentifier)
+2. Credential stealing attempts (Chrome, Exodus, etc.)
+3. Cryptocurrency wallet theft
+4. System profiling for hardware identifiers
+5. Keychain exfiltration (Chrome Safe Storage)
+6. Network exfiltration patterns (localhost:8000)
+7. Process behavior anomalies
+
+## Author & License
+
+Author: ਕੀਰਤਨ ਤੇਗ ਸਿੰਘ
+Owner: Snocomm. - 2026
+
+This tool is provided for security research and incident response purposes.

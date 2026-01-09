@@ -1,0 +1,19 @@
+# Dependencias para macOS Threat Detection & Response Framework (MTDRF)
+# Instalar todas: pip3 install -r requirements.txt
+
+# Terminal colors y formateo
+colorama>=0.4.6
+rich>=13.0.0
+
+# Procesos y utilidades del sistema
+psutil>=5.9.0
+
+# Framework CLI
+click>=8.0.0
+
+# Detección de tipos de archivo
+python-magic>=0.4.27
+
+# Acceso a APIs de macOS (requiere macOS)
+pyobjc-framework-Security>=9.0
+pyobjc-framework-CoreServices>=9.0
