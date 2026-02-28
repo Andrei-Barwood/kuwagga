@@ -1,71 +1,188 @@
 #!/bin/zsh
 set -euo pipefail
 
-#
-# A script to find a folder or a file by its approximate name across all connected drives on macOS.
-#
-# Usage:
-# 1. Save this file (e.g., as `findstuff.zsh`).
-# 2. Make it executable: `chmod +x findstuff.zsh`
-# 3. Run it: `./findstuff.zsh`
-#
+typeset -g SEARCH_TERM=""
+typeset -g SEARCH_TYPE_NAME=""
+typeset -g SEARCH_TYPE_FLAG=""
+typeset -ga SEARCH_ROOTS=()
+typeset -g FIND_PATTERN=""
+typeset -gi RESULT_COUNT=0
+typeset -gA SEEN_PATHS=()
 
-# --- Script Start ---
+trim_whitespace() {
+    local value="$1"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    print -r -- "$value"
+}
 
-# 1. Display Menu and get user's choice
-echo "What would you like to search for?"
-echo "  1) A Directory (Folder)"
-echo "  2) A File"
-echo ""
-echo -n "Enter your choice [1 or 2]: "
-read choice || exit 1
+escape_find_pattern() {
+    local value="$1"
+    value=${value//\\/\\\\}
+    value=${value//\*/\\*}
+    value=${value//\?/\\?}
+    value=${value//\[/\\[}
+    value=${value//\]/\\]}
+    print -r -- "$value"
+}
 
-# 2. Determine search parameters using an array for robustness
-# An array ensures that '-type' and its value ('d' or 'f') are passed as separate arguments.
-case $choice in
-    1)
-        # Define an array with two elements: '-type' and 'd'
-        search_params=('-type' 'd')
-        SEARCH_TYPE_NAME="folder"
-        ;;
-    2)
-        # Define an array with two elements: '-type' and 'f'
-        search_params=('-type' 'f')
-        SEARCH_TYPE_NAME="file"
-        ;;
-    *)
-        echo "❌ Invalid choice. Please run the script again and select 1 or 2."
+build_search_roots() {
+    local -A seen_roots=()
+    local root
+
+    SEARCH_ROOTS=("/")
+    for root in /Volumes/*(N/); do
+        SEARCH_ROOTS+=("$root")
+    done
+
+    local -a unique_roots=()
+    for root in "${SEARCH_ROOTS[@]}"; do
+        [[ -n "${seen_roots[$root]-}" ]] && continue
+        seen_roots[$root]=1
+        unique_roots+=("$root")
+    done
+
+    SEARCH_ROOTS=("${unique_roots[@]}")
+}
+
+emit_result_if_valid() {
+    local path="$1"
+
+    [[ -z "$path" ]] && return
+    [[ -n "${SEEN_PATHS[$path]-}" ]] && return
+
+    if [[ "$SEARCH_TYPE_FLAG" == "d" ]]; then
+        [[ -d "$path" ]] || return
+    else
+        [[ -f "$path" ]] || return
+    fi
+
+    SEEN_PATHS[$path]=1
+    print -r -- "$path"
+    (( ++RESULT_COUNT ))
+}
+
+spotlight_is_usable() {
+    command -v mdfind >/dev/null 2>&1 || return 1
+    command -v mdutil >/dev/null 2>&1 || return 1
+
+    local root md_status
+    for root in "${SEARCH_ROOTS[@]}"; do
+        md_status="$(mdutil -s "$root" 2>/dev/null || true)"
+        [[ "$md_status" == *"Indexing enabled."* ]] && return 0
+    done
+
+    return 1
+}
+
+search_with_spotlight() {
+    local root path
+
+    for root in "${SEARCH_ROOTS[@]}"; do
+        while IFS= read -r path; do
+            emit_result_if_valid "$path"
+        done < <(mdfind -onlyin "$root" -name "$SEARCH_TERM" 2>/dev/null || true)
+    done
+}
+
+run_find_for_root() {
+    local root="$1"
+    local path
+
+    if [[ "$root" == "/" ]]; then
+        while IFS= read -r -d '' path; do
+            emit_result_if_valid "$path"
+        done < <(
+            find "$root" -xdev \
+                \( -path "/System/*" -o -path "/dev/*" -o -path "/proc/*" -o -path "/private/var/*" -o -path "/private/tmp/*" \) -prune -o \
+                -type "$SEARCH_TYPE_FLAG" -iname "$FIND_PATTERN" -print0 2>/dev/null || true
+        )
+    else
+        while IFS= read -r -d '' path; do
+            emit_result_if_valid "$path"
+        done < <(
+            find "$root" -xdev \
+                -type "$SEARCH_TYPE_FLAG" -iname "$FIND_PATTERN" -print0 2>/dev/null || true
+        )
+    fi
+}
+
+search_with_find() {
+    local root
+
+    for root in "${SEARCH_ROOTS[@]}"; do
+        run_find_for_root "$root"
+    done
+}
+
+prompt_user() {
+    local choice
+
+    echo "What would you like to search for?"
+    echo "  1) A Directory (Folder)"
+    echo "  2) A File"
+    echo ""
+    read -r "choice?Enter your choice [1 or 2]: " || exit 1
+
+    case "$choice" in
+        1)
+            SEARCH_TYPE_FLAG="d"
+            SEARCH_TYPE_NAME="folder"
+            ;;
+        2)
+            SEARCH_TYPE_FLAG="f"
+            SEARCH_TYPE_NAME="file"
+            ;;
+        *)
+            echo "Invalid choice. Please run the script again and select 1 or 2." >&2
+            exit 1
+            ;;
+    esac
+
+    echo ""
+    read -r "SEARCH_TERM?Please enter part of the ${SEARCH_TYPE_NAME} name: " || exit 1
+    SEARCH_TERM="$(trim_whitespace "$SEARCH_TERM")"
+
+    if [[ -z "$SEARCH_TERM" ]]; then
+        echo "Error: The search term cannot be empty." >&2
         exit 1
-        ;;
-esac
+    fi
 
-# 3. Prompt for and store the search term
-echo ""
-read "SEARCH_TERM?Please enter the approximate name of the $SEARCH_TYPE_NAME: " || exit 1
+    FIND_PATTERN="*$(escape_find_pattern "$SEARCH_TERM")*"
+}
 
-# 4. Check for user input
-SEARCH_TERM="${SEARCH_TERM#"${SEARCH_TERM%%[![:space:]]*}"}"
-SEARCH_TERM="${SEARCH_TERM%"${SEARCH_TERM##*[![:space:]]}"}"
+main() {
+    local -i spotlight_ok=0
+    local run_deep_scan=""
 
-if [[ -z "$SEARCH_TERM" ]]; then
-  echo "Error: The search term cannot be empty." >&2
-  exit 1
-fi
+    prompt_user
+    build_search_roots
 
-# 5. Inform the user that the search is starting
-echo ""
-echo "🔎 Searching for ${SEARCH_TYPE_NAME}s with names containing \"$SEARCH_TERM\"..."
-echo "This might take several minutes depending on the size and speed of your drives. Please be patient."
-echo "----------------------------------------------------"
+    echo ""
+    echo "Searching for ${SEARCH_TYPE_NAME}s containing \"$SEARCH_TERM\"..."
+    echo "----------------------------------------------------"
 
-# 6. Execute the search command
-# We now use the ${search_params[@]} array, which expands correctly to '-type' 'f'.
-# '2>/dev/null' is still removed so you can see if the search is running.
-# You can add it back to the end of the line to hide "Permission denied" errors.
-find / /Volumes ${search_params[@]} -iname "*$SEARCH_TERM*"
+    if spotlight_is_usable; then
+        spotlight_ok=1
+        search_with_spotlight
+    else
+        echo "Spotlight index is not available. Using deep filesystem scan..."
+        search_with_find
+    fi
 
-# 7. Inform the user that the search is complete
-echo "----------------------------------------------------"
-echo "✅ Search complete."
+    if (( RESULT_COUNT == 0 && spotlight_ok == 1 )); then
+        echo "No indexed results found."
+        read -r "run_deep_scan?Run a deep filesystem scan anyway? [y/N]: " || true
 
-# --- Script End ---
+        case "${run_deep_scan:l}" in
+            y|yes)
+                search_with_find
+                ;;
+        esac
+    fi
+
+    echo "----------------------------------------------------"
+    echo "Found $RESULT_COUNT result(s)."
+}
+
+main "$@"

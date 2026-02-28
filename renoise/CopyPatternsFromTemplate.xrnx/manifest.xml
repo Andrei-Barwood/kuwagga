@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool docs_version="6.2">
+  <Id>com.kirtantegsingh.copypatternsfromtemplate</Id>
+  <ApiVersion>6.2</ApiVersion>
+  <Version>1.01</Version>
+  <Author>ਕਿਰਤਨ ਤੇਗ ਸਿੰਘ</Author>
+  <Name>Copy Patterns from Template Song</Name>
+  <Category>Workflow</Category>
+  <Description>Replace all patterns in current song with template content, pattern lengths, and sequence order.</Description>
+  <Platform>Mac, Linux, Windows</Platform>
+</RenoiseScriptingTool>

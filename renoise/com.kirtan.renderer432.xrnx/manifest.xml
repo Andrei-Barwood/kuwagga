@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool>
+  <Name>432Hz Renderer</Name>
+  <Id>com.kirtan.renderer432</Id>
+  <Version>1.0</Version>
+  <ApiVersion>6</ApiVersion>
+  <Author>ਕਿਰਤਨ ਤੇਗ ਸਿੰਘ</Author>
+  <Description>Renderiza la canción a 44.1kHz/24-bit y exporta WAV/FLAC/MP3 en 432Hz manteniendo duración con ffmpeg.</Description>
+  <Homepage>https://sacred-geometry.uk/</Homepage>
+</RenoiseScriptingTool>

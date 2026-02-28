@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool docs_version="6.2">
+  <Id>com.kirtantegsingh.copymixerfxfromtemplate</Id>
+  <ApiVersion>6.2</ApiVersion>
+  <Version>1.03</Version>
+  <Author>ਕਿਰਤਨ ਤੇਗ ਸਿੰਘ</Author>
+  <Name>Copy Mix + Mixer FX from Template Song</Name>
+  <Category>Workflow</Category>
+  <Description>Import mixer configuration (faders/mixer state), selected mixer effects (tracks + master), and track names from a template song into the current song.</Description>
+  <Platform>Mac, Linux, Windows</Platform>
+</RenoiseScriptingTool>

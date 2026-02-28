@@ -1,0 +1,5 @@
+# Sample URLs for wiki_to_pdf.py
+# One URL per line — blank lines and lines starting with # are ignored.
+
+https://en.wikipedia.org/wiki/Python_(programming_language)
+https://en.wikipedia.org/wiki/PDF

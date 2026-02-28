@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool docs_version="6.2">
+  <Id>com.kirtantegsingh.copyinstrumentsfromtemplate</Id>
+  <ApiVersion>6.2</ApiVersion>
+  <Version>1.01</Version>
+  <Author>ਕਿਰਤਨ ਤੇਗ ਸਿੰਘ</Author>
+  <Name>Copy Instruments from Template Song</Name>
+  <Category>Workflow</Category>
+  <Description>Copy selected instruments from a template song into the current song.</Description>
+  <Platform>Mac, Linux, Windows</Platform>
+</RenoiseScriptingTool>

@@ -422,3 +422,4 @@ Estable y listo para producción
 
 **¿Listo? Ejecuta: `bash setup_project.sh`** 🚀
 
+ 

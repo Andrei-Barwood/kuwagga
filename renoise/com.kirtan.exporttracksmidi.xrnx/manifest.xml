@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool>
+  <Name>Kirtan Export Tracks to MIDI</Name>
+  <Id>com.kirtan.exporttracksmidi</Id>
+  <Version>1.0</Version>
+  <ApiVersion>6</ApiVersion>
+  <Author>ਕਿਰਤਨ ਤੇਗ ਸਿੰਘ</Author>
+  <Description>Exporta tracks seleccionadas a archivos MIDI individuales con numeracion ordenada y alta resolucion temporal.</Description>
+  <Homepage>https://renoise.com</Homepage>
+</RenoiseScriptingTool>

@@ -1,0 +1,87 @@
+feat(renoise): 🎛️ Documentación completa de tools Renoise + utilities
+
+═══════════════════════════════════════════════════════════════════════════════
+AÑADIDO: Documentación .md para cada tool y utilidad del directorio renoise/
+═══════════════════════════════════════════════════════════════════════════════
+
+📚 NUEVA DOCUMENTACIÓN (8 archivos .md)
+
+  • exporttracksmidi.md
+    🎹 Export Tracks to MIDI (com.kirtan.exporttracksmidi)
+    → Exporta tracks seleccionadas a archivos MIDI individuales con alta resolución (960 PPQ)
+    → Incluye notas, velocidades, CC (volumen, pan, width) y tempo
+    → Útil para notación (MuseScore), re-arrangements y colaboración
+
+  • renderer432.md
+    🌊 432Hz Renderer (com.kirtan.renderer432)
+    → Renderiza canción a 44.1kHz/24-bit y convierte afinación 440Hz → 432Hz
+    → Formatos: WAV, FLAC, MP3 (320kbps)
+    → Requiere ffmpeg; mantiene duración exacta con filtro atempo
+
+  • configurar_buffers.md
+    ⚖️ Pattern Line Balancer (com.kirtantegsingh.configurar_buffers)
+    → Automatiza la cantidad de líneas por patrón (1-512) de forma granular
+    → Modo A: uniforme para todos | Modo B: individual por patrón
+    → Ideal para plantillas y consistencia estructural
+
+  • copyinstrumentsfromtemplate.md
+    🎺 Copy Instruments from Template Song
+    → Importa instrumentos seleccionados desde una canción plantilla (.xrns)
+    → Evita duplicados por nombre; mantiene samples y mappings
+    → Acelera setup de librerías instrumentales
+
+  • copymixerfxfromtemplate.md
+    🎚️ Copy Mix + Mixer FX from Template Song
+    → Importa configuración del mixer (faders, pan, width)
+    → Importa efectos seleccionados (tracks + Master)
+    → Copia nombres de tracks y ajusta estructura al template
+
+  • copypatternsfromtemplate.md
+    📋 Copy Patterns from Template Song
+    → Reemplaza todos los patrones con contenido de plantilla
+    → Preserva longitudes, secuenciador y columnas
+    → Combina notas, instrumentos, volumen, pan, delays, Efx
+
+  • clear_all_patterns.md
+    🧹 Clear All Patterns (01_clear_all_buffers.lua)
+    → Script standalone para limpiar contenido de todos los patrones
+    → Mantiene estructura (líneas, tracks, etc.) para uso como plantilla
+    → Ejecutable vía Lua Script Runner
+
+═══════════════════════════════════════════════════════════════════════════════
+ESTRUCTURA DE CADA DOCUMENTO
+═══════════════════════════════════════════════════════════════════════════════
+
+Cada .md incluye:
+  ✨ Emojis descriptivos por sección
+  📖 Tutorial paso a paso de uso
+  🎯 Explicación de utilidad en producción discográfica
+  📥 Instrucciones de instalación
+  ⚠️ Notas, requisitos y recomendaciones
+  🎵 Contribución al flujo de producción y masterización
+
+═══════════════════════════════════════════════════════════════════════════════
+HERRAMIENTAS DOCUMENTADAS (Renoise Tools .xrnx)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. com.kirtan.exporttracksmidi.xrnx     → exporttracksmidi.md
+2. com.kirtan.renderer432.xrnx          → renderer432.md
+3. com.kirtantegsingh.configurar_buffers.xrnx → configurar_buffers.md
+4. CopyInstrumentsFromTemplate.xrnx     → copyinstrumentsfromtemplate.md
+5. CopyMixerFxFromTemplate.xrnx         → copymixerfxfromtemplate.md
+6. CopyPatternsFromTemplate.xrnx        → copypatternsfromtemplate.md
+7. 01_clear_all_buffers.lua (standalone) → clear_all_patterns.md
+
+═══════════════════════════════════════════════════════════════════════════════
+FLUJO INTEGRADO EN PRODUCCIÓN DISCÓGRAFICA
+═══════════════════════════════════════════════════════════════════════════════
+
+Setup de plantilla:
+  Pattern Line Balancer → Copy Patterns → Copy Instruments → Copy Mix+Mixer FX
+
+Exportación y post-producción:
+  Export Tracks to MIDI → stems para notación/DAW
+  432Hz Renderer → masters para géneros wellness/meditación
+
+Limpieza:
+  Clear All Patterns → convertir canción en plantilla vacía

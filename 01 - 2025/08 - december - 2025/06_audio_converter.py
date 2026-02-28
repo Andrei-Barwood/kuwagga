@@ -240,6 +240,63 @@ def select_folder() -> Optional[Path]:
             print()
 
 
+def select_output_folder(default_dir: Path) -> Optional[Path]:
+    """
+    Seleccionar carpeta de destino pidiendo al usuario que pegue la ruta desde Finder.
+    Si se presiona Enter, usa el directorio por defecto (directorio actual/source).
+    
+    Args:
+        default_dir: Directorio por defecto a usar si se presiona Enter
+    
+    Returns:
+        Path de la carpeta seleccionada, o default_dir si se presiona Enter, o None si se cancela
+    """
+    print_info("Selecciona la carpeta de destino en Finder y copia la ruta de acceso.")
+    print(f"    {Colors.YELLOW_GREEN}→ En Finder: Cmd+Opt+C para copiar la ruta{Colors.NC}")
+    print(f"    {Colors.YELLOW_GREEN}→ O arrastra la carpeta a Terminal y presiona Tab{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}→ O presiona Enter para utilizar el directorio actual{Colors.NC}")
+    print()
+    print(f"    {Colors.LIME}Directorio actual:{Colors.NC} {Colors.LIGHT_GREEN}{default_dir}{Colors.NC}")
+    print()
+    
+    while True:
+        try:
+            folder_input = input(f"{Colors.YELLOW_GREEN}Pega la ruta de la carpeta de destino (Enter=directorio actual): {Colors.NC}").strip()
+            
+            # Si es Enter (vacío), usar el directorio por defecto
+            if not folder_input:
+                print()
+                print_success(f"Usando directorio actual: {default_dir}")
+                print()
+                return default_dir
+            
+            # Limpiar la entrada (remover comillas si las hay, espacios al inicio/final)
+            folder_input = folder_input.strip().strip('"').strip("'")
+            
+            # Expandir ~ si se usa
+            folder_input = folder_input.replace('~', str(Path.home()))
+            
+            folder = Path(folder_input).expanduser().resolve()
+            
+            if folder.exists() and folder.is_dir():
+                print()
+                print_success(f"Carpeta de destino seleccionada: {folder}")
+                print()
+                return folder
+            else:
+                print_error(f"La carpeta no existe o no es válida: {folder_input}")
+                print(f"    {Colors.MEDIUM_GREEN}Por favor, verifica la ruta e intenta de nuevo.{Colors.NC}")
+                print()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            print_warning("Operación cancelada.")
+            return None
+        except Exception as e:
+            print_error(f"Error al procesar la ruta: {e}")
+            print(f"    {Colors.MEDIUM_GREEN}Por favor, verifica la ruta e intenta de nuevo.{Colors.NC}")
+            print()
+
+
 def get_audio_duration(file_path: Path) -> Optional[float]:
     try:
         result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
@@ -334,15 +391,67 @@ def estimate_audio_output_size(duration_seconds: float, sample_rate: int, bit_de
         return wav_size_mb
 
 
+def estimate_mp3_output_size(duration_seconds: float, bitrate_kbps: int = 320) -> float:
+    """
+    Estima el tamaño del archivo MP3 de salida en MB
+    
+    Args:
+        duration_seconds: Duración del audio en segundos
+        bitrate_kbps: Bitrate en kbps (128, 192, 256, 320)
+    
+    Returns:
+        Tamaño estimado en MB
+    """
+    # Tamaño MP3 = (bitrate en kbps * duración en segundos) / 8 / 1024
+    # Dividir entre 8 para convertir bits a bytes, y entre 1024 para convertir KB a MB
+    size_mb = (bitrate_kbps * duration_seconds) / (8 * 1024)
+    return size_mb
+
+
+def calculate_max_bitrate_for_size(duration_seconds: float, max_size_mb: float = 200.0) -> int:
+    """
+    Calcula el bitrate máximo en kbps para que el MP3 no supere el tamaño máximo
+    
+    Args:
+        duration_seconds: Duración del audio en segundos
+        max_size_mb: Tamaño máximo permitido en MB (default: 200MB para Ditto)
+    
+    Returns:
+        Bitrate máximo en kbps (redondeado hacia abajo)
+    """
+    if duration_seconds <= 0:
+        return 320  # Default si no se puede calcular
+    
+    # Despejar bitrate de la fórmula: size_mb = (bitrate * duration) / (8 * 1024)
+    # bitrate = (size_mb * 8 * 1024) / duration
+    max_bitrate = (max_size_mb * 8 * 1024) / duration_seconds
+    
+    # Redondear hacia abajo y limitar a valores estándar
+    max_bitrate = int(max_bitrate)
+    
+    # Ajustar a bitrates estándar MP3 (128, 192, 256, 320)
+    if max_bitrate >= 320:
+        return 320
+    elif max_bitrate >= 256:
+        return 256
+    elif max_bitrate >= 192:
+        return 192
+    elif max_bitrate >= 128:
+        return 128
+    else:
+        return 128  # Mínimo recomendado
+
+
 def estimate_432hz_conversion_time(duration_seconds: float, output_format: str = 'flac',
-                                   compression_level: int = 8) -> float:
+                                   compression_level: int = 8, bitrate_kbps: int = 320) -> float:
     """
     Estima el tiempo de conversión a 432Hz en minutos
     
     Args:
         duration_seconds: Duración del audio en segundos
-        output_format: 'wav', 'flac', o 'wav_compressed'
-        compression_level: Nivel de compresión (afecta tiempo de encoding)
+        output_format: 'wav', 'flac', 'wav_compressed', o 'mp3'
+        compression_level: Nivel de compresión (afecta tiempo de encoding para FLAC)
+        bitrate_kbps: Bitrate en kbps para MP3 (afecta tiempo de encoding)
     
     Returns:
         Tiempo estimado en minutos
@@ -369,6 +478,16 @@ def estimate_432hz_conversion_time(duration_seconds: float, output_format: str =
             encoding_factor = 0.20  # Compresión lenta
         else:  # 9-12
             encoding_factor = 0.30  # Compresión muy lenta
+    elif output_format == 'mp3':
+        # MP3: tiempo depende del bitrate (mayor bitrate = más tiempo)
+        if bitrate_kbps <= 128:
+            encoding_factor = 0.08  # Compresión rápida
+        elif bitrate_kbps <= 192:
+            encoding_factor = 0.10  # Compresión media
+        elif bitrate_kbps <= 256:
+            encoding_factor = 0.12  # Compresión lenta
+        else:  # 320kbps
+            encoding_factor = 0.15  # Compresión más lenta (máxima calidad)
     else:
         encoding_factor = 0.15
     
@@ -1062,6 +1181,119 @@ def convert_to_432hz(input_file: Path, output_file: Path, output_sample_rate: in
         print(f"\nError: {e}", file=sys.stderr)
         return False
 
+
+def convert_to_432hz_mp3(input_file: Path, output_file: Path, output_sample_rate: int = 48000,
+                         bitrate_kbps: int = 320, vbr_quality: int = None) -> bool:
+    """
+    Convierte audio a frecuencia 432Hz y exporta a MP3
+    
+    Args:
+        input_file: Archivo de entrada
+        output_file: Archivo de salida (debe tener extensión .mp3)
+        output_sample_rate: Sample rate deseado (Hz) - será limitado a 48kHz máximo para MP3
+        bitrate_kbps: Bitrate en kbps (128, 192, 256, 320) - solo si vbr_quality es None
+        vbr_quality: Calidad VBR (0-9, donde 0 es mejor) - si se especifica, usa VBR en lugar de CBR
+    """
+    if not input_file.exists():
+        print_error(f"El archivo no existe: {input_file}")
+        return False
+    info = get_audio_info(input_file)
+    input_sample_rate = info.get('sample_rate')
+    bit_depth = info.get('bit_depth', 24)
+    if not input_sample_rate:
+        print_error("No se pudo detectar el sample rate del archivo")
+        return False
+    input_sample_rate = int(input_sample_rate)
+    
+    # libmp3lame solo soporta hasta 48kHz - limitar sample rate
+    # Sample rates soportados: 8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
+    mp3_max_sample_rate = 48000
+    processing_sample_rate = output_sample_rate  # Para procesamiento interno (pitch shift)
+    mp3_sample_rate = min(output_sample_rate, mp3_max_sample_rate)  # Para encoding MP3
+    
+    print(f"    {Colors.MEDIUM_GREEN}🎵 Conversión a frecuencia universal 432Hz → MP3{Colors.NC}")
+    print(f"    {Colors.DARK_FOREST}Input: {input_sample_rate}Hz/{bit_depth}-bit → Output: {mp3_sample_rate}Hz/MP3{Colors.NC}")
+    if output_sample_rate > mp3_max_sample_rate:
+        print(f"    {Colors.YELLOW_GREEN}ℹ️  Procesamiento interno a {output_sample_rate}Hz, luego resample a {mp3_sample_rate}Hz para MP3{Colors.NC}")
+    print(f"    {Colors.DARK_FOREST}Procesando: 440Hz → 432Hz (manteniendo duración){Colors.NC}")
+    if vbr_quality is not None:
+        print(f"    {Colors.DARK_FOREST}Modo: VBR Quality {vbr_quality} (0=máxima calidad){Colors.NC}")
+    else:
+        print(f"    {Colors.DARK_FOREST}Modo: CBR {bitrate_kbps}kbps{Colors.NC}")
+    
+    # Nota sobre limitación de MP3
+    if output_sample_rate > mp3_max_sample_rate:
+        print()
+        print_info(f"ℹ️  Nota: MP3 (libmp3lame) soporta máximo 48kHz")
+        print_info(f"   El audio se procesa a {output_sample_rate}Hz internamente, luego se resamplea a {mp3_sample_rate}Hz para el MP3 final")
+        print()
+    
+    stop_event = threading.Event()
+    messages = ["Ajustando frecuencia...", "Aplicando pitch shift...", "Re-muestreando audio...", "Codificando MP3...", "Casi listo..."]
+    anim_thread = threading.Thread(target=animate_conversion, args=(input_file.name, stop_event, messages), daemon=True)
+    anim_thread.start()
+    
+    try:
+        # Construir comando base
+        # Procesar a sample rate deseado internamente, luego resamplear a 48kHz para MP3
+        if output_sample_rate > mp3_max_sample_rate:
+            # Procesar a alta resolución primero, luego resamplear a 48kHz para MP3
+            cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
+                   '-i', str(input_file),
+                   '-af', f'asetrate={input_sample_rate}*432/440,aresample={output_sample_rate},atempo=440/432,aresample={mp3_sample_rate}',
+                   '-c:a', 'libmp3lame',
+                   '-ar', str(mp3_sample_rate),
+                   '-y', str(output_file)]
+        else:
+            # Sample rate está dentro del rango soportado
+            cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
+                   '-i', str(input_file),
+                   '-af', f'asetrate={input_sample_rate}*432/440,aresample={mp3_sample_rate},atempo=440/432',
+                   '-c:a', 'libmp3lame',
+                   '-ar', str(mp3_sample_rate),
+                   '-y', str(output_file)]
+        
+        # Agregar parámetros de bitrate o VBR
+        if vbr_quality is not None:
+            # Modo VBR
+            cmd.extend(['-q:a', str(vbr_quality)])
+        else:
+            # Modo CBR
+            cmd.extend(['-b:a', f'{bitrate_kbps}k'])
+        
+        # Agregar metadatos ID3 para compatibilidad con Ditto Music y reconocimiento de MIME type
+        # ID3v2.3 es el estándar más compatible
+        cmd.extend(['-id3v2_version', '3'])
+        cmd.extend(['-write_id3v1', '1'])
+        
+        # Agregar metadatos básicos del archivo original
+        input_name = input_file.stem
+        cmd.extend(['-metadata', f'title={input_name}'])
+        
+        # Asegurar formato MP3 estándar
+        cmd.extend(['-f', 'mp3'])
+        
+        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        stop_event.set()
+        anim_thread.join(timeout=0.5)
+        print("\r\033[K", end='', flush=True, file=sys.stderr)
+        
+        if result.returncode == 0 and output_file.exists():
+            orig_size = get_file_size(input_file)
+            new_size = get_file_size(output_file)
+            print_success(f"Conversión a 432Hz MP3 completada: {output_file.name}")
+            print(f"    {Colors.DARK_FOREST}Tamaño: {orig_size} → {new_size} | {mp3_sample_rate}Hz/MP3{Colors.NC}")
+            return True
+        else:
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            return False
+    except Exception as e:
+        stop_event.set()
+        anim_thread.join(timeout=0.5)
+        print(f"\nError: {e}", file=sys.stderr)
+        return False
+
 # ============================================================================
 # FUNCIONES DE PROCESAMIENTO
 # ============================================================================
@@ -1606,12 +1838,36 @@ def select_output_format_for_432hz() -> Optional[Dict]:
         
         if selected_format["format"] == "flac":
             print(f"    {Colors.LIME}🎚️  Nivel de compresión FLAC (0-12){Colors.NC}")
-            print(f"    {Colors.MEDIUM_GREEN}Niveles más altos = mejor compresión pero más tiempo de procesamiento.{Colors.NC}")
             print()
-            print(f"    {Colors.LIGHT_GREEN}0-2:{Colors.NC}   Compresión rápida, archivos más grandes")
+            print(f"    {Colors.MEDIUM_GREEN}📊 ¿Cómo funcionan los niveles de compresión?{Colors.NC}")
+            print(f"    {Colors.MEDIUM_GREEN}FLAC es un formato SIN PÉRDIDA: la calidad de audio es idéntica en todos los niveles.{Colors.NC}")
+            print(f"    {Colors.MEDIUM_GREEN}Los niveles más altos comprimen MÁS (archivos más pequeños) pero tardan MÁS tiempo.{Colors.NC}")
+            print()
+            print(f"    {Colors.LIME}📦 Ratios de compresión estimados:{Colors.NC}")
+            print()
+            print(f"    {Colors.LIGHT_GREEN}0-2:{Colors.NC}   Compresión rápida")
+            print(f"      {Colors.DARK_FOREST}→ Archivo: ~75% del tamaño WAV original{Colors.NC}")
+            print(f"      {Colors.DARK_FOREST}→ Ejemplo: 100MB WAV → ~75MB FLAC{Colors.NC}")
+            print(f"      {Colors.DARK_FOREST}→ Velocidad: Muy rápida{Colors.NC}")
+            print()
             print(f"    {Colors.LIGHT_GREEN}3-5:{Colors.NC}   Balance velocidad/tamaño")
-            print(f"    {Colors.LIGHT_GREEN}6-8:{Colors.NC}   Buen balance (recomendado)")
-            print(f"    {Colors.LIGHT_GREEN}9-12:{Colors.NC}  Máxima compresión, más lento")
+            print(f"      {Colors.DARK_FOREST}→ Archivo: ~65% del tamaño WAV original{Colors.NC}")
+            print(f"      {Colors.DARK_FOREST}→ Ejemplo: 100MB WAV → ~65MB FLAC{Colors.NC}")
+            print(f"      {Colors.DARK_FOREST}→ Velocidad: Rápida{Colors.NC}")
+            print()
+            print(f"    {Colors.LIGHT_GREEN}6-8:{Colors.NC}   Buen balance ⭐ (recomendado)")
+            print(f"      {Colors.DARK_FOREST}→ Archivo: ~55% del tamaño WAV original{Colors.NC}")
+            print(f"      {Colors.DARK_FOREST}→ Ejemplo: 100MB WAV → ~55MB FLAC{Colors.NC}")
+            print(f"      {Colors.DARK_FOREST}→ Velocidad: Media (buen equilibrio){Colors.NC}")
+            print()
+            print(f"    {Colors.LIGHT_GREEN}9-12:{Colors.NC}  Máxima compresión")
+            print(f"      {Colors.DARK_FOREST}→ Archivo: ~50% del tamaño WAV original{Colors.NC}")
+            print(f"      {Colors.DARK_FOREST}→ Ejemplo: 100MB WAV → ~50MB FLAC{Colors.NC}")
+            print(f"      {Colors.DARK_FOREST}→ Velocidad: Lenta (máximo ahorro de espacio){Colors.NC}")
+            print()
+            print(f"    {Colors.YELLOW_GREEN}💡 Comparación práctica:{Colors.NC}")
+            print(f"    {Colors.MEDIUM_GREEN}Nivel 3 vs Nivel 8: El nivel 8 produce archivos ~15% más pequeños,{Colors.NC}")
+            print(f"    {Colors.MEDIUM_GREEN}pero tarda más tiempo en procesar. La calidad de audio es idéntica.{Colors.NC}")
             print()
         else:  # wav_compressed
             print(f"    {Colors.LIME}🎚️  Nivel de compresión WAV{Colors.NC}")
@@ -1720,9 +1976,339 @@ def select_audio_files_for_432hz(audio_files: List[Path]) -> Optional[List[Path]
             return None
 
 
-def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
-    output_dir = source_dir / output_dirname
-    output_dir.mkdir(exist_ok=True)
+def select_sample_rate_for_432hz_mp3() -> Optional[int]:
+    """
+    Permite al usuario seleccionar el sample rate de salida para la conversión a 432Hz MP3.
+    Retorna el sample rate seleccionado o None si se cancela.
+    
+    Nota: libmp3lame solo soporta hasta 48kHz. Si se selecciona un rate mayor,
+    el audio se procesará internamente a esa resolución pero se resampleará a 48kHz para MP3.
+    """
+    print_header("Selecciona Resolución de Audio (Sample Rate) para MP3")
+    print()
+    print(f"    {Colors.LIME}🎚️  Resolución de salida para conversión a 432Hz MP3{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}El sample rate determina la calidad del procesamiento interno.{Colors.NC}")
+    print()
+    print(f"    {Colors.YELLOW_GREEN}⚠️  IMPORTANTE: libmp3lame (codec MP3) solo soporta hasta 48kHz{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}Si seleccionas > 48kHz, el audio se procesará a esa resolución internamente,{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}pero se resampleará automáticamente a 48kHz antes de codificar a MP3.{Colors.NC}")
+    print()
+    
+    sample_rates = {
+        "1": {"rate": 44100, "name": "44.1kHz (CD Quality)", "description": "Estándar CD. Máxima compatibilidad universal. Recomendado para compatibilidad.", "standard": True},
+        "2": {"rate": 48000, "name": "48kHz (Professional) ⭐", "description": "Estándar profesional. Máximo soportado por libmp3lame. Excelente compatibilidad. RECOMENDADO.", "standard": True},
+        "3": {"rate": 96000, "name": "96kHz (Hi-Res) - Procesamiento interno", "description": "Alta resolución para procesamiento interno. Se resampleará a 48kHz para MP3 final.", "standard": False},
+        "4": {"rate": 192000, "name": "192kHz (Ultra Hi-Res) - Procesamiento interno", "description": "Ultra alta resolución para procesamiento interno. Se resampleará a 48kHz para MP3 final.", "standard": False},
+    }
+    
+    # Mostrar opciones
+    for key, sr_info in sample_rates.items():
+        rec_mark = " ⭐" if "⭐" in sr_info["name"] else ""
+        warning = " (se resampleará a 48kHz)" if not sr_info["standard"] else ""
+        print(f"  {Colors.LIME}{key}){Colors.NC} {sr_info['name']}{rec_mark}{warning}")
+        print(f"      {Colors.MEDIUM_GREEN}{sr_info['description']}{Colors.NC}")
+        print()
+    
+    # Solicitar selección
+    while True:
+        try:
+            choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona resolución (1-4) o Enter para 48kHz (recomendado): {Colors.NC}").strip()
+            
+            # Si es Enter (vacío), retornar 48kHz por defecto
+            if not choice:
+                print()
+                print_success(f"Resolución seleccionada: 48kHz (Professional) - Recomendado")
+                print()
+                return 48000
+            
+            if choice in sample_rates:
+                selected = sample_rates[choice]
+                print()
+                if not selected["standard"]:
+                    print_info(f"ℹ️  Nota: El audio se procesará internamente a {selected['rate']}Hz")
+                    print_info("   pero se resampleará automáticamente a 48kHz antes de codificar a MP3")
+                    print_info("   (libmp3lame solo soporta hasta 48kHz)")
+                    if not confirm("¿Continuar con procesamiento a alta resolución?"):
+                        continue
+                print_success(f"Resolución seleccionada: {selected['name']}")
+                if not selected["standard"]:
+                    print(f"    {Colors.MEDIUM_GREEN}→ MP3 final será a 48kHz (máximo soportado){Colors.NC}")
+                print()
+                return selected["rate"]
+            else:
+                print_error(f"Opción inválida. Selecciona un número del 1 al 4, o presiona Enter para 48kHz.")
+        except (EOFError, KeyboardInterrupt):
+            return None
+
+
+def select_mp3_quality_settings() -> Optional[Dict]:
+    """
+    Permite al usuario seleccionar la configuración de calidad MP3 (bitrate o VBR).
+    Retorna un dict con la configuración o None si se cancela.
+    """
+    print_header("Selecciona Calidad MP3")
+    print()
+    print(f"    {Colors.LIME}📦 Configuración de calidad para archivos MP3{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}MP3 es un formato con pérdida: mayor bitrate = mejor calidad pero archivos más grandes.{Colors.NC}")
+    print()
+    
+    modes = {
+        "1": {
+            "name": "CBR (Constant Bitrate) - Recomendado ⭐",
+            "mode": "cbr",
+            "description": "Bitrate constante. Calidad predecible, archivos de tamaño consistente."
+        },
+        "2": {
+            "name": "VBR (Variable Bitrate)",
+            "mode": "vbr",
+            "description": "Bitrate variable. Mejor calidad en pasajes complejos, archivos más pequeños."
+        },
+    }
+    
+    # Mostrar opciones de modo
+    for key, mode_info in modes.items():
+        rec_mark = " ⭐" if "Recomendado" in mode_info["name"] else ""
+        print(f"  {Colors.LIME}{key}){Colors.NC} {mode_info['name']}{rec_mark}")
+        print(f"      {Colors.MEDIUM_GREEN}{mode_info['description']}{Colors.NC}")
+        print()
+    
+    # Solicitar selección de modo
+    selected_mode = None
+    while selected_mode is None:
+        try:
+            choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona modo (1-2) o Enter para CBR (recomendado): {Colors.NC}").strip()
+            
+            # Si es Enter (vacío), retornar CBR por defecto
+            if not choice:
+                selected_mode = modes["1"]
+                break
+            
+            if choice in modes:
+                selected_mode = modes[choice]
+                break
+            else:
+                print_error(f"Opción inválida. Selecciona un número del 1 al 2, o presiona Enter para CBR.")
+        except (EOFError, KeyboardInterrupt):
+            return None
+    
+    print()
+    print_success(f"Modo seleccionado: {selected_mode['name']}")
+    print()
+    
+    # Si es CBR, seleccionar bitrate
+    if selected_mode["mode"] == "cbr":
+        print_header("Selecciona Bitrate CBR")
+        print()
+        bitrates = {
+            "1": {"bitrate": 128, "name": "128 kbps", "description": "Calidad básica. Archivos pequeños. Adecuado para voz."},
+            "2": {"bitrate": 192, "name": "192 kbps", "description": "Calidad media. Balance calidad/tamaño."},
+            "3": {"bitrate": 256, "name": "256 kbps", "description": "Buena calidad. Recomendado para música."},
+            "4": {"bitrate": 320, "name": "320 kbps ⭐", "description": "Máxima calidad CBR. Excelente para música de alta calidad."},
+        }
+        
+        for key, br_info in bitrates.items():
+            rec_mark = " ⭐" if "⭐" in br_info["name"] else ""
+            print(f"  {Colors.LIME}{key}){Colors.NC} {br_info['name']}{rec_mark}")
+            print(f"      {Colors.MEDIUM_GREEN}{br_info['description']}{Colors.NC}")
+            print()
+        
+        bitrate = None
+        while bitrate is None:
+            try:
+                br_choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona bitrate (1-4) o Enter para 320kbps (recomendado): {Colors.NC}").strip()
+                
+                if not br_choice:
+                    bitrate = 320
+                    break
+                
+                if br_choice in bitrates:
+                    bitrate = bitrates[br_choice]["bitrate"]
+                    break
+                else:
+                    print_error(f"Opción inválida. Selecciona un número del 1 al 4.")
+            except (EOFError, KeyboardInterrupt):
+                return None
+        
+        # Encontrar el nombre del bitrate seleccionado
+        selected_bitrate_name = None
+        for br_info in bitrates.values():
+            if br_info['bitrate'] == bitrate:
+                selected_bitrate_name = br_info['name']
+                break
+        
+        print()
+        print_success(f"Bitrate seleccionado: {selected_bitrate_name or f'{bitrate} kbps'}")
+        print()
+        
+        return {
+            'mode': 'cbr',
+            'bitrate': bitrate,
+            'vbr_quality': None
+        }
+    
+    else:  # VBR
+        print_header("Selecciona Calidad VBR")
+        print()
+        print(f"    {Colors.LIME}🎚️  Calidad VBR (0-9){Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}Valores más bajos = mejor calidad pero archivos más grandes.{Colors.NC}")
+        print()
+        print(f"    {Colors.LIGHT_GREEN}0:{Colors.NC}   Máxima calidad VBR (~245 kbps promedio)")
+        print(f"    {Colors.LIGHT_GREEN}1-2:{Colors.NC}  Calidad muy alta (~225 kbps promedio)")
+        print(f"    {Colors.LIGHT_GREEN}3-4:{Colors.NC}  Calidad alta (~190 kbps promedio)")
+        print(f"    {Colors.LIGHT_GREEN}5-6:{Colors.NC}  Calidad media (~175 kbps promedio)")
+        print(f"    {Colors.LIGHT_GREEN}7-9:{Colors.NC}  Calidad básica (~165 kbps promedio)")
+        print()
+        
+        vbr_quality = None
+        while vbr_quality is None:
+            try:
+                vbr_input = input(f"{Colors.YELLOW_GREEN}▶ Calidad VBR (0-9, Enter=0 para máxima calidad): {Colors.NC}").strip()
+                
+                if not vbr_input:
+                    vbr_quality = 0
+                    break
+                
+                vbr_quality = int(vbr_input)
+                if 0 <= vbr_quality <= 9:
+                    break
+                else:
+                    print_error("El valor debe estar entre 0 y 9.")
+            except ValueError:
+                print_error("Por favor ingresa un número entre 0 y 9.")
+            except (EOFError, KeyboardInterrupt):
+                return None
+        
+        print()
+        print_success(f"Calidad VBR seleccionada: {vbr_quality} (0=máxima calidad)")
+        print()
+        
+        return {
+            'mode': 'vbr',
+            'bitrate': None,
+            'vbr_quality': vbr_quality
+        }
+
+
+def show_432hz_mp3_estimations(audio_files: List[Path], sample_rate: int,
+                               bitrate_kbps: int = None, vbr_quality: int = None) -> None:
+    """
+    Muestra estimaciones individuales y totales para conversión a 432Hz MP3
+    
+    Args:
+        audio_files: Lista de archivos de audio a convertir
+        sample_rate: Sample rate de salida (Hz)
+        bitrate_kbps: Bitrate en kbps (solo para CBR)
+        vbr_quality: Calidad VBR (solo para VBR)
+    """
+    print_header("Estimaciones de Conversión a 432Hz MP3")
+    print()
+    
+    # Mostrar configuración seleccionada
+    sr_display = "96kHz" if sample_rate == 96000 else ("48kHz" if sample_rate == 48000 else ("44.1kHz" if sample_rate == 44100 else ("192kHz" if sample_rate == 192000 else f"{sample_rate}Hz")))
+    
+    print(f"    {Colors.LIME}Formato:{Colors.NC}        {Colors.LIGHT_GREEN}MP3{Colors.NC}")
+    print(f"    {Colors.LIME}Sample Rate:{Colors.NC}    {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    if sample_rate > 48000:
+        print(f"    {Colors.YELLOW_GREEN}⚠️  ADVERTENCIA: Sample rate > 48kHz NO es parte del estándar MP3{Colors.NC}")
+    if bitrate_kbps:
+        print(f"    {Colors.LIME}Bitrate:{Colors.NC}        {Colors.LIGHT_GREEN}{bitrate_kbps} kbps (CBR){Colors.NC}")
+    elif vbr_quality is not None:
+        print(f"    {Colors.LIME}Calidad:{Colors.NC}        {Colors.LIGHT_GREEN}VBR Quality {vbr_quality} (0=máxima){Colors.NC}")
+    print()
+    print(f"    {Colors.MEDIUM_GREEN}💡 Nota: MP3 procesa desde entrada de alta calidad (24-bit),{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}   pero el formato final no preserva bit depth nativo.{Colors.NC}")
+    print()
+    
+    total_duration_min = 0
+    total_original_size_mb = 0
+    total_estimated_size_mb = 0
+    total_time_min = 0
+    
+    # Calcular estimaciones para cada archivo
+    file_estimations = []
+    for audio_file in audio_files:
+        duration = get_audio_duration(audio_file)
+        if duration:
+            duration_min = duration / 60.0
+            original_size_mb = audio_file.stat().st_size / (1024 * 1024)
+            
+            # Estimar tamaño de salida
+            if bitrate_kbps:
+                est_size_mb = estimate_mp3_output_size(duration, bitrate_kbps)
+            else:
+                # Para VBR, estimar basado en calidad (aproximado)
+                avg_bitrates = {0: 245, 1: 225, 2: 225, 3: 190, 4: 190, 5: 175, 6: 175, 7: 165, 8: 165, 9: 165}
+                avg_bitrate = avg_bitrates.get(vbr_quality, 200)
+                est_size_mb = estimate_mp3_output_size(duration, avg_bitrate)
+            
+            # Estimar tiempo de conversión
+            est_time_min = estimate_432hz_conversion_time(
+                duration, output_format='mp3', bitrate_kbps=bitrate_kbps or 320
+            )
+            
+            file_estimations.append({
+                'file': audio_file,
+                'duration': duration,
+                'duration_min': duration_min,
+                'original_size_mb': original_size_mb,
+                'estimated_size_mb': est_size_mb,
+                'estimated_time_min': est_time_min
+            })
+            
+            total_duration_min += duration_min
+            total_original_size_mb += original_size_mb
+            total_estimated_size_mb += est_size_mb
+            total_time_min += est_time_min
+    
+    # Mostrar tabla de estimaciones individuales
+    print(f"    {Colors.LIME}{'Archivo':<30} {'Duración':<12} {'Tamaño Orig.':<15} {'Tamaño Est.':<18} {'Tiempo Est.':<15}{Colors.NC}")
+    print(f"    {Colors.DARK_GREEN}{'-' * 90}{Colors.NC}")
+    
+    for est in file_estimations:
+        duration_str = format_duration(est['duration'])
+        original_size_str = get_file_size(est['file'])
+        
+        if est['estimated_size_mb'] < 1024:
+            estimated_size_str = f"{est['estimated_size_mb']:.1f}MB"
+        else:
+            estimated_size_str = f"{est['estimated_size_mb']/1024:.1f}GB"
+        
+        time_str = format_time_estimate(est['estimated_time_min'])
+        
+        file_name = est['file'].name[:28] + ".." if len(est['file'].name) > 30 else est['file'].name
+        print(f"    {Colors.LIGHT_GREEN}{file_name:<30}{Colors.NC} {duration_str:<12} {original_size_str:<15} {estimated_size_str:<18} {time_str:<15}")
+    
+    print()
+    print(f"    {Colors.DARK_GREEN}{'-' * 90}{Colors.NC}")
+    
+    # Mostrar totales
+    total_duration_str = format_time_estimate(total_duration_min)
+    
+    if total_original_size_mb < 1024:
+        total_original_str = f"{total_original_size_mb:.1f}MB"
+    else:
+        total_original_str = f"{total_original_size_mb/1024:.1f}GB"
+    
+    if total_estimated_size_mb < 1024:
+        total_estimated_str = f"{total_estimated_size_mb:.1f}MB"
+    else:
+        total_estimated_str = f"{total_estimated_size_mb/1024:.1f}GB"
+    
+    total_time_str = format_time_estimate(total_time_min)
+    
+    print(f"    {Colors.LIME}{'TOTALES':<30} {total_duration_str:<12} {total_original_str:<15} {total_estimated_str:<18} {total_time_str:<15}{Colors.NC}")
+    print()
+
+
+def process_to_432hz(source_dir: Path, output_dir: Path):
+    """
+    Procesa archivos de audio convirtiéndolos a frecuencia 432Hz
+    
+    Args:
+        source_dir: Directorio fuente donde están los archivos de audio
+        output_dir: Directorio de destino donde se guardarán los archivos convertidos
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
     audio_files = []
     for ext in ['.flac', '.FLAC', '.wav', '.WAV', '.m4a', '.M4A', '.mp3', '.MP3']:
         audio_files.extend(sorted(source_dir.glob(f"*{ext}")))
@@ -1913,6 +2499,267 @@ def process_to_432hz(source_dir: Path, output_dirname: str = "432hz"):
     print(f"    {Colors.LIME}Salida:{Colors.NC}     {Colors.LIGHT_GREEN}{output_dir}/{Colors.NC}")
     return success_count > 0
 
+
+def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
+    """
+    Procesa archivos de audio convirtiéndolos a frecuencia 432Hz y exporta a MP3
+    
+    Args:
+        source_dir: Directorio fuente donde están los archivos de audio
+        output_dir: Directorio de destino donde se guardarán los archivos convertidos
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    audio_files = []
+    for ext in ['.flac', '.FLAC', '.wav', '.WAV', '.m4a', '.M4A', '.mp3', '.MP3']:
+        audio_files.extend(sorted(source_dir.glob(f"*{ext}")))
+    if not audio_files:
+        print_error("No se encontraron archivos de audio para convertir a 432Hz MP3")
+        return False
+    
+    print_header("Conversión a frecuencia 432Hz MP3 - Música Devocional")
+    print()
+    print(f"    {Colors.LIME}╔════════════════════════════════════════════════════════════╗{Colors.NC}")
+    print(f"    {Colors.LIME}║{Colors.NC}  {Colors.YELLOW_GREEN}🕉️  CONVERSIÓN A 432Hz MP3 - FRECUENCIA SANADORA 🕉️{Colors.NC}      {Colors.LIME}║{Colors.NC}")
+    print(f"    {Colors.LIME}╚════════════════════════════════════════════════════════════╝{Colors.NC}")
+    print()
+    print_info(f"Archivos encontrados: {len(audio_files)}")
+    print()
+    
+    # Permitir al usuario seleccionar archivos
+    selected_files = select_audio_files_for_432hz(audio_files)
+    if selected_files is None:
+        print_warning("Conversión cancelada.")
+        return False
+    
+    if not selected_files:
+        print_error("No se seleccionaron archivos para convertir.")
+        return False
+    
+    print()
+    
+    # Preguntar si desea usar preset Ditto Pro
+    print_header("Preset de Configuración")
+    print()
+    print(f"    {Colors.LIME}🎯 Preset Ditto Pro{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}Configuración optimizada para Ditto Music y distribución profesional:{Colors.NC}")
+    print(f"    {Colors.LIGHT_GREEN}• Sample Rate: 48kHz (Máximo estándar MP3){Colors.NC}")
+    print(f"    {Colors.LIGHT_GREEN}• Modo: CBR (Constant Bitrate){Colors.NC}")
+    print(f"    {Colors.LIGHT_GREEN}• Bitrate: 320 kbps (se ajustará automáticamente si supera 200MB){Colors.NC}")
+    print()
+    print(f"    {Colors.YELLOW_GREEN}💡 Compatible con Ditto Music:{Colors.NC}")
+    print(f"    {Colors.YELLOW_GREEN}   • Formato MP3 con metadatos ID3 correctos (MIME type: audio/mpeg){Colors.NC}")
+    print(f"    {Colors.YELLOW_GREEN}   • Límite de 200MB: el bitrate se ajusta automáticamente{Colors.NC}")
+    print(f"    {Colors.YELLOW_GREEN}   • Tamaño optimizado (~90MB vs ~700MB WAV){Colors.NC}")
+    print()
+    print(f"    {Colors.MEDIUM_GREEN}ℹ️  Nota: MP3 (libmp3lame) soporta máximo 48kHz según estándar{Colors.NC}")
+    print()
+    
+    use_ditto_preset = confirm("¿Usar preset Ditto Pro? (configuración automática)")
+    print()
+    
+    if use_ditto_preset:
+        # Configuración automática Ditto Pro
+        output_sample_rate = 48000  # Máximo soportado por libmp3lame
+        bitrate_kbps = 320
+        vbr_quality = None
+        print_success("✅ Preset Ditto Pro seleccionado")
+        print(f"    {Colors.LIME}Sample Rate:{Colors.NC} {Colors.LIGHT_GREEN}48kHz (Máximo estándar MP3){Colors.NC}")
+        print(f"    {Colors.LIME}Modo:{Colors.NC} {Colors.LIGHT_GREEN}CBR 320kbps{Colors.NC}")
+        print()
+        if not confirm("¿Continuar con esta configuración?"):
+            print_warning("Conversión cancelada.")
+            return False
+    else:
+        # Configuración manual
+        # Permitir al usuario seleccionar sample rate
+        output_sample_rate = select_sample_rate_for_432hz_mp3()
+        if output_sample_rate is None:
+            print_warning("Conversión cancelada.")
+            return False
+        
+        print()
+        
+        # Permitir al usuario seleccionar configuración de calidad MP3
+        quality_config = select_mp3_quality_settings()
+        if quality_config is None:
+            print_warning("Conversión cancelada.")
+            return False
+        
+        bitrate_kbps = quality_config.get('bitrate')
+        vbr_quality = quality_config.get('vbr_quality')
+    
+    # Formatear sample rate para mostrar
+    sr_display = "96kHz" if output_sample_rate == 96000 else ("48kHz" if output_sample_rate == 48000 else ("44.1kHz" if output_sample_rate == 44100 else ("192kHz" if output_sample_rate == 192000 else f"{output_sample_rate}Hz")))
+    
+    # Verificar tamaño estimado y ajustar bitrate si es necesario para Ditto (límite 200MB)
+    DITTO_MAX_SIZE_MB = 200.0
+    adjusted_bitrate = bitrate_kbps
+    files_need_adjustment = []
+    
+    if bitrate_kbps:  # Solo ajustar si es CBR (no VBR)
+        for audio_file in selected_files:
+            duration = get_audio_duration(audio_file)
+            if duration:
+                estimated_size = estimate_mp3_output_size(duration, bitrate_kbps)
+                if estimated_size > DITTO_MAX_SIZE_MB:
+                    max_bitrate = calculate_max_bitrate_for_size(duration, DITTO_MAX_SIZE_MB)
+                    if max_bitrate < bitrate_kbps:
+                        adjusted_bitrate = min(adjusted_bitrate, max_bitrate)
+                        files_need_adjustment.append((audio_file, estimated_size, max_bitrate))
+    
+    # Si algún archivo necesita ajuste, informar al usuario
+    if files_need_adjustment and adjusted_bitrate != bitrate_kbps:
+        print()
+        print_warning(f"⚠️  Algunos archivos excederían el límite de 200MB de Ditto Music")
+        print(f"    {Colors.MEDIUM_GREEN}Se ajustará el bitrate a {adjusted_bitrate}kbps para cumplir con el límite{Colors.NC}")
+        print()
+        for audio_file, estimated_size, max_bitrate in files_need_adjustment:
+            print(f"    {Colors.YELLOW_GREEN}• {audio_file.name}{Colors.NC}")
+            print(f"      {Colors.MEDIUM_GREEN}Tamaño estimado: {estimated_size:.1f}MB → Se usará bitrate: {max_bitrate}kbps{Colors.NC}")
+        print()
+        if not confirm(f"¿Ajustar bitrate a {adjusted_bitrate}kbps para cumplir con el límite de Ditto (200MB)?"):
+            print_warning("Conversión cancelada.")
+            return False
+        bitrate_kbps = adjusted_bitrate
+    
+    print()
+    
+    # Mostrar tabla de estimaciones
+    show_432hz_mp3_estimations(
+        selected_files, output_sample_rate,
+        bitrate_kbps=bitrate_kbps, vbr_quality=vbr_quality
+    )
+    
+    print()
+    quality_str = f"{bitrate_kbps}kbps (CBR)" if bitrate_kbps else f"VBR Quality {vbr_quality}"
+    if not confirm(f"¿Convertir {len(selected_files)} archivo(s) a 432Hz MP3 con sample rate {sr_display} y calidad {quality_str}?"):
+        print_warning("Conversión cancelada.")
+        return False
+    
+    print()
+    print_header("Iniciando conversión a 432Hz MP3")
+    print(f"    {Colors.LIME}Resolución de salida:{Colors.NC} {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    print(f"    {Colors.LIME}Calidad:{Colors.NC} {Colors.LIGHT_GREEN}{quality_str}{Colors.NC}")
+    if output_sample_rate > 48000:
+        print_warning("⚠️  ADVERTENCIA: Sample rate > 48kHz NO es parte del estándar MP3")
+        print_warning("Algunos reproductores pueden no reproducir estos archivos correctamente")
+    print(f"    {Colors.MEDIUM_GREEN}💡 Presiona Ctrl+C en cualquier momento para cancelar{Colors.NC}")
+    print()
+    
+    success_count = 0
+    fail_count = 0
+    skip_count = 0
+    existing_files = []
+    
+    # Verificar archivos existentes antes de procesar
+    for audio_file in selected_files:
+        output_file = output_dir / f"{audio_file.stem}_432Hz.mp3"
+        if output_file.exists():
+            existing_files.append((audio_file, output_file))
+    
+    # Si hay archivos existentes, preguntar al usuario
+    if existing_files:
+        print()
+        print_warning(f"⚠️  Se encontraron {len(existing_files)} archivo(s) que ya existen en el directorio de salida:")
+        for audio_file, output_file in existing_files:
+            existing_size = get_file_size(output_file)
+            print(f"    {Colors.YELLOW_GREEN}• {output_file.name}{Colors.NC} ({existing_size}) - de {audio_file.name}")
+        print()
+        print(f"    {Colors.LIME}Opciones:{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}1) Sobrescribir archivos existentes{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}2) Saltar archivos existentes (mantener los actuales){Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}3) Agregar sufijo único a archivos nuevos (evitar sobrescritura){Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}4) Cancelar{Colors.NC}")
+        print()
+        
+        overwrite_mode = None
+        while overwrite_mode is None:
+            try:
+                choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona opción (1-4): {Colors.NC}").strip()
+                if choice == "1":
+                    overwrite_mode = "overwrite"
+                    print()
+                    print_warning("⚠️  Los archivos existentes serán SOBRESCRITOS")
+                    if not confirm("¿Continuar con sobrescritura?"):
+                        print_warning("Conversión cancelada.")
+                        return False
+                elif choice == "2":
+                    overwrite_mode = "skip"
+                    print()
+                    print_info(f"Se saltarán {len(existing_files)} archivo(s) existente(s)")
+                elif choice == "3":
+                    overwrite_mode = "unique"
+                    print()
+                    print_info("Se agregará un sufijo único a los archivos nuevos para evitar sobrescritura")
+                elif choice == "4":
+                    print_warning("Conversión cancelada.")
+                    return False
+                else:
+                    print_error("Opción inválida. Selecciona 1, 2, 3 o 4.")
+            except (EOFError, KeyboardInterrupt):
+                print_warning("Conversión cancelada.")
+                return False
+    else:
+        overwrite_mode = "overwrite"  # Por defecto, sobrescribir si no hay conflictos
+    
+    print()
+    
+    for i, audio_file in enumerate(selected_files, 1):
+        if INTERRUPTED:
+            print_warning("Conversión interrumpida por el usuario")
+            break
+        
+        output_file = output_dir / f"{audio_file.stem}_432Hz.mp3"
+        
+        # Verificar si el archivo ya existe y manejar según el modo seleccionado
+        if output_file.exists() and overwrite_mode == "skip":
+            skip_count += 1
+            existing_size = get_file_size(output_file)
+            print(f"\n    {Colors.YELLOW_GREEN}⊘{Colors.NC} {audio_file.name} → Saltado (ya existe: {existing_size})")
+            continue
+        elif output_file.exists() and overwrite_mode == "unique":
+            # Agregar sufijo único basado en timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}.mp3"
+            # Si aún existe (muy improbable), agregar un número incremental
+            counter = 1
+            while output_file.exists():
+                output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}.mp3"
+                counter += 1
+        
+        animated_progress_bar(i, len(selected_files), f"Convirtiendo: {audio_file.name[:25]}")
+        
+        if convert_to_432hz_mp3(audio_file, output_file, output_sample_rate,
+                               bitrate_kbps=bitrate_kbps, vbr_quality=vbr_quality):
+            success_count += 1
+            orig_size = get_file_size(audio_file)
+            out_size = get_file_size(output_file)
+            print(f"\n    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
+        else:
+            fail_count += 1
+            print(f"\n    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+    
+    print()
+    print_header("Conversión a 432Hz MP3 Completada")
+    print()
+    print(f"    {Colors.LIGHT_GREEN}╔════════════════════════════════════════════════════════╗{Colors.NC}")
+    print(f"    {Colors.LIGHT_GREEN}║{Colors.NC}  {Colors.LIME}🎵 MÚSICA AHORA VIBRA EN FRECUENCIA UNIVERSAL 🎵{Colors.NC}        {Colors.LIGHT_GREEN}║{Colors.NC}")
+    print(f"    {Colors.LIGHT_GREEN}╚════════════════════════════════════════════════════════╝{Colors.NC}")
+    print()
+    print(f"    {Colors.LIGHT_GREEN}Exitosos:{Colors.NC} {Colors.LIME}{success_count}{Colors.NC}")
+    if skip_count > 0:
+        print(f"    {Colors.YELLOW_GREEN}Saltados:{Colors.NC} {Colors.LIME}{skip_count}{Colors.NC}")
+    if fail_count > 0:
+        print(f"    {Colors.DARK_GREEN}Fallidos:{Colors.NC} {Colors.YELLOW_GREEN}{fail_count}{Colors.NC}")
+    print(f"    {Colors.LIME}Formato:{Colors.NC}     {Colors.LIGHT_GREEN}MP3{Colors.NC}")
+    print(f"    {Colors.LIME}Frecuencia:{Colors.NC} {Colors.LIGHT_GREEN}432Hz (frecuencia sanadora){Colors.NC}")
+    print(f"    {Colors.LIME}Resolución:{Colors.NC}   {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    print(f"    {Colors.LIME}Calidad:{Colors.NC}     {Colors.LIGHT_GREEN}{quality_str}{Colors.NC}")
+    if output_sample_rate > 48000:
+        print(f"    {Colors.YELLOW_GREEN}⚠️  ADVERTENCIA:{Colors.NC} Sample rate > 48kHz NO es estándar MP3")
+    print(f"    {Colors.LIME}Salida:{Colors.NC}     {Colors.LIGHT_GREEN}{output_dir}/{Colors.NC}")
+    return success_count > 0
+
 # ============================================================================
 # MENÚ INTERACTIVO
 # ============================================================================
@@ -1935,6 +2782,9 @@ def show_menu():
     print()
     print(f"  {Colors.BOLD}{Colors.LIME}6){Colors.NC} {Colors.LIME}AUDIO → 432Hz{Colors.NC}  {Colors.YELLOW_GREEN}(frecuencia sanadora){Colors.NC}")
     print(f"     {Colors.MEDIUM_GREEN}Convierte audio a frecuencia universal 432Hz{Colors.NC}")
+    print()
+    print(f"  {Colors.BOLD}{Colors.YELLOW_GREEN}7){Colors.NC} {Colors.YELLOW_GREEN}AUDIO → MP3 432Hz{Colors.NC}  {Colors.LIME}(frecuencia sanadora en MP3){Colors.NC}")
+    print(f"     {Colors.MEDIUM_GREEN}Convierte audio a frecuencia 432Hz y exporta a MP3{Colors.NC}")
     print()
     print(f"  {Colors.DARK_FOREST}h){Colors.NC} Ayuda")
     print(f"  {Colors.DARK_FOREST}q){Colors.NC} Salir")
@@ -1965,6 +2815,8 @@ MODOS DE CONVERSIÓN:
                         (Alta resolución para producción/archivo)
     6) AUDIO → 432Hz    Convierte audio a frecuencia universal 432Hz
                         (Frecuencia sanadora para música devocional)
+    7) AUDIO → MP3 432Hz Convierte audio a frecuencia 432Hz y exporta a MP3
+                        (Frecuencia sanadora en formato MP3)
 
 EJEMPLOS:
     # Modo interactivo
@@ -2038,8 +2890,15 @@ def main():
         elif choice == '6':
             folder = select_folder()
             if folder:
-                output_dirname = input(f"{Colors.YELLOW_GREEN}Nombre del directorio de salida (Enter=432hz): {Colors.NC}").strip() or "432hz"
-                process_to_432hz(folder, output_dirname)
+                output_dir = select_output_folder(folder)
+                if output_dir:
+                    process_to_432hz(folder, output_dir)
+        elif choice == '7':
+            folder = select_folder()
+            if folder:
+                output_dir = select_output_folder(folder)
+                if output_dir:
+                    process_to_432hz_mp3(folder, output_dir)
         elif choice.lower() == 'h':
             show_help()
         elif choice.lower() == 'q':

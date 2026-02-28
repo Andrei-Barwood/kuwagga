@@ -7,19 +7,19 @@ set -euo pipefail
 # Quit Preview app if running
 if pgrep -x "Preview" > /dev/null; then
   osascript -e 'tell application "Preview" to quit' || true
-  # Wait a moment to ensure it quits
-  sleep 2
+# Wait a moment to ensure it quits
+sleep 2
 fi
 
 # Remove Preview preferences plist (resets Preview settings)
 if [[ -f ~/Library/Preferences/com.apple.Preview.plist ]]; then
-  rm -f ~/Library/Preferences/com.apple.Preview.plist
+rm -f ~/Library/Preferences/com.apple.Preview.plist
   echo "✓ Preferencias eliminadas"
 fi
 
 # Remove Preview saved state
 if [[ -d ~/Library/Saved\ Application\ State/com.apple.Preview.savedState ]]; then
-  rm -rf ~/Library/Saved\ Application\ State/com.apple.Preview.savedState
+rm -rf ~/Library/Saved\ Application\ State/com.apple.Preview.savedState
   echo "✓ Estado guardado eliminado"
 fi
 
@@ -32,7 +32,7 @@ fi
 # Relaunch Preview app
 if open -a Preview 2>/dev/null; then
   echo "✓ Preview reiniciado"
-  echo "Preview app has been reset and relaunched."
+echo "Preview app has been reset and relaunched."
 else
   echo "Error: No se pudo abrir Preview" >&2
   exit 1

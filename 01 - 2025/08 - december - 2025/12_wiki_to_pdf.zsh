@@ -23,6 +23,7 @@
 #   - Disable this behavior by setting:  WIKI_READER_MODE=0
 
 set -euo pipefail
+setopt extended_glob
 
 USE_READER_MODE=${WIKI_READER_MODE:-1}
 
@@ -407,22 +408,14 @@ index=0
 success_count=0
 fail_count=0
 
-# Read all lines from the URLs file into an array (split on newlines)
-if ! urls=("${(@f)$(< "$urls_file")}"); then
-  print -u2 "Error: Failed to read URLs file: $urls_file"
-  exit 1
-fi
-
-if (( ${#urls[@]} == 0 )); then
-  print -u2 "Warning: URLs file is empty: $urls_file"
-  exit 0
-fi
-
-for url in "${urls[@]}"; do
+# Process file line by line
+while IFS= read -r url || [[ -n "$url" ]]; do
   # Remove comments (anything after #)
-  url="${url%%#*}"
+  url="${url%%\#*}"
   # Strip a possible trailing Windows-style CR
   url="${url%$'\r'}"
+  # Trim leading/trailing whitespace
+  url="${${url##[[:space:]]#}%%[[:space:]]#}"
 
   # Skip empty lines
   [[ -z "$url" ]] && continue
@@ -433,7 +426,7 @@ for url in "${urls[@]}"; do
     continue
   fi
 
-  (( index++ ))
+  (( ++index ))
   pdf_path=$(make_pdf_path "$index" "$url")
 
   print ""
@@ -459,14 +452,18 @@ for url in "${urls[@]}"; do
       convert_with_wkhtml "$url" "$pdf_path"
     fi
   } && {
-    (( success_count++ ))
+    (( ++success_count ))
     print "  -> OK"
   } || {
-    (( fail_count++ ))
+    (( ++fail_count ))
     print -u2 "  -> FAILED"
   }
 
-done
+done < "$urls_file"
+
+if (( index == 0 )); then
+  print -u2 "Warning: No valid URLs processed from file: $urls_file"
+fi
 
 print ""
 print "Done."

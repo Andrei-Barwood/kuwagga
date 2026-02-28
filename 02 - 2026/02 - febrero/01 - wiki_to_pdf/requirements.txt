@@ -1,0 +1,5 @@
+# Dependencies for wiki_to_pdf.py
+# Install: pip install -r requirements.txt && playwright install chromium
+
+# Headless Chromium browser — loads JS, images, and renders the full page
+playwright>=1.40.0

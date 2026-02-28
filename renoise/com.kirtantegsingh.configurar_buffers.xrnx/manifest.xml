@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool docs_version="6.2">
+  <Id>com.kirtantegsingh.configurar_buffers</Id>
+  <ApiVersion>6.0</ApiVersion>
+  <Version>1.0</Version>
+  <Author>ਕਿਰਤਨ ਤੇਗ ਸਿੰਘ</Author>
+  <Name>Configurar Longitud de Buffer</Name>
+  <Category>Workflow</Category>
+  <Description>Automatiza la cantidad de líneas de cada patrón para equilibrar tu flujo de trabajo.</Description>
+  <Platform>Mac, Linux, Windows</Platform>
+</RenoiseScriptingTool>
