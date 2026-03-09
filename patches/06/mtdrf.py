@@ -9,6 +9,7 @@ Owner: Snocomm. - 2026
 
 import sys
 from pathlib import Path
+from importlib import import_module
 
 # Ensure we can import our modules
 sys.path.insert(0, str(Path(__file__).parent))
@@ -24,17 +25,16 @@ from utils.output import (
 from utils.permissions import check_admin_privileges, get_capabilities
 from utils.system_info import get_system_info
 
-# Import detectors
-from detectors import binary_analyzer, process_monitor, file_monitor, keychain_monitor, network_monitor
-
-# Import preventers
-from preventers import file_protection, network_firewall, keychain_protection
-
-# Import mitigators
-from mitigators import quarantine, cleanup, recovery
-
-# Import forensic tools
-from forensic import binary_forensics, process_analyzer, log_analyzer
+def require_module(module_name, feature_name):
+    """Load optional runtime modules only when a command needs them."""
+    try:
+        return import_module(module_name)
+    except ModuleNotFoundError as exc:
+        missing = exc.name or "unknown dependency"
+        raise click.ClickException(
+            f"Missing dependency '{missing}' required for {feature_name}. "
+            "Install with: pip3 install -r patches/06/requirements.txt"
+        ) from exc
 
 
 @click.group()
@@ -75,6 +75,7 @@ def cli(ctx, output_json, verbose, no_color, output):
 @click.argument('directory', type=click.Path(exists=True, file_okay=False, dir_okay=True))
 def scan(directory, recursive):
     """Scan directory for suspicious binaries"""
+    binary_analyzer = require_module('detectors.binary_analyzer', 'binary scanning')
     print_header(f"Scanning Directory: {directory}")
     
     dir_path = Path(directory)
@@ -96,6 +97,10 @@ def scan(directory, recursive):
 @cli.command()
 def detect():
     """Run all detection modules"""
+    process_monitor = require_module('detectors.process_monitor', 'process monitoring')
+    file_monitor = require_module('detectors.file_monitor', 'file monitoring')
+    keychain_monitor = require_module('detectors.keychain_monitor', 'keychain monitoring')
+    network_monitor = require_module('detectors.network_monitor', 'network monitoring')
     print_header("Running Detection Modules")
     
     all_results = {
@@ -173,6 +178,9 @@ def detect():
 @cli.command()
 def prevent():
     """Apply prevention measures"""
+    file_protection = require_module('preventers.file_protection', 'file protection')
+    network_firewall = require_module('preventers.network_firewall', 'network firewall')
+    keychain_protection = require_module('preventers.keychain_protection', 'keychain protection')
     print_header("Applying Prevention Measures")
     
     if not check_admin_privileges():
@@ -204,6 +212,9 @@ def prevent():
 @click.option('--auto', is_flag=True, help='Automatically quarantine without confirmation')
 def mitigate(auto):
     """Run mitigation procedures"""
+    process_monitor = require_module('detectors.process_monitor', 'process monitoring')
+    network_monitor = require_module('detectors.network_monitor', 'network monitoring')
+    recovery = require_module('mitigators.recovery', 'recovery checklist')
     print_header("Running Mitigation Procedures")
     
     if not auto:
@@ -232,6 +243,7 @@ def mitigate(auto):
 @click.argument('binary_path', type=click.Path(exists=True, dir_okay=False))
 def forensic(binary_path):
     """Perform forensic analysis on a binary"""
+    binary_forensics = require_module('forensic.binary_forensics', 'forensic analysis')
     print_header(f"Forensic Analysis: {binary_path}")
     
     binary = Path(binary_path)
@@ -267,6 +279,8 @@ def forensic(binary_path):
 @cli.command()
 def monitor():
     """Continuous monitoring mode"""
+    process_monitor = require_module('detectors.process_monitor', 'process monitoring')
+    network_monitor = require_module('detectors.network_monitor', 'network monitoring')
     print_header("Continuous Monitoring Mode")
     print_info("Monitoring for threats... (Press Ctrl+C to stop)")
     
@@ -295,6 +309,10 @@ def monitor():
 @click.option('--hours', default=24, help='Number of hours to analyze')
 def report(hours):
     """Generate comprehensive detection report"""
+    process_monitor = require_module('detectors.process_monitor', 'process monitoring')
+    network_monitor = require_module('detectors.network_monitor', 'network monitoring')
+    keychain_monitor = require_module('detectors.keychain_monitor', 'keychain monitoring')
+    log_analyzer = require_module('forensic.log_analyzer', 'timeline analysis')
     print_header("Generating Comprehensive Report")
     
     report_data = {

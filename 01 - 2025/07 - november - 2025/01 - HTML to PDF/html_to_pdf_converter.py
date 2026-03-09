@@ -11,19 +11,26 @@ Fecha: 2025
 
 import os
 import sys
+import math
 from pathlib import Path
 from typing import Tuple, Optional
 import logging
 from datetime import datetime
 
-# Importaciones necesarias
-try:
-    from weasyprint import HTML, CSS
-    import math
-except ImportError as e:
-    print(f"❌ Error: Librería no instalada - {e}")
-    print("Instala con: pip install weasyprint")
-    sys.exit(1)
+HTML = None
+
+
+def ensure_weasyprint():
+    """Carga WeasyPrint en runtime para permitir --help sin dependencias."""
+    global HTML
+    if HTML is not None:
+        return True, None
+    try:
+        from weasyprint import HTML as weasy_html
+        HTML = weasy_html
+        return True, None
+    except ImportError as exc:
+        return False, exc
 
 
 # ============================================================================
@@ -338,6 +345,11 @@ class HTMLtoPDFConverter:
             Tupla (éxito: bool, mensaje: str)
         """
         try:
+            has_weasyprint, import_error = ensure_weasyprint()
+            if not has_weasyprint:
+                logger.error(f"Librería no instalada: {import_error}")
+                return False, f"Librería requerida no disponible: {import_error}. Instala con: pip install weasyprint"
+
             # Validar entrada
             if not self._validate_html():
                 return False, "Archivo HTML inválido"

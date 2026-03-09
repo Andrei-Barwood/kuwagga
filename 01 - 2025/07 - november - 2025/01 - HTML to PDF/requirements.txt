@@ -5,27 +5,27 @@
 
 # Conversión HTML a PDF con preservación de estilos CSS y colores
 # Soporta CSS3, tablas, matemáticas, colores, fuentes personalizadas
-weasyprint==61.0
+weasyprint>=61.0
 
 # Manejo de URLs y descargas de recursos web
 # Necesario para cargar fuentes externas y recursos en el PDF
-requests==2.31.0
+requests>=2.31.0
 
 # Validación y procesamiento de HTML/XML
 # Utilizado para análisis de estructura del documento
-lxml==4.9.3
+lxml>=5.3.0
 
 # Gestión de variables de entorno desde archivos .env
 # Facilita configuración sin hardcoding de valores
-python-dotenv==1.0.0
+python-dotenv>=1.0.0
 
 # Procesamiento de imágenes
 # Opcional pero recomendado para mejor calidad de imágenes en PDF
-Pillow==10.1.0
+Pillow>=11.0.0
 
 # Herramientas avanzadas de fuentes
 # Mejora la compatibilidad y renderizado de tipografías
-fonttools==4.47.0
+fonttools>=4.47.0
 
 # Opcional: para generación de reportes (si necesitas más adelante)
 # reportlab==4.0.7

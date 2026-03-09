@@ -10,13 +10,23 @@ import psutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.output import print_debug, print_info, print_warning
 
 
-def get_running_processes() -> List[Dict[str, any]]:
+def _safe_cmdline(proc_info: Dict[str, Any]) -> List[str]:
+    """Normalize psutil cmdline values that can be None or non-list."""
+    cmdline = proc_info.get('cmdline')
+    if not cmdline:
+        return []
+    if isinstance(cmdline, (list, tuple)):
+        return [str(arg) for arg in cmdline]
+    return [str(cmdline)]
+
+
+def get_running_processes() -> List[Dict[str, Any]]:
     """
     Get list of currently running processes.
     
@@ -37,7 +47,7 @@ def get_running_processes() -> List[Dict[str, any]]:
     
     return processes
 
-def check_process_tree(pid: int) -> Optional[Dict[str, any]]:
+def check_process_tree(pid: int) -> Optional[Dict[str, Any]]:
     """
     Analyze process tree for a given PID.
     
@@ -88,7 +98,7 @@ def check_process_tree(pid: int) -> Optional[Dict[str, any]]:
         print_debug(f"Error analyzing process tree for PID {pid}: {e}")
         return None
 
-def monitor_system_profiler() -> List[Dict[str, any]]:
+def monitor_system_profiler() -> List[Dict[str, Any]]:
     """
     Monitor for system_profiler executions, especially with SPHardwareDataType.
     
@@ -100,8 +110,8 @@ def monitor_system_profiler() -> List[Dict[str, any]]:
     processes = get_running_processes()
     
     for proc_info in processes:
-        name = proc_info.get('name', '').lower()
-        cmdline = proc_info.get('cmdline', [])
+        name = str(proc_info.get('name', '')).lower()
+        cmdline = _safe_cmdline(proc_info)
         
         # Check for system_profiler
         if 'system_profiler' in name or any('system_profiler' in str(arg).lower() for arg in cmdline):
@@ -121,7 +131,7 @@ def monitor_system_profiler() -> List[Dict[str, any]]:
     
     return suspicious
 
-def detect_suspicious_patterns() -> List[Dict[str, any]]:
+def detect_suspicious_patterns() -> List[Dict[str, Any]]:
     """
     Detect processes exhibiting stealer malware behavior patterns.
     
@@ -133,9 +143,9 @@ def detect_suspicious_patterns() -> List[Dict[str, any]]:
     processes = get_running_processes()
     
     for proc_info in processes:
-        cmdline = proc_info.get('cmdline', [])
+        cmdline = _safe_cmdline(proc_info)
         cmdline_str = ' '.join(str(arg) for arg in cmdline).lower()
-        name = proc_info.get('name', '').lower()
+        name = str(proc_info.get('name', '')).lower()
         
         patterns = []
         

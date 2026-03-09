@@ -9,13 +9,18 @@ Owner: Snocomm. - 2026
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.output import print_debug, print_info, print_warning, print_error
 
 
-def monitor_keychain_access() -> List[Dict[str, any]]:
+LOG_TIMEOUT_SECONDS = 8
+SHORT_LOOKBACK = '15m'
+MEDIUM_LOOKBACK = '30m'
+
+
+def monitor_keychain_access() -> List[Dict[str, Any]]:
     """
     Monitor for Keychain access, specifically SecItemCopyMatching calls.
     Note: This requires system log analysis as direct Keychain monitoring is restricted.
@@ -29,10 +34,10 @@ def monitor_keychain_access() -> List[Dict[str, any]]:
     try:
         # Search for security framework calls in logs
         result = subprocess.run(
-            ['log', 'show', '--predicate', 'subsystem == "com.apple.security"', '--last', '1h', '--style', 'syslog'],
+            ['log', 'show', '--predicate', 'subsystem == "com.apple.security"', '--last', SHORT_LOOKBACK, '--style', 'syslog'],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=LOG_TIMEOUT_SECONDS
         )
         
         if result.returncode == 0:
@@ -60,7 +65,7 @@ def monitor_keychain_access() -> List[Dict[str, any]]:
     
     return events
 
-def check_chrome_keychain() -> Dict[str, any]:
+def check_chrome_keychain() -> Dict[str, Any]:
     """
     Specifically check for Chrome Safe Storage Keychain access.
     
@@ -97,7 +102,7 @@ def check_chrome_keychain() -> Dict[str, any]:
     
     return result
 
-def parse_keychain_logs() -> List[Dict[str, any]]:
+def parse_keychain_logs() -> List[Dict[str, Any]]:
     """
     Parse security logs for Keychain-related activity.
     
@@ -111,10 +116,10 @@ def parse_keychain_logs() -> List[Dict[str, any]]:
         result = subprocess.run(
             ['log', 'show', '--predicate', 
              'eventMessage CONTAINS "keychain" OR eventMessage CONTAINS "SecItem" OR eventMessage CONTAINS "security"',
-             '--last', '2h', '--style', 'compact'],
+             '--last', MEDIUM_LOOKBACK, '--style', 'compact'],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=LOG_TIMEOUT_SECONDS
         )
         
         if result.returncode == 0:
@@ -152,7 +157,7 @@ def parse_keychain_logs() -> List[Dict[str, any]]:
     
     return events
 
-def get_keychain_access_summary() -> Dict[str, any]:
+def get_keychain_access_summary() -> Dict[str, Any]:
     """
     Get summary of Keychain access monitoring results.
     

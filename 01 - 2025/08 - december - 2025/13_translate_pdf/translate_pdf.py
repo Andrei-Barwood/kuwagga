@@ -116,6 +116,32 @@ SERVICIOS_TRADUCCION = {
     # "DeepL (requiere API key)": "deepl",
 }
 
+MYMEMORY_LANG_MAP = {
+    "es": "es-ES",
+    "en": "en-GB",
+    "fr": "fr-FR",
+    "de": "de-DE",
+    "it": "it-IT",
+    "pt": "pt-PT",
+    "ru": "ru-RU",
+    "ja": "ja-JP",
+    "ko": "ko-KR",
+    "ar": "ar-SA",
+    "hi": "hi-IN",
+    "nl": "nl-NL",
+    "pl": "pl-PL",
+    "tr": "tr-TR",
+}
+
+
+def normalizar_codigo_idioma(codigo: str, servicio: str) -> str:
+    """Normaliza códigos para servicios con requisitos específicos."""
+    if servicio != "mymemory":
+        return codigo
+    if codigo == "auto":
+        return codigo
+    return MYMEMORY_LANG_MAP.get(codigo, codigo)
+
 
 # ============================================================================
 # CLASE: Caché de Traducciones
@@ -313,7 +339,9 @@ def traducir_texto(
     if servicio == "google":
         traductor = GoogleTranslator(source=idioma_origen, target=idioma_destino)
     elif servicio == "mymemory":
-        traductor = MyMemoryTranslator(source=idioma_origen, target=idioma_destino)
+        source = normalizar_codigo_idioma(idioma_origen, servicio)
+        target = normalizar_codigo_idioma(idioma_destino, servicio)
+        traductor = MyMemoryTranslator(source=source, target=target)
     elif servicio == "deepl":
         # DeepL requiere API key - no implementado en versión básica
         raise NotImplementedError("DeepL requiere una API key. Use Google o MyMemory.")
@@ -934,4 +962,3 @@ if __name__ == "__main__":
         logger.exception("Error inesperado en la aplicación")
         print(f"Error inesperado: {e}", file=sys.stderr)
         sys.exit(1)
-

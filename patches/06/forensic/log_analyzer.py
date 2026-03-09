@@ -10,11 +10,13 @@ import subprocess
 import sys
 from pathlib import Path
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import config
 from utils.output import print_debug, print_info, print_warning
+
+LOG_SHOW_TIMEOUT_SECONDS = 10
 
 
 def parse_unified_logs(hours: int = 1, predicate: Optional[str] = None) -> List[str]:
@@ -40,7 +42,7 @@ def parse_unified_logs(hours: int = 1, predicate: Optional[str] = None) -> List[
             cmd,
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=LOG_SHOW_TIMEOUT_SECONDS
         )
         
         if result.returncode == 0:
@@ -52,7 +54,7 @@ def parse_unified_logs(hours: int = 1, predicate: Optional[str] = None) -> List[
     
     return log_lines
 
-def search_for_stealer_indicators(hours: int = 2) -> List[Dict[str, any]]:
+def search_for_stealer_indicators(hours: int = 2) -> List[Dict[str, Any]]:
     """
     Search logs for known stealer malware patterns.
     
@@ -85,7 +87,7 @@ def search_for_stealer_indicators(hours: int = 2) -> List[Dict[str, any]]:
     
     return indicators
 
-def search_for_ad_hoc_signature_activity(hours: int = 2) -> List[Dict[str, any]]:
+def search_for_ad_hoc_signature_activity(hours: int = 2) -> List[Dict[str, Any]]:
     """
     Detect ad-hoc signature-related activity in logs.
     
@@ -120,7 +122,7 @@ def search_for_ad_hoc_signature_activity(hours: int = 2) -> List[Dict[str, any]]
     
     return events
 
-def timeline_analysis(hours: int = 24) -> Dict[str, List[Dict[str, any]]]:
+def timeline_analysis(hours: int = 24) -> Dict[str, List[Dict[str, Any]]]:
     """
     Build timeline of suspicious activity from logs.
     
@@ -136,35 +138,51 @@ def timeline_analysis(hours: int = 24) -> Dict[str, List[Dict[str, any]]]:
         'file_access': [],
         'network_activity': [],
     }
-    
-    # Search for stealer indicators
-    timeline['stealer_indicators'] = search_for_stealer_indicators(hours=hours)
-    
-    # Search for signature activity
-    timeline['signature_activity'] = search_for_ad_hoc_signature_activity(hours=hours)
-    
-    # Search for file access (simplified)
-    file_access_logs = parse_unified_logs(
-        hours=hours,
-        predicate='eventMessage CONTAINS "Chrome" OR eventMessage CONTAINS "Exodus"'
-    )
-    
-    for line in file_access_logs:
+
+    # Single log fetch keeps report generation responsive.
+    all_logs = parse_unified_logs(hours=hours)
+
+    for line in all_logs:
         line_lower = line.lower()
-        if any(path_keyword in line_lower for path_keyword in ['cookie', 'login data', 'exodus.wallet']):
+
+        # Stealer indicators
+        matched_indicators = [
+            indicator for indicator in config.STEALER_INDICATORS
+            if indicator.lower() in line_lower
+        ]
+        if matched_indicators:
+            timeline['stealer_indicators'].append({
+                'log_line': line,
+                'matched_indicators': matched_indicators,
+                'severity': 'high' if len(matched_indicators) >= 2 else 'medium',
+            })
+
+        # Signature activity
+        if 'codesign' in line_lower or 'signature' in line_lower:
+            if 'adhoc' in line_lower or 'ad-hoc' in line_lower:
+                timeline['signature_activity'].append({
+                    'log_line': line,
+                    'event_type': 'ad_hoc_signature',
+                    'severity': 'medium',
+                })
+            if 'linker-signed' in line_lower:
+                timeline['signature_activity'].append({
+                    'log_line': line,
+                    'event_type': 'linker_signed',
+                    'severity': 'low',
+                })
+
+        # File access indicators
+        if ('chrome' in line_lower or 'exodus' in line_lower) and any(
+            path_keyword in line_lower
+            for path_keyword in ['cookie', 'login data', 'exodus.wallet']
+        ):
             timeline['file_access'].append({
                 'log_line': line,
                 'severity': 'medium',
             })
-    
-    # Search for network activity
-    network_logs = parse_unified_logs(
-        hours=hours,
-        predicate='subsystem == "com.apple.network"'
-    )
-    
-    for line in network_logs:
-        line_lower = line.lower()
+
+        # Network activity indicators
         if 'localhost:8000' in line_lower or '127.0.0.1:8000' in line_lower:
             timeline['network_activity'].append({
                 'log_line': line,

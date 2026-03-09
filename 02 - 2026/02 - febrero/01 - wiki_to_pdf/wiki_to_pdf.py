@@ -21,7 +21,14 @@ import sys
 import time
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright, Page, Browser
+try:
+    from playwright.sync_api import sync_playwright, Page, Browser
+    PLAYWRIGHT_IMPORT_ERROR = None
+except ImportError as exc:
+    sync_playwright = None
+    Page = object
+    Browser = object
+    PLAYWRIGHT_IMPORT_ERROR = exc
 
 
 # ── Colours ──────────────────────────────────────────────────────────────────
@@ -402,6 +409,15 @@ def ask_output_dir() -> str:
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
+    if sync_playwright is None:
+        print(col("  ✗ Playwright no está instalado.", C.RED))
+        print("  Instala dependencias con:")
+        print("    pip install -r requirements.txt")
+        print("    playwright install chromium")
+        if PLAYWRIGHT_IMPORT_ERROR:
+            print(col(f"  Detalle: {PLAYWRIGHT_IMPORT_ERROR}", C.DIM))
+        sys.exit(1)
+
     banner()
 
     # 1. Interactive setup

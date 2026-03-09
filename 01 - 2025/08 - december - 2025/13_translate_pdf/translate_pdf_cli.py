@@ -46,7 +46,7 @@ try:
     import pdfplumber
 except ImportError:
     pdfplumber = None
-    logger.error("pdfplumber no instalado. Ejecuta: pip install pdfplumber")
+    logger.debug("pdfplumber no instalado. Ejecuta: pip install pdfplumber")
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -56,7 +56,7 @@ try:
     from reportlab.lib.enums import TA_JUSTIFY
 except ImportError:
     SimpleDocTemplate = None
-    logger.error("reportlab no instalado. Ejecuta: pip install reportlab")
+    logger.debug("reportlab no instalado. Ejecuta: pip install reportlab")
 
 # ============================================================================
 # TRADUCCIÓN
@@ -65,7 +65,7 @@ try:
     from deep_translator import GoogleTranslator, MyMemoryTranslator
 except ImportError:
     GoogleTranslator = None
-    logger.error("deep-translator no instalado. Ejecuta: pip install deep-translator")
+    logger.debug("deep-translator no instalado. Ejecuta: pip install deep-translator")
 
 
 # ============================================================================
@@ -105,6 +105,33 @@ IDIOMAS = {
     "hu": "Húngaro",
     "auto": "Auto-detectar",
 }
+
+# MyMemory requiere códigos regionales para varios idiomas.
+MYMEMORY_LANG_MAP = {
+    "es": "es-ES",
+    "en": "en-GB",
+    "fr": "fr-FR",
+    "de": "de-DE",
+    "it": "it-IT",
+    "pt": "pt-PT",
+    "ru": "ru-RU",
+    "ja": "ja-JP",
+    "ko": "ko-KR",
+    "ar": "ar-SA",
+    "hi": "hi-IN",
+    "nl": "nl-NL",
+    "pl": "pl-PL",
+    "tr": "tr-TR",
+}
+
+
+def normalizar_codigo_idioma(codigo: str, servicio: str) -> str:
+    """Normaliza códigos para servicios con requisitos específicos."""
+    if servicio != "mymemory":
+        return codigo
+    if codigo == "auto":
+        return codigo
+    return MYMEMORY_LANG_MAP.get(codigo, codigo)
 
 
 # ============================================================================
@@ -238,7 +265,9 @@ def traducir_texto(
     if servicio == "google":
         traductor = GoogleTranslator(source=idioma_origen, target=idioma_destino)
     elif servicio == "mymemory":
-        traductor = MyMemoryTranslator(source=idioma_origen, target=idioma_destino)
+        source = normalizar_codigo_idioma(idioma_origen, servicio)
+        target = normalizar_codigo_idioma(idioma_destino, servicio)
+        traductor = MyMemoryTranslator(source=source, target=target)
     else:
         traductor = GoogleTranslator(source=idioma_origen, target=idioma_destino)
     
@@ -538,6 +567,4 @@ if __name__ == "__main__":
         logger.exception("Error inesperado en la aplicación")
         print(f"Error inesperado: {e}", file=sys.stderr)
         sys.exit(1)
-
-
 
