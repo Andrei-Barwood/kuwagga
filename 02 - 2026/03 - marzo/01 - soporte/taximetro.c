@@ -29,3 +29,8 @@ void taximeter_timer_callback(void) {
         }
     }
 }
+
+void TIM_IRQHandler(void) {
+    CMMotionManager_update(&motionManager);
+    // Optionally read data and process taxi logic
+}
