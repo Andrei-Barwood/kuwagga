@@ -97,14 +97,19 @@ MP3_BITRATE = "320k"
 ALBUM_NAME = ""
 
 # Configuración para FLAC de alta resolución (modo 5)
-FLAC_SAMPLE_RATE = 96000
-FLAC_BIT_DEPTH = 24
+FLAC_SAMPLE_RATE = 192000
+FLAC_BIT_DEPTH = 32
 FLAC_COMPRESSION = 8
 
 # Variables globales
 INTERRUPTED = False
 TMP_FILES = []
 TMP_DIRS = []
+AUDIO_SOURCE_EXTENSIONS = {'.wav', '.flac', '.aiff', '.aif'}
+AUDIO_SOURCE_FORMATS_LABEL = "WAV/AIFF/FLAC"
+HIRES_AUDIO_SOURCE_EXTENSIONS = AUDIO_SOURCE_EXTENSIONS | {'.mp3', '.m4a'}
+HIRES_AUDIO_SOURCE_FORMATS_LABEL = "WAV/AIFF/FLAC/MP3/M4A"
+LOSSY_AUDIO_SOURCE_EXTENSIONS = {'.mp3', '.m4a'}
 
 # ============================================================================
 # COLORES Y FORMATO (Paleta: Forest Green)
@@ -295,6 +300,233 @@ def select_output_folder(default_dir: Path) -> Optional[Path]:
             print_error(f"Error al procesar la ruta: {e}")
             print(f"    {Colors.MEDIUM_GREEN}Por favor, verifica la ruta e intenta de nuevo.{Colors.NC}")
             print()
+
+
+def collect_audio_files(directory: Path, recursive: bool = False,
+                        extensions: Optional[set] = None) -> List[Path]:
+    """Recolecta archivos de audio por extensión (filtrado estricto)."""
+    ext_set = {ext.lower() for ext in (extensions or AUDIO_SOURCE_EXTENSIONS)}
+    if not directory.exists() or not directory.is_dir():
+        return []
+    pattern_iter = directory.rglob("*") if recursive else directory.glob("*")
+    files = [p for p in pattern_iter if p.is_file() and p.suffix.lower() in ext_set]
+    return sorted(files, key=lambda p: str(p).lower())
+
+
+def parse_number_selection(raw_selection: str, min_value: int, max_value: int) -> Optional[List[int]]:
+    """
+    Parsea selección numérica con coma y rangos.
+    Ejemplos válidos: "1,3,5", "2-4", "1,4-6".
+    Retorna lista ordenada sin duplicados o None si hay error.
+    """
+    if not raw_selection:
+        return []
+
+    selected_numbers = set()
+    parts = [part.strip() for part in raw_selection.split(',') if part.strip()]
+    if not parts:
+        return []
+
+    for part in parts:
+        if '-' in part:
+            bounds = [b.strip() for b in part.split('-', 1)]
+            if len(bounds) != 2 or not bounds[0].isdigit() or not bounds[1].isdigit():
+                return None
+            start = int(bounds[0])
+            end = int(bounds[1])
+            if start > end:
+                return None
+            if start < min_value or end > max_value:
+                return None
+            selected_numbers.update(range(start, end + 1))
+        else:
+            if not part.isdigit():
+                return None
+            value = int(part)
+            if value < min_value or value > max_value:
+                return None
+            selected_numbers.add(value)
+
+    return sorted(selected_numbers)
+
+
+def select_audio_source_files(source_dir: Path,
+                              extensions: Optional[set] = None,
+                              formats_label: Optional[str] = None,
+                              filter_note: Optional[str] = None) -> Optional[List[Path]]:
+    """
+    Selecciona la fuente de archivos de audio:
+    - Directorio actual
+    - Uno de los subdirectorios con archivos compatibles
+    - Todos los subdirectorios compatibles
+
+    Solo considera extensiones en `extensions` (por defecto WAV/AIFF/FLAC).
+    """
+    ext_set = {ext.lower() for ext in (extensions or AUDIO_SOURCE_EXTENSIONS)}
+    label = formats_label or AUDIO_SOURCE_FORMATS_LABEL
+    current_dir_files = collect_audio_files(source_dir, recursive=False, extensions=ext_set)
+
+    print_header("Origen de Archivos de Audio")
+    print_info(f"Filtro activo: {label}.")
+    if filter_note:
+        print_info(filter_note)
+    print_info(f"Directorio actual: {len(current_dir_files)} archivo(s) compatible(s).")
+    print()
+
+    explore_subdirs = confirm("¿Deseas explorar subdirectorios disponibles en esta carpeta?")
+    print()
+    if not explore_subdirs:
+        return current_dir_files
+
+    subdirs_with_files = []
+    for child in sorted(source_dir.iterdir(), key=lambda p: p.name.lower()):
+        if child.is_dir():
+            child_files = collect_audio_files(child, recursive=True, extensions=ext_set)
+            if child_files:
+                subdirs_with_files.append((child, child_files))
+
+    if not subdirs_with_files:
+        print_warning(f"No se encontraron subdirectorios con archivos {label}.")
+        return current_dir_files
+
+    total_subdir_files = sum(len(files) for _, files in subdirs_with_files)
+
+    print(f"    {Colors.LIME}Fuentes disponibles:{Colors.NC}")
+    print(f"  {Colors.LIME}0){Colors.NC} Directorio actual ({len(current_dir_files)} archivo(s))")
+    for idx, (subdir, files) in enumerate(subdirs_with_files, 1):
+        rel_name = subdir.relative_to(source_dir)
+        print(f"  {Colors.LIME}{idx}){Colors.NC} {rel_name}/ ({len(files)} archivo(s))")
+    all_option = len(subdirs_with_files) + 1
+    print(f"  {Colors.LIME}{all_option}){Colors.NC} Todos los subdirectorios ({total_subdir_files} archivo(s))")
+    print(f"  {Colors.LIME}b){Colors.NC} Modo batch subdirectorios (selección múltiple)")
+    print()
+    print(f"    {Colors.YELLOW_GREEN}💡 Enter = directorio actual{Colors.NC}")
+    print(f"    {Colors.YELLOW_GREEN}💡 En modo batch puedes usar: 1,3,5 o rangos 1-4{Colors.NC}")
+    print()
+
+    while True:
+        try:
+            choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona origen (0-{all_option}): {Colors.NC}").strip()
+
+            if not choice or choice == "0":
+                print_success(f"Usando directorio actual: {len(current_dir_files)} archivo(s)")
+                print()
+                return current_dir_files
+
+            if choice.lower() == "b":
+                print()
+                print_info("Modo batch de subdirectorios activado.")
+                print(f"    {Colors.MEDIUM_GREEN}Selecciona varios subdirectorios en una sola ejecución.{Colors.NC}")
+                print(f"    {Colors.MEDIUM_GREEN}Ejemplos: 1,3,5  |  2-6  |  1,4-7,10{Colors.NC}")
+                print(f"    {Colors.YELLOW_GREEN}Enter = todos los subdirectorios{Colors.NC}")
+                print()
+
+                batch_choice = input(
+                    f"{Colors.YELLOW_GREEN}▶ Subdirectorios batch (1-{len(subdirs_with_files)}): {Colors.NC}"
+                ).strip()
+
+                if not batch_choice:
+                    selected_indices = list(range(1, len(subdirs_with_files) + 1))
+                else:
+                    selected_indices = parse_number_selection(
+                        batch_choice, min_value=1, max_value=len(subdirs_with_files)
+                    )
+                    if selected_indices is None:
+                        print_error(
+                            f"Selección inválida. Usa números entre 1 y {len(subdirs_with_files)}, "
+                            "separados por comas o rangos (ej: 1,3,5 o 2-4)."
+                        )
+                        print()
+                        continue
+
+                selected_files = []
+                selected_names = []
+                for idx in selected_indices:
+                    subdir, files = subdirs_with_files[idx - 1]
+                    selected_files.extend(files)
+                    selected_names.append(str(subdir.relative_to(source_dir)))
+
+                print_success(
+                    f"Modo batch: {len(selected_indices)} subdirectorio(s), "
+                    f"{len(selected_files)} archivo(s) seleccionado(s)."
+                )
+                for name in selected_names:
+                    print(f"    {Colors.MEDIUM_GREEN}• {name}/{Colors.NC}")
+                print()
+                return selected_files
+
+            if not choice.isdigit():
+                print_error(f"Opción inválida. Ingresa un número entre 0 y {all_option}, o 'b' para batch.")
+                continue
+
+            selected = int(choice)
+            if selected == all_option:
+                selected_files = []
+                for _, files in subdirs_with_files:
+                    selected_files.extend(files)
+                print_success(f"Usando todos los subdirectorios: {len(selected_files)} archivo(s)")
+                print()
+                return selected_files
+
+            if 1 <= selected <= len(subdirs_with_files):
+                selected_subdir, selected_files = subdirs_with_files[selected - 1]
+                rel_name = selected_subdir.relative_to(source_dir)
+                print_success(f"Subdirectorio seleccionado: {rel_name}/ ({len(selected_files)} archivo(s))")
+                print()
+                return selected_files
+
+            print_error(f"Opción inválida. Ingresa un número entre 0 y {all_option}.")
+        except (EOFError, KeyboardInterrupt):
+            return None
+
+
+def get_source_bucket_dir(source_dir: Path, audio_file: Path) -> Path:
+    """
+    Retorna el directorio "bucket" del archivo:
+    - source_dir para archivos en el directorio raíz
+    - primer subdirectorio bajo source_dir para archivos en subcarpetas
+    """
+    try:
+        source_resolved = source_dir.resolve()
+        file_resolved = audio_file.resolve()
+        rel = file_resolved.relative_to(source_resolved)
+        if len(rel.parts) <= 1:
+            return source_resolved
+        return source_resolved / rel.parts[0]
+    except Exception:
+        return audio_file.parent.resolve()
+
+
+def resolve_output_dir_for_file(source_dir: Path, selected_output_dir: Path,
+                                audio_file: Path, subdir_name: str) -> Path:
+    """
+    Resuelve el directorio de salida por archivo.
+
+    Si el destino seleccionado es el directorio actual (source_dir):
+    - Archivos del raíz -> source_dir/masters
+    - Archivos de subdirectorios -> <subdirectorio>/subdir_name
+
+    Si no es el directorio actual:
+    - Crea carpeta en destino con el nombre de la carpeta origen del archivo.
+      Ejemplos:
+      - Archivo en source_dir -> selected_output_dir/source_dir.name
+      - Archivo en source_dir/subX -> selected_output_dir/subX
+    """
+    try:
+        source_resolved = source_dir.resolve()
+        selected_resolved = selected_output_dir.resolve()
+    except Exception:
+        source_resolved = source_dir
+        selected_resolved = selected_output_dir
+
+    bucket_dir = get_source_bucket_dir(source_resolved, audio_file)
+
+    if selected_resolved != source_resolved:
+        return selected_resolved / bucket_dir.name
+
+    if bucket_dir == source_resolved:
+        return source_resolved / "masters"
+    return bucket_dir / subdir_name
 
 
 def get_audio_duration(file_path: Path) -> Optional[float]:
@@ -834,7 +1066,7 @@ def get_audio_info(file_path: Path) -> Dict:
     try:
         info['duration'] = get_audio_duration(file_path)
         result = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'a:0',
-                                '-show_entries', 'stream=sample_rate,bits_per_sample,codec_name,bit_rate',
+                                '-show_entries', 'stream=sample_rate,bits_per_sample,bits_per_raw_sample,codec_name,bit_rate',
                                 '-of', 'json', str(file_path)],
                                capture_output=True, text=True)
         if result.returncode == 0:
@@ -847,6 +1079,48 @@ def get_audio_info(file_path: Path) -> Dict:
     except Exception:
         pass
     return info
+
+
+def get_effective_flac_bit_depth(requested_bit_depth: int) -> int:
+    """
+    FLAC en FFmpeg acepta sample_fmt s32 para el proceso, pero el archivo FLAC
+    final queda efectivamente en 24-bit. Por eso normalizamos cualquier
+    solicitud >16-bit a 24-bit para reporting/copia inteligente.
+    """
+    return 16 if requested_bit_depth == 16 else 24
+
+
+def print_bit_depth_guide(sample_rate: int):
+    """
+    Muestra una guía práctica para elegir bit depth, con ejemplos concretos
+    y cómo se relaciona con exportación a 192kHz.
+    """
+    print_header("Guía Rápida de Bit Depth")
+    print()
+    print(f"    {Colors.LIME}Concepto clave:{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}• Sample rate (Hz) = cuántas muestras por segundo.{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}• Bit depth = precisión de cada muestra (rango dinámico).{Colors.NC}")
+    print()
+    print(f"    {Colors.LIME}Diferencias principales:{Colors.NC}")
+    print(f"    {Colors.LIGHT_GREEN}16-bit:{Colors.NC} ~96 dB de rango dinámico. Entrega final y máxima compatibilidad.")
+    print(f"    {Colors.LIGHT_GREEN}24-bit:{Colors.NC} ~144 dB de rango dinámico. Estándar de producción/mastering.")
+    print(f"    {Colors.LIGHT_GREEN}32-bit:{Colors.NC} mayor margen para procesamiento interno (headroom).")
+    print()
+    print(f"    {Colors.LIME}Ejemplo exportando a 192kHz (estéreo, 10s, sin compresión):{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}• 16-bit @ 192kHz: ~7.3 MB{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}• 24-bit @ 192kHz: ~11.0 MB{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}• 32-bit @ 192kHz: ~14.6 MB{Colors.NC}")
+    print()
+    print(f"    {Colors.LIME}Relación con 192kHz:{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}A 192kHz tienes 192000 muestras/segundo por canal.{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}El bit depth define cuánta resolución tiene cada una de esas muestras.{Colors.NC}")
+    print()
+    if sample_rate == 192000:
+        print(f"    {Colors.YELLOW_GREEN}✔ Configuración actual: exportación a 192kHz.{Colors.NC}")
+    else:
+        print(f"    {Colors.YELLOW_GREEN}ℹ Configuración actual: {sample_rate}Hz. El ejemplo anterior usa 192kHz como referencia hi-res.{Colors.NC}")
+    print(f"    {Colors.YELLOW_GREEN}⚠ En este flujo FFmpeg/FLAC termina en 24-bit efectivo aunque se solicite 32-bit.{Colors.NC}")
+    print()
 
 # ============================================================================
 # ANIMACIONES
@@ -1042,17 +1316,17 @@ def convert_to_flac(audio_file: Path, output_dir: Path, sample_rate: int = FLAC_
     input_codec = info.get('codec', '')
     input_sr = info.get('sample_rate')
     input_bd = info.get('bit_depth')
+    effective_target_bd = get_effective_flac_bit_depth(bit_depth)
     if input_codec == 'flac' and input_sr and str(input_sr) == str(sample_rate):
-        input_bd_norm = 24 if input_bd in [24, 32] else (input_bd or 24)
-        target_bd_norm = 24 if bit_depth in [24, 32] else bit_depth
-        if input_bd_norm == target_bd_norm:
+        input_bd_norm = get_effective_flac_bit_depth(input_bd or effective_target_bd)
+        if input_bd_norm == effective_target_bd:
             try:
                 shutil.copy2(audio_file, output_file)
                 if output_file.exists():
                     orig_size = get_file_size(audio_file)
                     out_size = get_file_size(output_file)
                     print_success(f"Copiado (sin re-codificación): {output_file.name}")
-                    print(f"    {Colors.DARK_FOREST}{orig_size} → {out_size} | {input_sr}Hz/{input_bd}bit{Colors.NC}")
+                    print(f"    {Colors.DARK_FOREST}{orig_size} → {out_size} | {input_sr}Hz/{input_bd_norm}bit FLAC{Colors.NC}")
                     return True
             except Exception:
                 pass
@@ -1073,8 +1347,14 @@ def convert_to_flac(audio_file: Path, output_dir: Path, sample_rate: int = FLAC_
         if result.returncode == 0 and output_file.exists():
             orig_size = get_file_size(audio_file)
             out_size = get_file_size(output_file)
+            output_info = get_audio_info(output_file)
+            actual_sr = output_info.get('sample_rate') or sample_rate
+            actual_bd = output_info.get('bit_depth') or effective_target_bd
             print_success(f"Creado: {output_file.name}")
-            print(f"    {Colors.DARK_FOREST}{orig_size} → {out_size} | {sample_rate}Hz/{bit_depth}bit{Colors.NC}")
+            print(f"    {Colors.DARK_FOREST}{orig_size} → {out_size} | {actual_sr}Hz/{actual_bd}bit FLAC{Colors.NC}")
+            if bit_depth == 32 and actual_bd != 32:
+                print_warning("32-bit solicitado, pero FFmpeg/FLAC generó FLAC efectivo a 24-bit.")
+                print_info("Si necesitas 32-bit real, conviene exportar a WAV o AIFF.")
             return True
         else:
             if result.stderr:
@@ -1406,19 +1686,19 @@ def process_m4a_to_mp4(source_dir: Path, output_dirname: str = "converted_videos
     return success_count > 0
 
 
-def process_audio_to_m4a(source_dir: Path, format_type: str, output_dirname: str = "converted",
+def process_audio_to_m4a(source_dir: Path, output_dirname: str = "converted",
                          quality_mode: str = QUALITY_MODE, vbr_quality: int = VBR_QUALITY,
                          cbr_bitrate: str = CBR_BITRATE):
     output_dir = source_dir / output_dirname
     output_dir.mkdir(exist_ok=True)
-    extensions = ['.wav', '.WAV'] if format_type == 'wav' else ['.flac', '.FLAC']
-    audio_files = []
-    for ext in extensions:
-        audio_files.extend(sorted(source_dir.glob(f"*{ext}")))
-    if not audio_files:
-        print_error(f"No se encontraron archivos {format_type.upper()} en esta carpeta.")
+    audio_files = select_audio_source_files(source_dir)
+    if audio_files is None:
+        print_warning("Conversión cancelada.")
         return False
-    print_header(f"Archivos {format_type.upper()} encontrados: {len(audio_files)}")
+    if not audio_files:
+        print_error("No se encontraron archivos WAV/AIFF/FLAC para convertir.")
+        return False
+    print_header(f"Archivos {AUDIO_SOURCE_FORMATS_LABEL} encontrados: {len(audio_files)}")
     for f in audio_files:
         print(f"    📄 {f.name}")
     print()
@@ -1430,7 +1710,7 @@ def process_audio_to_m4a(source_dir: Path, format_type: str, output_dirname: str
     if not confirm(f"¿Convertir {len(audio_files)} archivos a M4A?"):
         print_warning("Conversión cancelada.")
         return False
-    print_header(f"Iniciando conversión {format_type.upper()} → M4A")
+    print_header("Iniciando conversión AUDIO (WAV/AIFF/FLAC) → M4A")
     print(f"    {Colors.MEDIUM_GREEN}💡 Presiona Ctrl+C en cualquier momento para cancelar{Colors.NC}")
     success_count = 0
     fail_count = 0
@@ -1461,11 +1741,12 @@ def process_album_to_unified_mp3(source_dir: Path, output_dirname: str = "unifie
                                  mp3_bitrate: str = MP3_BITRATE, album_name: str = ALBUM_NAME):
     output_dir = source_dir / output_dirname
     output_dir.mkdir(exist_ok=True)
-    audio_files = []
-    for ext in ['.flac', '.FLAC', '.wav', '.WAV', '.m4a', '.M4A', '.mp3', '.MP3']:
-        audio_files.extend(sorted(source_dir.glob(f"*{ext}")))
+    audio_files = select_audio_source_files(source_dir)
+    if audio_files is None:
+        print_warning("Operación cancelada.")
+        return False
     if not audio_files:
-        print_error("No se encontraron archivos de audio (FLAC/WAV/M4A/MP3) en esta carpeta.")
+        print_error("No se encontraron archivos WAV/AIFF/FLAC en la fuente seleccionada.")
         return False
     if len(audio_files) < 2:
         print_warning("Solo se encontró 1 archivo. Este modo está diseñado para álbumes con múltiples pistas.")
@@ -1625,32 +1906,51 @@ def process_audio_to_flac(source_dir: Path, output_dirname: str = "flac_hires",
                           compression: int = FLAC_COMPRESSION):
     output_dir = source_dir / output_dirname
     output_dir.mkdir(exist_ok=True)
-    audio_files = []
-    for ext in ['.wav', '.WAV', '.m4a', '.M4A', '.mp3', '.MP3', '.aiff', '.AIF', '.aif', '.AIF',
-                '.ogg', '.OGG', '.wma', '.WMA', '.opus', '.OPUS', '.flac', '.FLAC']:
-        audio_files.extend(sorted(source_dir.glob(f"*{ext}")))
+    audio_files = select_audio_source_files(
+        source_dir,
+        extensions=HIRES_AUDIO_SOURCE_EXTENSIONS,
+        formats_label=HIRES_AUDIO_SOURCE_FORMATS_LABEL,
+        filter_note="Incluye fuentes con pérdida (MP3/M4A). Convertirlas a FLAC no recupera detalle perdido, pero sí unifica el formato maestro."
+    )
+    if audio_files is None:
+        print_warning("Conversión cancelada.")
+        return False
     if not audio_files:
-        print_error("No se encontraron archivos de audio en esta carpeta.")
-        print_info("Formatos soportados: WAV, M4A, MP3, AIFF, OGG, WMA, OPUS, FLAC")
+        print_error("No se encontraron archivos compatibles para convertir a FLAC.")
+        print_info("Formatos soportados para esta selección: WAV, AIFF, FLAC, MP3, M4A")
         return False
     print_header(f"Archivos de audio encontrados: {len(audio_files)}")
+    lossy_count = 0
     for f in audio_files:
         dur = get_audio_duration(f)
         info = get_audio_info(f)
         sr = info.get('sample_rate', '?')
+        codec = info.get('codec', '?')
         dur_fmt = format_duration(dur) if dur else "00:00"
-        print(f"    {Colors.LIME}📄{Colors.NC} {Colors.LIGHT_GREEN}{f.name}{Colors.NC} {Colors.MEDIUM_GREEN}({dur_fmt}, {sr}Hz){Colors.NC}")
+        if f.suffix.lower() in LOSSY_AUDIO_SOURCE_EXTENSIONS:
+            lossy_count += 1
+        print(f"    {Colors.LIME}📄{Colors.NC} {Colors.LIGHT_GREEN}{f.name}{Colors.NC} {Colors.MEDIUM_GREEN}({dur_fmt}, {sr}Hz, {codec}){Colors.NC}")
     print()
-    sr_display = "96kHz" if sample_rate == 96000 else ("48kHz" if sample_rate == 48000 else ("44.1kHz" if sample_rate == 44100 else f"{sample_rate}Hz"))
+    sr_display = "192kHz" if sample_rate == 192000 else ("96kHz" if sample_rate == 96000 else ("48kHz" if sample_rate == 48000 else ("44.1kHz" if sample_rate == 44100 else f"{sample_rate}Hz")))
+    effective_bit_depth = get_effective_flac_bit_depth(bit_depth)
     print_info("Configuración FLAC:")
     print(f"    {Colors.LIME}Sample Rate:{Colors.NC}    {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
-    print(f"    {Colors.LIME}Bit Depth:{Colors.NC}      {Colors.LIGHT_GREEN}{bit_depth}-bit{Colors.NC}")
+    if bit_depth == effective_bit_depth:
+        print(f"    {Colors.LIME}Bit Depth:{Colors.NC}      {Colors.LIGHT_GREEN}{bit_depth}-bit{Colors.NC}")
+    else:
+        print(f"    {Colors.LIME}Bit Depth:{Colors.NC}      {Colors.LIGHT_GREEN}{bit_depth}-bit solicitado{Colors.NC}")
+        print(f"    {Colors.LIME}FLAC efectivo:{Colors.NC} {Colors.LIGHT_GREEN}{effective_bit_depth}-bit{Colors.NC}")
     print(f"    {Colors.LIME}Compresión:{Colors.NC}     {Colors.LIGHT_GREEN}Nivel {compression}{Colors.NC}")
+    if lossy_count > 0:
+        print_warning(f"Se detectaron {lossy_count} fuente(s) MP3/M4A.")
+        print_info("La conversión a FLAC mejora compatibilidad y preserva la reexportación, pero no restaura información perdida del original con pérdida.")
+    if bit_depth == 32 and effective_bit_depth != 32:
+        print_warning("FFmpeg en este flujo genera FLAC efectivo a 24-bit aunque se procese en s32.")
     print()
-    if not confirm(f"¿Convertir {len(audio_files)} archivos a FLAC {sr_display}/{bit_depth}-bit?"):
+    if not confirm(f"¿Convertir {len(audio_files)} archivos a FLAC {sr_display}/{effective_bit_depth}-bit efectivo?"):
         print_warning("Conversión cancelada.")
         return False
-    print_header(f"Iniciando conversión a FLAC {sr_display}/{bit_depth}-bit")
+    print_header(f"Iniciando conversión a FLAC {sr_display}/{effective_bit_depth}-bit")
     print(f"    {Colors.MEDIUM_GREEN}💡 Presiona Ctrl+C en cualquier momento para cancelar{Colors.NC}")
     print()
     success_count = 0
@@ -1674,7 +1974,7 @@ def process_audio_to_flac(source_dir: Path, output_dirname: str = "flac_hires",
     print(f"    {Colors.LIGHT_GREEN}Exitosos:{Colors.NC} {Colors.LIME}{success_count}{Colors.NC}")
     if fail_count > 0:
         print(f"    {Colors.DARK_GREEN}Fallidos:{Colors.NC} {Colors.YELLOW_GREEN}{fail_count}{Colors.NC}")
-    print(f"    {Colors.LIME}Formato:{Colors.NC}  {Colors.LIGHT_GREEN}FLAC {sr_display}/{bit_depth}-bit{Colors.NC}")
+    print(f"    {Colors.LIME}Formato:{Colors.NC}  {Colors.LIGHT_GREEN}FLAC {sr_display}/{effective_bit_depth}-bit{Colors.NC}")
     print(f"    {Colors.LIME}Salida:{Colors.NC}   {Colors.LIGHT_GREEN}{output_dir}/{Colors.NC}")
     return success_count > 0
 
@@ -2309,11 +2609,12 @@ def process_to_432hz(source_dir: Path, output_dir: Path):
         output_dir: Directorio de destino donde se guardarán los archivos convertidos
     """
     output_dir.mkdir(parents=True, exist_ok=True)
-    audio_files = []
-    for ext in ['.flac', '.FLAC', '.wav', '.WAV', '.m4a', '.M4A', '.mp3', '.MP3']:
-        audio_files.extend(sorted(source_dir.glob(f"*{ext}")))
+    audio_files = select_audio_source_files(source_dir)
+    if audio_files is None:
+        print_warning("Conversión cancelada.")
+        return False
     if not audio_files:
-        print_error("No se encontraron archivos de audio para convertir a 432Hz")
+        print_error("No se encontraron archivos WAV/AIFF/FLAC para convertir a 432Hz")
         return False
     
     print_header("Conversión a frecuencia 432Hz - Música Devocional")
@@ -2388,13 +2689,19 @@ def process_to_432hz(source_dir: Path, output_dir: Path):
     fail_count = 0
     skip_count = 0
     existing_files = []
+    created_output_dirs = set()
+
+    if output_dir.resolve() == source_dir.resolve():
+        (source_dir / "masters").mkdir(parents=True, exist_ok=True)
     
     # Determinar extensión según formato
     output_ext = ".wav" if output_format in ['wav', 'wav_compressed'] else ".flac"
+    per_subdir_output_name = "flac" if output_format == "flac" else "wav"
     
     # Verificar archivos existentes antes de procesar
     for audio_file in selected_files:
-        output_file = output_dir / f"{audio_file.stem}_432Hz{output_ext}"
+        target_dir = resolve_output_dir_for_file(source_dir, output_dir, audio_file, per_subdir_output_name)
+        output_file = target_dir / f"{audio_file.stem}_432Hz{output_ext}"
         if output_file.exists():
             existing_files.append((audio_file, output_file))
     
@@ -2450,7 +2757,10 @@ def process_to_432hz(source_dir: Path, output_dir: Path):
             print_warning("Conversión interrumpida por el usuario")
             break
         
-        output_file = output_dir / f"{audio_file.stem}_432Hz{output_ext}"
+        target_dir = resolve_output_dir_for_file(source_dir, output_dir, audio_file, per_subdir_output_name)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        created_output_dirs.add(str(target_dir))
+        output_file = target_dir / f"{audio_file.stem}_432Hz{output_ext}"
         
         # Verificar si el archivo ya existe y manejar según el modo seleccionado
         if output_file.exists() and overwrite_mode == "skip":
@@ -2461,11 +2771,11 @@ def process_to_432hz(source_dir: Path, output_dir: Path):
         elif output_file.exists() and overwrite_mode == "unique":
             # Agregar sufijo único basado en timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}{output_ext}"
+            output_file = target_dir / f"{audio_file.stem}_432Hz_{timestamp}{output_ext}"
             # Si aún existe (muy improbable), agregar un número incremental
             counter = 1
             while output_file.exists():
-                output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}{output_ext}"
+                output_file = target_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}{output_ext}"
                 counter += 1
         
         animated_progress_bar(i, len(selected_files), f"Convirtiendo: {audio_file.name[:25]}")
@@ -2496,7 +2806,14 @@ def process_to_432hz(source_dir: Path, output_dir: Path):
     print(f"    {Colors.LIME}Formato:{Colors.NC}     {Colors.LIGHT_GREEN}{output_format.upper()}{Colors.NC}")
     print(f"    {Colors.LIME}Frecuencia:{Colors.NC} {Colors.LIGHT_GREEN}432Hz (frecuencia sanadora){Colors.NC}")
     print(f"    {Colors.LIME}Resolución:{Colors.NC}   {Colors.LIGHT_GREEN}{sr_display}/{output_bit_depth}-bit{Colors.NC}")
-    print(f"    {Colors.LIME}Salida:{Colors.NC}     {Colors.LIGHT_GREEN}{output_dir}/{Colors.NC}")
+    print(f"    {Colors.LIME}Salida:{Colors.NC}")
+    if output_dir.resolve() == source_dir.resolve():
+        print(f"    {Colors.MEDIUM_GREEN}• Raíz del origen: carpeta{Colors.NC} {Colors.LIGHT_GREEN}masters{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}• Subdirectorios: carpeta{Colors.NC} {Colors.LIGHT_GREEN}{per_subdir_output_name}{Colors.NC} {Colors.MEDIUM_GREEN}en cada subdirectorio seleccionado{Colors.NC}")
+    else:
+        print(f"    {Colors.LIGHT_GREEN}{output_dir}/{Colors.NC}")
+    for out_dir in sorted(created_output_dirs):
+        print(f"    {Colors.MEDIUM_GREEN}• {out_dir}{Colors.NC}")
     return success_count > 0
 
 
@@ -2509,11 +2826,12 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
         output_dir: Directorio de destino donde se guardarán los archivos convertidos
     """
     output_dir.mkdir(parents=True, exist_ok=True)
-    audio_files = []
-    for ext in ['.flac', '.FLAC', '.wav', '.WAV', '.m4a', '.M4A', '.mp3', '.MP3']:
-        audio_files.extend(sorted(source_dir.glob(f"*{ext}")))
+    audio_files = select_audio_source_files(source_dir)
+    if audio_files is None:
+        print_warning("Conversión cancelada.")
+        return False
     if not audio_files:
-        print_error("No se encontraron archivos de audio para convertir a 432Hz MP3")
+        print_error("No se encontraron archivos WAV/AIFF/FLAC para convertir a 432Hz MP3")
         return False
     
     print_header("Conversión a frecuencia 432Hz MP3 - Música Devocional")
@@ -2650,10 +2968,15 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
     fail_count = 0
     skip_count = 0
     existing_files = []
+    created_output_dirs = set()
+
+    if output_dir.resolve() == source_dir.resolve():
+        (source_dir / "masters").mkdir(parents=True, exist_ok=True)
     
     # Verificar archivos existentes antes de procesar
     for audio_file in selected_files:
-        output_file = output_dir / f"{audio_file.stem}_432Hz.mp3"
+        target_dir = resolve_output_dir_for_file(source_dir, output_dir, audio_file, "mp3")
+        output_file = target_dir / f"{audio_file.stem}_432Hz.mp3"
         if output_file.exists():
             existing_files.append((audio_file, output_file))
     
@@ -2709,7 +3032,10 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
             print_warning("Conversión interrumpida por el usuario")
             break
         
-        output_file = output_dir / f"{audio_file.stem}_432Hz.mp3"
+        target_dir = resolve_output_dir_for_file(source_dir, output_dir, audio_file, "mp3")
+        target_dir.mkdir(parents=True, exist_ok=True)
+        created_output_dirs.add(str(target_dir))
+        output_file = target_dir / f"{audio_file.stem}_432Hz.mp3"
         
         # Verificar si el archivo ya existe y manejar según el modo seleccionado
         if output_file.exists() and overwrite_mode == "skip":
@@ -2720,11 +3046,11 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
         elif output_file.exists() and overwrite_mode == "unique":
             # Agregar sufijo único basado en timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}.mp3"
+            output_file = target_dir / f"{audio_file.stem}_432Hz_{timestamp}.mp3"
             # Si aún existe (muy improbable), agregar un número incremental
             counter = 1
             while output_file.exists():
-                output_file = output_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}.mp3"
+                output_file = target_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}.mp3"
                 counter += 1
         
         animated_progress_bar(i, len(selected_files), f"Convirtiendo: {audio_file.name[:25]}")
@@ -2757,7 +3083,14 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
     print(f"    {Colors.LIME}Calidad:{Colors.NC}     {Colors.LIGHT_GREEN}{quality_str}{Colors.NC}")
     if output_sample_rate > 48000:
         print(f"    {Colors.YELLOW_GREEN}⚠️  ADVERTENCIA:{Colors.NC} Sample rate > 48kHz NO es estándar MP3")
-    print(f"    {Colors.LIME}Salida:{Colors.NC}     {Colors.LIGHT_GREEN}{output_dir}/{Colors.NC}")
+    print(f"    {Colors.LIME}Salida:{Colors.NC}")
+    if output_dir.resolve() == source_dir.resolve():
+        print(f"    {Colors.MEDIUM_GREEN}• Raíz del origen: carpeta{Colors.NC} {Colors.LIGHT_GREEN}masters{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}• Subdirectorios: carpeta{Colors.NC} {Colors.LIGHT_GREEN}mp3{Colors.NC} {Colors.MEDIUM_GREEN}en cada subdirectorio seleccionado{Colors.NC}")
+    else:
+        print(f"    {Colors.LIGHT_GREEN}{output_dir}/{Colors.NC}")
+    for out_dir in sorted(created_output_dirs):
+        print(f"    {Colors.MEDIUM_GREEN}• {out_dir}{Colors.NC}")
     return success_count > 0
 
 # ============================================================================
@@ -2777,14 +3110,16 @@ def show_menu():
     print(f"  {Colors.BOLD}{Colors.YELLOW_GREEN}4){Colors.NC} {Colors.YELLOW_GREEN}ÁLBUM → MP3 UNIFICADO{Colors.NC}  {Colors.LIGHT_GREEN}(para registro de derechos de autor){Colors.NC}")
     print(f"     {Colors.MEDIUM_GREEN}Une todos los archivos de audio en UN SOLO MP3{Colors.NC}")
     print()
-    print(f"  {Colors.BOLD}{Colors.LIGHT_GREEN}5){Colors.NC} {Colors.LIGHT_GREEN}AUDIO → FLAC HI-RES{Colors.NC}  {Colors.LIME}(96kHz/24-bit alta resolución){Colors.NC}")
-    print(f"     {Colors.MEDIUM_GREEN}Convierte cualquier audio a FLAC sin pérdida{Colors.NC}")
+    print(f"  {Colors.BOLD}{Colors.LIGHT_GREEN}5){Colors.NC} {Colors.LIGHT_GREEN}AUDIO → FLAC HI-RES{Colors.NC}  {Colors.LIME}(192kHz hi-res, admite MP3/M4A){Colors.NC}")
+    print(f"     {Colors.MEDIUM_GREEN}Convierte WAV/AIFF/FLAC/MP3/M4A a FLAC sin pérdida{Colors.NC}")
     print()
     print(f"  {Colors.BOLD}{Colors.LIME}6){Colors.NC} {Colors.LIME}AUDIO → 432Hz{Colors.NC}  {Colors.YELLOW_GREEN}(frecuencia sanadora){Colors.NC}")
     print(f"     {Colors.MEDIUM_GREEN}Convierte audio a frecuencia universal 432Hz{Colors.NC}")
     print()
     print(f"  {Colors.BOLD}{Colors.YELLOW_GREEN}7){Colors.NC} {Colors.YELLOW_GREEN}AUDIO → MP3 432Hz{Colors.NC}  {Colors.LIME}(frecuencia sanadora en MP3){Colors.NC}")
     print(f"     {Colors.MEDIUM_GREEN}Convierte audio a frecuencia 432Hz y exporta a MP3{Colors.NC}")
+    print()
+    print(f"  {Colors.MEDIUM_GREEN}Entrada general en modos de audio: WAV, AIFF, FLAC (modo 5 también admite MP3 y M4A){Colors.NC}")
     print()
     print(f"  {Colors.DARK_FOREST}h){Colors.NC} Ayuda")
     print(f"  {Colors.DARK_FOREST}q){Colors.NC} Salir")
@@ -2806,17 +3141,58 @@ USO:
     python3 06_audio_converter.py [opciones]
 
 MODOS DE CONVERSIÓN:
-    1) M4A → MP4        Crea video con imagen estática (requiere cover.png)
-    2) WAV → M4A        Comprime WAV a AAC de alta calidad
-    3) FLAC → M4A       Convierte FLAC a AAC
-    4) ÁLBUM → MP3      Une todos los FLAC/WAV/M4A en UN SOLO MP3
-                        (Para registro de derechos de autor)
-    5) AUDIO → FLAC     Convierte cualquier audio a FLAC 96kHz/24-bit
-                        (Alta resolución para producción/archivo)
-    6) AUDIO → 432Hz    Convierte audio a frecuencia universal 432Hz
-                        (Frecuencia sanadora para música devocional)
-    7) AUDIO → MP3 432Hz Convierte audio a frecuencia 432Hz y exporta a MP3
-                        (Frecuencia sanadora en formato MP3)
+    1) M4A → MP4
+       Crea video con imagen estática para YouTube/streaming.
+       Requiere imagen de portada (cover.png, cover.jpg, etc.).
+
+    2) WAV → M4A
+       Convierte audio fuente sin pérdida a AAC alta calidad.
+
+    3) FLAC → M4A
+       Convierte audio fuente sin pérdida a AAC alta calidad.
+
+    4) ÁLBUM → MP3 UNIFICADO
+       Une múltiples pistas en un solo MP3 (con silencios entre tracks).
+       Pensado para registro de derechos de autor.
+
+    5) AUDIO → FLAC HI-RES
+       Entrada: WAV/AIFF/FLAC/MP3/M4A
+       Salida: FLAC (preset recomendado: 192kHz)
+       Incluye guía para seleccionar bit depth (16/24/32).
+
+    6) AUDIO → 432Hz
+       Convierte audio a 432Hz (música devocional/frecuencia sanadora).
+       Salida configurable: WAV, WAV comprimido o FLAC.
+
+    7) AUDIO → MP3 432Hz
+       Convierte audio a 432Hz y exporta a MP3 con opciones de calidad.
+       Incluye preset Ditto Pro (48kHz, CBR 320kbps con ajuste por tamaño).
+
+DETALLE TÉCNICO MODO 5 (192kHz + BIT DEPTH):
+    Sample rate y bit depth no son lo mismo:
+    - Sample rate (Hz): cuántas muestras por segundo.
+    - Bit depth: precisión de cada muestra.
+
+    Diferencias de bit depth:
+    - 16-bit: ~96 dB de rango dinámico, máxima compatibilidad.
+    - 24-bit: ~144 dB de rango dinámico, estándar de producción/mastering.
+    - 32-bit: mayor headroom para procesamiento interno.
+
+    Ejemplo a 192kHz (estéreo, 10 segundos, sin compresión):
+    - 16-bit @ 192kHz: ~7.3 MB
+    - 24-bit @ 192kHz: ~11.0 MB
+    - 32-bit @ 192kHz: ~14.6 MB
+
+    Importante en este script:
+    - Si pides 32-bit en FLAC, FFmpeg/FLAC termina generando FLAC efectivo
+      a 24-bit en este flujo.
+    - Convertir MP3/M4A a FLAC mejora archivo maestro/flujo de trabajo, pero
+      no recupera información ya perdida por compresión con pérdida.
+
+NOTAS GENERALES:
+    - En modos de audio se listan WAV/AIFF/FLAC por defecto.
+    - El modo 5 también incluye MP3 y M4A como fuente.
+    - Presiona Ctrl+C para cancelar en cualquier momento.
 
 EJEMPLOS:
     # Modo interactivo
@@ -2845,12 +3221,12 @@ def main():
             folder = select_folder()
             if folder:
                 output_dirname = input(f"{Colors.YELLOW_GREEN}Nombre del directorio de salida (Enter=converted): {Colors.NC}").strip() or "converted"
-                process_audio_to_m4a(folder, 'wav', output_dirname)
+                process_audio_to_m4a(folder, output_dirname)
         elif choice == '3':
             folder = select_folder()
             if folder:
                 output_dirname = input(f"{Colors.YELLOW_GREEN}Nombre del directorio de salida (Enter=converted): {Colors.NC}").strip() or "converted"
-                process_audio_to_m4a(folder, 'flac', output_dirname)
+                process_audio_to_m4a(folder, output_dirname)
         elif choice == '4':
             folder = select_folder()
             if folder:
@@ -2872,15 +3248,22 @@ def main():
                 print(f"{Colors.LIME}═══ Configuración FLAC Alta Resolución ═══{Colors.NC}")
                 print()
                 print(f"  {Colors.MEDIUM_GREEN}Sample rates disponibles:{Colors.NC}")
-                print(f"    {Colors.LIGHT_GREEN}96000{Colors.NC} - 96kHz (máxima calidad, archivos grandes)")
+                print(f"    {Colors.LIGHT_GREEN}192000{Colors.NC} - 192kHz (Ultra Hi-Res, preset recomendado)")
+                print(f"    {Colors.LIGHT_GREEN}96000{Colors.NC} - 96kHz (alta calidad, archivos grandes)")
                 print(f"    {Colors.LIGHT_GREEN}48000{Colors.NC} - 48kHz (estudio profesional)")
                 print(f"    {Colors.LIGHT_GREEN}44100{Colors.NC} - 44.1kHz (calidad CD)")
                 print()
-                sr_input = input(f"{Colors.YELLOW_GREEN}Sample rate (Enter=96000): {Colors.NC}").strip()
-                sample_rate = int(sr_input) if sr_input else 96000
+                sr_input = input(f"{Colors.YELLOW_GREEN}Sample rate (Enter=192000): {Colors.NC}").strip()
+                sample_rate = int(sr_input) if sr_input else 192000
                 print()
-                bd_input = input(f"{Colors.YELLOW_GREEN}Bit depth - 24 o 16 (Enter=24): {Colors.NC}").strip()
-                bit_depth = int(bd_input) if bd_input else 24
+                print_bit_depth_guide(sample_rate)
+                print(f"  {Colors.MEDIUM_GREEN}Bit depth disponibles para solicitud:{Colors.NC}")
+                print(f"    {Colors.LIGHT_GREEN}32{Colors.NC} - Procesamiento s32 (FLAC final efectivo 24-bit con FFmpeg)")
+                print(f"    {Colors.LIGHT_GREEN}24{Colors.NC} - FLAC estándar de alta resolución")
+                print(f"    {Colors.LIGHT_GREEN}16{Colors.NC} - Compatibilidad máxima")
+                print()
+                bd_input = input(f"{Colors.YELLOW_GREEN}Bit depth - 32, 24 o 16 (Enter=32): {Colors.NC}").strip()
+                bit_depth = int(bd_input) if bd_input else 32
                 print()
                 comp_input = input(f"{Colors.YELLOW_GREEN}Nivel compresión 0-12 (Enter=8): {Colors.NC}").strip()
                 compression = int(comp_input) if comp_input else 8
@@ -2916,5 +3299,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
