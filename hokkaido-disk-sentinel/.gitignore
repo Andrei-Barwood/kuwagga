@@ -1,0 +1,23 @@
+# Entornos virtuales
+venv/
+env/
+hokkaido/
+.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# VS Code / IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Pruebas
+.pytest_cache/
+coverage.xml
+.coverage

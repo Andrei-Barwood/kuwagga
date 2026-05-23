@@ -1,0 +1,2 @@
+[console_scripts]
+hokkaido-sentinel = hokkaido_disk_sentinel.__main__:main
