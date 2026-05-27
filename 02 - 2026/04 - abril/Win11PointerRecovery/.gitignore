@@ -1,0 +1,12 @@
+# PowerShell generated files
+*.log
+*.tmp
+
+# Local backups produced by the toolkit
+PolicyBackup-*/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

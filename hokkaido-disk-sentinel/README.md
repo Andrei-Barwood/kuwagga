@@ -1,0 +1,69 @@
+# Hokkaido Disk Sentinel
+
+> Hokkaido Disk Sentinel is designed to report first, explain second, and delete only after explicit consent.
+
+**Hokkaido Disk Sentinel** es una herramienta profesional, de línea de comandos, diseñada para el monitoreo, auditoría y limpieza segura de discos locales. Su enfoque es 100% conservador: no es un "cleaner agresivo", sino una utilidad de sistema que respeta la integridad del sistema operativo, clasificando el espacio y operando siempre en modo de simulación (*dry-run*) por defecto.
+
+## Características Principales
+
+*   **Multiplataforma:** Soporte nativo para macOS, Windows y Linux.
+*   **Conservador por defecto:** Modo *dry-run* activado. No borra nada sin tu confirmación explícita.
+*   **Clasificación de Riesgos:** Organiza los archivos en cuatro niveles: `SAFE`, `REVIEW`, `DANGEROUS` y `PROTECTED`.
+*   **Rutas Protegidas:** Nunca tocará carpetas del sistema (`/System`, `C:\Windows`, `/bin`, etc.).
+*   **Menú Interactivo:** Interfaz en terminal elegante construida con `rich`.
+*   **Reportes Profesionales:** Genera reportes en consola, JSON y Markdown.
+
+## Instalación
+
+Asegúrate de usar Python 3.13 o superior. Si estás usando un entorno virtual llamado `hokkaido`:
+
+```bash
+pyenv activate hokkaido
+pip install -e .
+```
+
+## Uso Rápido
+
+Para iniciar el menú interactivo profesional:
+
+```bash
+hokkaido-sentinel menu
+```
+
+### Comandos directos (CLI)
+
+También puedes usar la herramienta directamente desde la línea de comandos sin abrir el menú:
+
+*   **Escanear el disco:**
+    ```bash
+    hokkaido-sentinel scan
+    ```
+*   **Ver espacio recuperable:**
+    ```bash
+    hokkaido-sentinel recoverable
+    ```
+*   **Simular limpieza (Dry-Run):**
+    ```bash
+    hokkaido-sentinel clean --dry-run
+    ```
+*   **Ejecutar limpieza (Requiere confirmación):**
+    ```bash
+    hokkaido-sentinel clean --execute
+    ```
+*   **Generar reporte Markdown:**
+    ```bash
+    hokkaido-sentinel report --format markdown
+    ```
+
+## Política de Seguridad (Safety Policy)
+
+Esta herramienta se adhiere a reglas estrictas:
+*   **SAFE:** Cachés de usuario, archivos temporales, papelera y compilados locales (`__pycache__`). Pueden borrarse tras confirmación general.
+*   **REVIEW:** Entornos virtuales huérfanos, cachés de navegadores, descargas antiguas. Requieren confirmación individual detallada.
+*   **DANGEROUS / PROTECTED:** Archivos del sistema y rutas protegidas jamás serán eliminados automáticamente bajo ninguna circunstancia.
+
+## Advertencia Responsable
+Aunque la herramienta implementa estrictos controles de seguridad, el uso del comando de limpieza (`--execute`) es responsabilidad del usuario. Revisa siempre el reporte antes de confirmar la eliminación de archivos.
+
+## Licencia
+Distribuido bajo la MIT License. Ver `LICENSE` para más información.
