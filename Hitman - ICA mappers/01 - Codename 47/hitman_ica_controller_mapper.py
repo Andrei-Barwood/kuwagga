@@ -624,8 +624,8 @@ class HitmanApp(ctk.CTk):
 
 if __name__ == "__main__":
     print("Iniciando ICA Controller Mapper para Hitman: Codename 47...")
-    print("Asegúrate de tener pygame y pynput instalados:")
-    print("pip install customtkinter pygame pynput")
+    print("Instala dependencias con:")
+    print("pip install -r requirements.txt")
 
     app = HitmanApp()
     app.protocol("WM_DELETE_WINDOW", app.on_closing)
