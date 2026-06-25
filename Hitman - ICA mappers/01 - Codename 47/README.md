@@ -39,14 +39,34 @@ Ambos parchean `Hitman.ini` con **1280×720 en modo ventana** — el combo más 
 
 ---
 
-## 📥 Paso 1 — Descargar este proyecto
+## 📥 Paso 1 — Descargar este proyecto en Documentos
 
-**Opción A (recomendada):** clona el repo con Git.
+Guarda todo en tu carpeta **Documentos** para que las rutas de abajo funcionen al copiar y pegar.
 
-**Opción B:** en GitHub, pulsa **Code → Download ZIP**, descomprime y localiza estas carpetas:
+**Opción A — Git (recomendada)**
+
+🍎 macOS (Terminal / zsh):
+```bash
+cd ~/Documents
+git clone https://github.com/Andrei-Barwood/kuwagga.git
+```
+
+🪟 Windows (PowerShell):
+```powershell
+cd $env:USERPROFILE\Documents
+git clone https://github.com/Andrei-Barwood/kuwagga.git
+```
+
+**Opción B — ZIP**
+
+1. En GitHub: **Code → Download ZIP**
+2. Descomprime el ZIP dentro de **Documentos**
+3. Debe quedar así: `Documentos/kuwagga/`
+
+Estructura que vas a usar:
 
 ```
-kuwagga/
+Documentos/kuwagga/
 └── Hitman - ICA mappers/
     ├── 01_setup_Codename47_macos.sh    ← setup Mac (ejecutar ANTES del juego)
     ├── 01_setup_Codename47_win.ps1     ← setup Windows (ejecutar ANTES del juego)
@@ -66,9 +86,9 @@ kuwagga/
 **Requisito previo:** tener Hitman: Codename 47 instalado (típicamente vía **Porting Kit** + GOG) como `Hitman Codename 47.app` en `Applications`.
 
 1. Abre **Terminal** (Cmd + Espacio → escribe `Terminal`)
-2. Ve a la carpeta del repo:
+2. Copia y pega esto:
    ```bash
-   cd "/ruta/a/kuwagga/Hitman - ICA mappers"
+   cd ~/Documents/kuwagga/Hitman\ -\ ICA\ mappers
    ```
 3. Dale permiso de ejecución (solo la primera vez):
    ```bash
@@ -95,9 +115,9 @@ kuwagga/
 **Requisito previo:** Hitman: Codename 47 instalado por **GOG** o **Steam** en una ruta estándar.
 
 1. Clic derecho en **Inicio** → **Terminal (Windows)** o **Windows PowerShell**
-2. Ve a la carpeta del repo:
+2. Copia y pega esto:
    ```powershell
-   cd "C:\ruta\a\kuwagga\Hitman - ICA mappers"
+   cd "$env:USERPROFILE\Documents\kuwagga\Hitman - ICA mappers"
    ```
 3. Si Windows bloquea scripts, permite solo esta sesión:
    ```powershell
@@ -170,15 +190,19 @@ python --version
 
 ### Windows
 
-```bash
-cd "C:\ruta\a\kuwagga\Hitman - ICA mappers\01 - Codename 47"
+Copia y pega en PowerShell:
+
+```powershell
+cd "$env:USERPROFILE\Documents\kuwagga\Hitman - ICA mappers\01 - Codename 47"
 python -m pip install -r requirements.txt
 ```
 
 ### macOS
 
+Copia y pega en Terminal:
+
 ```bash
-cd "/ruta/a/kuwagga/Hitman - ICA mappers/01 - Codename 47"
+cd ~/Documents/kuwagga/Hitman\ -\ ICA\ mappers/01\ -\ Codename\ 47
 pip3 install -r requirements.txt
 ```
 
@@ -210,15 +234,19 @@ El mapper simula teclado y ratón. Sin permisos, el mando se detecta pero el jue
 
 ### Windows
 
-```bash
-cd "C:\ruta\a\kuwagga\Hitman - ICA mappers\01 - Codename 47"
+Copia y pega en PowerShell:
+
+```powershell
+cd "$env:USERPROFILE\Documents\kuwagga\Hitman - ICA mappers\01 - Codename 47"
 python hitman_ica_controller_mapper.py
 ```
 
 ### macOS
 
+Copia y pega en Terminal:
+
 ```bash
-cd "/ruta/a/kuwagga/Hitman - ICA mappers/01 - Codename 47"
+cd ~/Documents/kuwagga/Hitman\ -\ ICA\ mappers/01\ -\ Codename\ 47
 python3 hitman_ica_controller_mapper.py
 ```
 
