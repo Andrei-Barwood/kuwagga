@@ -5,6 +5,14 @@ GUI app with per-mission profiles for comfortable gamepad mapping.
 Built for EasySMX X15 (Xbox-style layout) but works with most controllers.
 """
 
+import os
+import sys
+
+# macOS: SDL must not init Cocoa video/keyboard from a worker thread while
+# tkinter owns the main thread — that triggers dispatch_assert_queue_fail.
+if sys.platform == "darwin":
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+
 import customtkinter as ctk
 import pygame
 import threading
@@ -242,6 +250,26 @@ RECOMENDACIÓN DE MANDO:
 # ============================================================
 # BASE MAPPINGS (EasySMX X15 / Xbox layout)
 # ============================================================
+_pygame_initialized = False
+
+
+def _ensure_pygame_initialized():
+    """Initialize pygame once on the main thread (required on macOS)."""
+    global _pygame_initialized
+    if _pygame_initialized:
+        return
+    pygame.init()
+    pygame.joystick.init()
+    _pygame_initialized = True
+
+
+def _shutdown_pygame():
+    global _pygame_initialized
+    if _pygame_initialized:
+        pygame.quit()
+        _pygame_initialized = False
+
+
 BASE_MAPPINGS = {
     # Button index : action description + key/mouse
     0: {"name": "A", "action": "Click Izquierdo (Disparar / Interactuar)", "key": Button.left, "type": "mouse"},
@@ -289,9 +317,6 @@ class HitmanMapper:
             key_states[key] = state
 
     def run(self):
-        pygame.init()
-        pygame.joystick.init()
-
         if pygame.joystick.get_count() == 0:
             print("[ICA Mapper] No se detectó ningún control.")
             return
@@ -365,11 +390,11 @@ class HitmanMapper:
 
             time.sleep(0.008)
 
-        pygame.quit()
         print("[ICA Mapper] Mapper detenido.")
 
     def start(self):
         if not self.running:
+            _ensure_pygame_initialized()
             self.thread = threading.Thread(target=self.run, daemon=True)
             self.thread.start()
 
@@ -619,6 +644,7 @@ class HitmanApp(ctk.CTk):
 
     def on_closing(self):
         self.mapper.stop()
+        _shutdown_pygame()
         self.destroy()
 
 
