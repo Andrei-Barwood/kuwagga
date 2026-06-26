@@ -405,6 +405,21 @@ Buscador avanzado de archivos y directorios.
 
 ## 🎨 Temas y Personalización
 
+### 🖥️ Terminal Styles (App nativa macOS) ⭐
+**Ubicación:** `Terminal Styles/`
+
+Gestor visual en SwiftUI para previsualizar e instalar 4 temas personalizados en **Terminal.app** de macOS. Binario universal (Intel + Apple Silicon).
+
+**Descarga directa:** [`releases/Terminal-Styles-v1.0-macOS-universal.zip`](releases/Terminal-Styles-v1.0-macOS-universal.zip) · [GitHub Releases](https://github.com/Andrei-Barwood/kuwagga/releases)
+
+**Uso rápido del binario:**
+```bash
+unzip Terminal-Styles-v1.0-macOS-universal.zip
+open "Terminal Styles.app"
+```
+
+📖 Tutorial completo: [`Terminal Styles/README.md`](Terminal%20Styles/README.md)
+
 ### Tank Theme
 **Ubicación:** `01 - 2025/08 - december - 2025/install_tank_theme.zsh`
 

@@ -34,3 +34,8 @@ ENV/
 # Archivos de revisión temporales
 REVIEW_SUMMARY.md
 
+# Xcode / Swift build artifacts
+Terminal Styles/dist/
+*.xcuserstate
+**/DerivedData/
+

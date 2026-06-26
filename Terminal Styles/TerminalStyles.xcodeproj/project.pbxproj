@@ -1,0 +1,316 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000010000000000000001 /* TerminalStylesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000001 /* TerminalStylesApp.swift */; };
+		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000002 /* ContentView.swift */; };
+		A10000010000000000000003 /* TerminalColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000003 /* TerminalColor.swift */; };
+		A10000010000000000000004 /* ThemePalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000004 /* ThemePalette.swift */; };
+		A10000010000000000000005 /* TerminalProfileWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000005 /* TerminalProfileWriter.swift */; };
+		A10000010000000000000006 /* TerminalPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000006 /* TerminalPreviewView.swift */; };
+		A10000010000000000000007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000007 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A10000100000000000000001 /* Terminal Styles.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Terminal Styles.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000110000000000000001 /* TerminalStylesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalStylesApp.swift; sourceTree = "<group>"; };
+		A10000110000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A10000110000000000000003 /* TerminalColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalColor.swift; sourceTree = "<group>"; };
+		A10000110000000000000004 /* ThemePalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePalette.swift; sourceTree = "<group>"; };
+		A10000110000000000000005 /* TerminalProfileWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalProfileWriter.swift; sourceTree = "<group>"; };
+		A10000110000000000000006 /* TerminalPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalPreviewView.swift; sourceTree = "<group>"; };
+		A10000110000000000000007 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000200000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000300000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A10000300000000000000002 /* TerminalStyles */,
+				A10000300000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000300000000000000002 /* TerminalStyles */ = {
+			isa = PBXGroup;
+			children = (
+				A10000110000000000000001 /* TerminalStylesApp.swift */,
+				A10000110000000000000002 /* ContentView.swift */,
+				A10000300000000000000004 /* Models */,
+				A10000300000000000000005 /* Services */,
+				A10000300000000000000006 /* Views */,
+				A10000110000000000000007 /* Assets.xcassets */,
+			);
+			path = TerminalStyles;
+			sourceTree = "<group>";
+		};
+		A10000300000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000100000000000000001 /* Terminal Styles.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A10000300000000000000004 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A10000110000000000000003 /* TerminalColor.swift */,
+				A10000110000000000000004 /* ThemePalette.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A10000300000000000000005 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A10000110000000000000005 /* TerminalProfileWriter.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A10000300000000000000006 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A10000110000000000000006 /* TerminalPreviewView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000400000000000000001 /* Terminal Styles */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000600000000000000003 /* Build configuration list for PBXNativeTarget "Terminal Styles" */;
+			buildPhases = (
+				A10000410000000000000001 /* Sources */,
+				A10000200000000000000001 /* Frameworks */,
+				A10000420000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Terminal Styles";
+			productName = TerminalStyles;
+			productReference = A10000100000000000000001 /* Terminal Styles.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000500000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A10000400000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A10000600000000000000001 /* Build configuration list for PBXProject "TerminalStyles" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = es;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				es,
+				Base,
+			);
+			mainGroup = A10000300000000000000001;
+			productRefGroup = A10000300000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000400000000000000001 /* Terminal Styles */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000420000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000007 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000410000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000001 /* TerminalStylesApp.swift in Sources */,
+				A10000010000000000000002 /* ContentView.swift in Sources */,
+				A10000010000000000000003 /* TerminalColor.swift in Sources */,
+				A10000010000000000000004 /* ThemePalette.swift in Sources */,
+				A10000010000000000000005 /* TerminalProfileWriter.swift in Sources */,
+				A10000010000000000000006 /* TerminalPreviewView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10000700000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A10000700000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A10000700000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Terminal Styles";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kuwagga.TerminalStyles;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A10000700000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Terminal Styles";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kuwagga.TerminalStyles;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A10000700000000000000005 /* Debug Universal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				ONLY_ACTIVE_ARCH = NO;
+			};
+			name = "Debug Universal";
+		};
+		A10000700000000000000006 /* Release Universal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				ONLY_ACTIVE_ARCH = NO;
+			};
+			name = "Release Universal";
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000600000000000000001 /* Build configuration list for PBXProject "TerminalStyles" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000700000000000000001 /* Debug */,
+				A10000700000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000600000000000000003 /* Build configuration list for PBXNativeTarget "Terminal Styles" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000700000000000000003 /* Debug */,
+				A10000700000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000500000000000000001 /* Project object */;
+}
