@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 
+         These descriptions are used when the system prompts the user 
+         for Accessibility / Automation permissions.
+         You can add more descriptions here if you expand functionality.
+    -->
+    <key>NSAppleEventsUsageDescription</key>
+    <string>ICA Mapper necesita controlar el teclado y el ratón para traducir los inputs del mando al juego.</string>
+</dict>
+</plist>
