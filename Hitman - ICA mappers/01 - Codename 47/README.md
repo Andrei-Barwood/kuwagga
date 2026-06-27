@@ -3,6 +3,9 @@
 Juega el clásico del sigilo **con mando (gamepad)** como si fuera teclado y ratón.  
 Briefings por misión, ajustes en vivo y estética ICA.
 
+> **macOS**: Usa la **app nativa en Swift** (`01 - Codename 47 (macOS Swift)`).  
+> **Windows**: Usa esta versión en Python.
+
 **No necesitas saber programar.** Solo seguir estos pasos en orden.
 
 ---
@@ -31,11 +34,13 @@ Ambos parchean `Hitman.ini` con **1280×720 en modo ventana** — el combo más 
 
 ## ✅ Qué necesitas
 
-- PC con **Windows 10/11** o **macOS**
-- **Copia legal** de Hitman: Codename 47 (GOG recomendado; Steam también)
+- **Windows 10/11** → usa esta versión Python
+- **macOS** → usa la app nativa Swift (recomendada)
+- **Copia legal** de Hitman: Codename 47 (GOG recomendado)
 - En Mac: instalación vía **Porting Kit** o similar (Wine)
-- **Python 3.10+** para el mapper
 - Un **mando** (EasySMX X15, Xbox, o similar)
+
+> **Nota**: La versión Python ya **no se mantiene para macOS**. Usa la versión Swift en Mac.
 
 ---
 
@@ -68,11 +73,12 @@ Estructura que vas a usar:
 ```
 Documentos/kuwagga/
 └── Hitman - ICA mappers/
-    ├── 01_setup_Codename47_macos.sh    ← setup Mac (ejecutar ANTES del juego)
-    ├── 01_setup_Codename47_win.ps1     ← setup Windows (ejecutar ANTES del juego)
-    └── 01 - Codename 47/
-        ├── hitman_ica_controller_mapper.py
-        └── requirements.txt
+    ├── 01_setup_Codename47_macos.sh
+    ├── 01_setup_Codename47_win.ps1
+    ├── 01 - Codename 47/
+    │   └── (versión Python - recomendada para Windows)
+    └── 01 - Codename 47 (macOS Swift)/
+        └── (app nativa SwiftUI - recomendada para macOS)
 ```
 
 ---
@@ -148,6 +154,8 @@ y aplica el mismo parche a `Hitman.ini`.
 
 ### ✅ Comprueba que el parche funcionó
 
+> Los scripts de setup (`01_setup_Codename47_macos.sh` y `.ps1`) siguen siendo útiles en **ambas plataformas** para evitar pantalla negra.
+
 1. Abre **Hitman: Codename 47**
 2. Debe arrancar en **ventana 1280×720** sin pantalla negra
 3. Si sigue en negro, ejecuta el setup otra vez y confirma que `Hitman.ini` contiene:
@@ -188,7 +196,7 @@ python --version
 
 ## 📦 Paso 4 — Instalar dependencias del mapper
 
-### Windows
+### Windows (Python)
 
 Copia y pega en PowerShell:
 
@@ -197,16 +205,7 @@ cd "$env:USERPROFILE\Documents\kuwagga\Hitman - ICA mappers\01 - Codename 47"
 python -m pip install -r requirements.txt
 ```
 
-### macOS
-
-Copia y pega en Terminal:
-
-```bash
-cd ~/Documents/kuwagga/Hitman\ -\ ICA\ mappers/01\ -\ Codename\ 47
-pip3 install -r requirements.txt
-```
-
-> 💡 Descarga 3 librerías (`customtkinter`, `pygame`, `pynput`). Una vez instaladas, no hace falta repetir.
+> **macOS**: No uses esta versión. Instala y usa la **app Swift nativa** en `01 - Codename 47 (macOS Swift)`.
 
 ---
 
@@ -221,9 +220,8 @@ El mapper simula teclado y ratón. Sin permisos, el mando se detecta pero el jue
 
 ### macOS
 
-1. **Ajustes del Sistema → Privacidad y seguridad → Accesibilidad**
-2. Activa el permiso para **Terminal** (o **Python**)
-3. Reinicia el mapper si ya estaba abierto
+> ⚠️ En macOS usa la **app Swift nativa**.  
+> Los permisos que necesitas son **Accesibilidad** e **Input Monitoring** para la app Swift (no para Terminal).
 
 ---
 
@@ -241,7 +239,7 @@ cd "$env:USERPROFILE\Documents\kuwagga\Hitman - ICA mappers\01 - Codename 47"
 python hitman_ica_controller_mapper.py
 ```
 
-### macOS
+### macOS (solo si usas la versión Python - no recomendado)
 
 Copia y pega en Terminal:
 
@@ -249,6 +247,8 @@ Copia y pega en Terminal:
 cd ~/Documents/kuwagga/Hitman\ -\ ICA\ mappers/01\ -\ Codename\ 47
 python3 hitman_ica_controller_mapper.py
 ```
+
+**Recomendado en Mac**: Abre la aplicación Swift compilada en `01 - Codename 47 (macOS Swift)`.
 
 3. Se abre la ventana **ICA // Codename 47 Controller Mapper**
 
@@ -312,9 +312,10 @@ Cada misión trae briefing en español + estilo de juego recomendado (sniper, si
 | El juego no arranca en Mac | Confirma instalación con Porting Kit; el `.app` debe estar en `Applications` |
 | Setup no encuentra el juego | Verifica ruta de instalación; edita el script si está en carpeta custom |
 | “No se detectó ningún control” | Conecta el mando antes de iniciar el mapper |
-| El juego no responde al mando | Revisa permisos (Paso 5); inicia el mapper **antes** del juego |
+| El juego no responde al mando | Revisa permisos de Accesibilidad + Input Monitoring (versión Swift) o Terminal (Python) |
 | `python` no se reconoce (Windows) | Reinstala Python con **Add to PATH** marcado |
 | Movimiento del ratón muy rápido/lento | Ajusta **Sensibilidad ratón** en la app |
+| En Mac prefiero la versión nativa | Usa la carpeta `01 - Codename 47 (macOS Swift)` |
 
 ---
 
