@@ -1,5 +1,6 @@
 import SwiftUI
 import GameController
+import ApplicationServices   // For AXIsProcessTrustedWithOptions (Accessibility permission)
 
 struct ContentView: View {
     @State private var mapper = ControllerMapper()
@@ -48,10 +49,13 @@ struct ContentView: View {
             mapper.stopAndCleanup()
         }
         .alert("Permisos necesarios", isPresented: $showingPermissionAlert) {
-            Button("Abrir Ajustes de Privacidad") {
+            Button("Abrir Accesibilidad") {
                 openPrivacySettings()
             }
-            Button("Cancelar", role: .cancel) {}
+            Button("Abrir Input Monitoring") {
+                openInputMonitoringSettings()
+            }
+            Button("Entendido", role: .cancel) {}
         } message: {
             Text(permissionMessage)
         }
@@ -278,9 +282,15 @@ struct ContentView: View {
 
         // Check permissions before starting
         if !hasAccessibilityPermission() {
-            permissionMessage = "La app necesita permisos de «Accesibilidad» e «Input Monitoring» para simular el ratón y teclado.\n\nVe a Ajustes del Sistema → Privacidad y seguridad y habilita esta app."
-            showingPermissionAlert = true
-            return
+            // Try to trigger the official system prompt for Accessibility
+            _ = requestAccessibilityPermission()
+
+            // Re-check after prompt attempt
+            if !hasAccessibilityPermission() {
+                permissionMessage = "Necesitas conceder permisos de «Accesibilidad» e «Input Monitoring».\n\n1. En la ventana que apareció, permite el acceso.\n2. También ve a «Monitorización de entrada» (Input Monitoring) y actívalo para esta app.\n3. IMPORTANTE: Cierra completamente esta app (Cmd+Q o clic derecho en el Dock → Salir) y vuelve a abrirla."
+                showingPermissionAlert = true
+                return
+            }
         }
 
         mapper.start()
@@ -318,7 +328,7 @@ struct ContentView: View {
 
     private func checkPermissionsOnLaunch() {
         if !hasAccessibilityPermission() {
-            mapper.statusMessage = "⚠️ Necesitas dar permisos de Accesibilidad para que funcione el mapper"
+            mapper.statusMessage = "⚠️ Accesibilidad + Input Monitoring requeridos. Pulsa INICIAR MAPPER para guiar."
         }
     }
 
@@ -327,9 +337,25 @@ struct ContentView: View {
         return AXIsProcessTrustedWithOptions(options)
     }
 
+    /// Calls with prompt:true so the system shows the official Accessibility permission dialog.
+    @discardableResult
+    private func requestAccessibilityPermission() -> Bool {
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        return AXIsProcessTrustedWithOptions(options)
+    }
+
     private func openPrivacySettings() {
-        // Open Privacy & Security → Accessibility
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+        // Opens the main Privacy & Security panel (user can then choose Accessibility or Input Monitoring)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func openInputMonitoringSettings() {
+        // Specific deep link for Input Monitoring (ListenEvent)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+            NSWorkspace.shared.open(url)
+        } else if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
     }

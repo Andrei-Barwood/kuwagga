@@ -222,6 +222,9 @@ El mapper simula teclado y ratón. Sin permisos, el mando se detecta pero el jue
 
 > ⚠️ En macOS usa la **app Swift nativa**.  
 > Los permisos que necesitas son **Accesibilidad** e **Input Monitoring** para la app Swift (no para Terminal).
+>
+> **Si concediste los permisos pero la app sigue pidiendo el mensaje:**  
+> Probablemente estás ejecutando desde Xcode. Exporta la app con **Product → Archive** y ejecútala desde Finder. Luego reinicia la app después de activar los switches.
 
 ---
 
@@ -312,7 +315,7 @@ Cada misión trae briefing en español + estilo de juego recomendado (sniper, si
 | El juego no arranca en Mac | Confirma instalación con Porting Kit; el `.app` debe estar en `Applications` |
 | Setup no encuentra el juego | Verifica ruta de instalación; edita el script si está en carpeta custom |
 | “No se detectó ningún control” | Conecta el mando antes de iniciar el mapper |
-| El juego no responde al mando | Revisa permisos de Accesibilidad + Input Monitoring (versión Swift) o Terminal (Python) |
+| El juego no responde al mando | Revisa permisos de Accesibilidad + Input Monitoring (versión Swift). Si diste permisos pero sigue pidiendo: usa la versión exportada del .app (no ejecutes solo con Cmd+R de Xcode) y reinicia la app después de activarlos. |
 | `python` no se reconoce (Windows) | Reinstala Python con **Add to PATH** marcado |
 | Movimiento del ratón muy rápido/lento | Ajusta **Sensibilidad ratón** en la app |
 | En Mac prefiero la versión nativa | Usa la carpeta `01 - Codename 47 (macOS Swift)` |

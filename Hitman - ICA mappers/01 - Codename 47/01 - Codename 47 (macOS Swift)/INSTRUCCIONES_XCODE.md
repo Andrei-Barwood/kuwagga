@@ -51,6 +51,10 @@ HitmanICAMapper/
 3. Conecta un mando antes de pulsar INICIAR MAPPER
 4. La primera vez que pulses INICIAR MAPPER te pedirá permisos.
 
+> ⚠️ **IMPORTANTE para permisos**: Si ejecutas desde Xcode (Cmd+R), los permisos suelen no aplicarse bien porque es una build de depuración.
+> La forma más fiable es: **Product → Archive → Distribute → Copy App**, y ejecutar el .app exportado.
+> También puedes añadir temporalmente **Xcode** a Accesibilidad + Input Monitoring mientras desarrollas.
+
 ## Si no compila
 
 Asegúrate de que todos los archivos están añadidos al target (clic derecho → Add to Target).

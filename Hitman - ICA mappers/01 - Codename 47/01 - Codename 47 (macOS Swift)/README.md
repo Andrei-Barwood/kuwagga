@@ -61,19 +61,37 @@ Para simular ratón y teclado necesitas:
 
 ---
 
-## 🔐 Permisos obligatorios (muy importante)
 
-Para que el mapper pueda controlar el ratón y el teclado necesitas dar dos permisos:
 
-### Accesibilidad
-1. Abre **Ajustes del Sistema → Privacidad y seguridad → Accesibilidad**
-2. Añade y activa `HitmanICAMapper` (o Xcode mientras desarrollas)
+## ❗ Si concediste los permisos pero la app sigue pidiendo / no inicia el mapper
 
-### Input Monitoring
-1. Ve a **Privacidad y seguridad → Input Monitoring**
-2. Añade y activa la app
+Este es el problema **más común** en desarrollo:
 
-> Sin estos permisos el mando se detecta pero el juego no recibe ningún input.
+### Causa #1 — Estás ejecutando desde Xcode (la más frecuente)
+Cuando haces **Cmd + R**, Xcode lanza una copia temporal de depuración desde `DerivedData`. Los permisos que diste en Ajustes del Sistema están asociados a otra firma/ruta.
+
+**Solución:**
+1. En Xcode: **Product → Archive**
+2. En la ventana Organizer: **Distribute App → Copy App** (o Exportar)
+3. Abre el `.app` resultante directamente con doble clic (no desde Xcode).
+4. Concede los permisos **a esta versión**.
+5. Cierra completamente la app anterior.
+
+### Causa #2 — No reiniciaste la app después de conceder
+macOS (TCC) no siempre actualiza permisos mientras la app está corriendo.
+
+**Solución:**  
+Cierra la app por completo (`Cmd + Q` o botón derecho en el Dock → Salir) y vuélvela a abrir.
+
+### Causa #3 — Solo diste Accesibilidad, falta "Input Monitoring"
+La app necesita **ambos**.
+
+**Solución:**
+- Ajustes → Privacidad y seguridad → **Accesibilidad** → activa HitmanICAMapper
+- Ajustes → Privacidad y seguridad → **Monitorización de entrada** (o Input Monitoring) → activa HitmanICAMapper
+
+### Durante desarrollo con Xcode
+Añade también **Xcode** a las dos listas de permisos. A veces ayuda.
 
 ---
 

@@ -9,5 +9,9 @@
     -->
     <key>NSAppleEventsUsageDescription</key>
     <string>ICA Mapper necesita controlar el teclado y el ratón para traducir los inputs del mando al juego.</string>
+
+    <!-- Shown when the system prompts for Input Monitoring permission -->
+    <key>NSInputMonitoringUsageDescription</key>
+    <string>ICA Mapper necesita monitorizar y enviar eventos de ratón y teclado para controlar el juego con el mando.</string>
 </dict>
 </plist>
