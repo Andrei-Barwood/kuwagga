@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Generador de tablas de resistencia PT100/PT1000 según IEC 60751. Funciona offline.">
+  <meta name="author" content="Kirtan Teg Singh (ਕੀਰਤਨ ਤੇਗ ਸਿੰਘ)">
+  <meta name="theme-color" content="#485199">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tabla PT100">
+  <title>Tabla PT100 / PT1000 — IEC 60751</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-top">
+        <h1>Tabla estándar PT100 / PT1000</h1>
+        <span id="offline-badge" class="badge badge-offline" hidden title="Sin conexión">Offline</span>
+      </div>
+      <p class="subtitle">Resistencia según norma IEC 60751</p>
+    </header>
+
+    <main class="main">
+      <section class="card form-card" aria-labelledby="form-title">
+        <h2 id="form-title" class="card-title">Parámetros</h2>
+        <form id="tabla-form" novalidate>
+          <div class="form-grid">
+            <label class="field">
+              <span>Temperatura inicial (°C)</span>
+              <input type="number" id="ti" name="ti" value="0" step="any" required>
+            </label>
+            <label class="field">
+              <span>Temperatura final (°C)</span>
+              <input type="number" id="tf" name="tf" value="100" step="any" required>
+            </label>
+            <label class="field">
+              <span>Subdivisión / paso (°C)</span>
+              <select id="step" name="step" required>
+                <option value="1">1 °C</option>
+                <option value="2">2 °C</option>
+                <option value="5" selected>5 °C</option>
+                <option value="10">10 °C</option>
+                <option value="20">20 °C</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Sensor</span>
+              <select id="tipo" name="tipo" required>
+                <option value="PT100" selected>PT100</option>
+                <option value="PT1000">PT1000</option>
+              </select>
+            </label>
+          </div>
+
+          <p id="form-error" class="form-error" role="alert" hidden></p>
+
+          <div class="actions">
+            <button type="submit" class="btn btn-primary">Generar tabla</button>
+            <button type="button" id="btn-export" class="btn btn-secondary" disabled>Exportar HTML</button>
+            <button type="button" id="btn-print" class="btn btn-secondary" disabled>Imprimir</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="result-section" class="card result-card" hidden aria-live="polite">
+        <h2 id="result-title" class="card-title">Tabla estándar PT100 — IEC 60751</h2>
+        <p id="result-meta" class="result-meta"></p>
+        <div class="table-wrap">
+          <table id="result-table">
+            <thead>
+              <tr>
+                <th>Temperatura (°C)</th>
+                <th>Resistencia (Ω)</th>
+              </tr>
+            </thead>
+            <tbody id="result-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p class="footer-author">
+        <span class="author-label">Autor / Author</span>
+        <span class="author-name">Kirtan Teg Singh</span>
+        <span class="author-gurmukhi" lang="pa" dir="auto">ਕੀਰਤਨ ਤੇਗ ਸਿੰਘ</span>
+      </p>
+      <p>
+        Cálculo IEC 60751 · App estática ·
+        <span id="sw-status">Cargando…</span>
+      </p>
+    </footer>
+  </div>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

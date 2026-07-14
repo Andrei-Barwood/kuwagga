@@ -1,0 +1,320 @@
+/**
+ * Tabla PT100 / PT1000 — estilos
+ * Author: Kirtan Teg Singh (ਕੀਰਤਨ ਤੇਗ ਸਿੰਘ)
+ * Paleta del script original 04_tabla_pt100.py
+ */
+:root {
+  --bg: #EAEEF4;
+  --primary: #485199;
+  --accent: #FFFFB8;
+  --text: #63627C;
+  --cell: #A6A4D7;
+  --border: #A7B7CF;
+  --hover: #A7B7CF;
+  --shadow: #63627C44;
+  --error: #b33a3a;
+  --white: #ffffff;
+  --radius: 10px;
+  --font: Arial, Helvetica, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: var(--font);
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.app {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.header h1 {
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+}
+
+.subtitle {
+  margin: 0.4rem 0 0;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.badge-offline {
+  background: var(--text);
+  color: var(--accent);
+}
+
+/* Cards */
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 10px var(--shadow);
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1.25rem;
+}
+
+.card-title {
+  margin: 0 0 1rem;
+  color: var(--primary);
+  font-size: 1.15rem;
+}
+
+/* Form */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 560px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.field span {
+  font-weight: 600;
+}
+
+.field input,
+.field select {
+  font: inherit;
+  color: var(--primary);
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(72, 81, 153, 0.2);
+}
+
+.form-error {
+  margin: 0.9rem 0 0;
+  color: var(--error);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.15rem;
+}
+
+.btn {
+  font: inherit;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+  transition: transform 0.1s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #3a4280;
+}
+
+.btn-secondary {
+  background: var(--cell);
+  color: var(--primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--border);
+}
+
+/* Result table */
+.result-meta {
+  text-align: center;
+  color: var(--text);
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+th {
+  background: var(--primary);
+  color: var(--accent);
+  border: 2px solid var(--text);
+  padding: 10px;
+}
+
+td {
+  background: var(--cell);
+  border: 1px solid var(--border);
+  text-align: center;
+  padding: 6px;
+  color: var(--text);
+}
+
+tr:nth-child(even) td {
+  background: var(--bg);
+  color: var(--text);
+}
+
+tr:hover td {
+  background: var(--hover);
+  color: var(--primary);
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.footer p {
+  margin: 0;
+}
+
+.footer-author {
+  margin-bottom: 0.45rem !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.35rem 0.55rem;
+}
+
+.author-label {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.author-label::after {
+  content: ":";
+}
+
+.author-name {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.author-gurmukhi {
+  color: var(--text);
+  font-size: 1.05em;
+}
+
+.author-gurmukhi::before {
+  content: "·";
+  margin-right: 0.55rem;
+  color: var(--border);
+}
+
+/* Print */
+@media print {
+  body {
+    background: white;
+  }
+
+  .form-card,
+  .footer p:not(.footer-author),
+  .badge,
+  #sw-status {
+    display: none !important;
+  }
+
+  .footer {
+    opacity: 1;
+  }
+
+  .footer-author {
+    margin-top: 1rem !important;
+  }
+
+  .card {
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  table {
+    box-shadow: none;
+  }
+}
