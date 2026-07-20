@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool doc_version="0">
+  <Name>moon eyes for karen</Name>
+  <Id>com.kirtantegsingh.mooneyesforkaren</Id>
+  <Version>1.1.6</Version>
+  <ApiVersion>6.0</ApiVersion>
+  <Author>kirtan teg singh</Author>
+  <Category>Sequencer</Category>
+  <Description>
+    moon eyes for karen — generates "mapas" (pattern sequences) from predefined
+    pattern orders. Maps: back2back, Citibank, unaAlcoholic4, AltoVoltaje,
+    dictadera, Cynthia, bandersnatch, Boogie 'L Graso, taxiista, Ascensores,
+    Amperes, HazaratAbraham, Leyes, reactor, donuts. Optional green matrix
+    colors + names on back2back.
+  </Description>
+  <Homepage></Homepage>
+  <Platform>Windows, Mac, Linux</Platform>
+  <Icon></Icon>
+</RenoiseScriptingTool>
