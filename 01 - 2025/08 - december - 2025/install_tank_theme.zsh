@@ -7,6 +7,21 @@ set -euo pipefail
 # Paleta: Forest Green
 # Colores: #3E7352, #529B6F, #67C294, #AAF797, #DCFF93, #0E1C0F, #1C3121, #2B4D33
 
+# macOS often blocks writes to /tmp ("Operation not permitted") under TCC/sandbox.
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  if command -v getconf >/dev/null 2>&1; then
+    TMPDIR="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)"
+  fi
+fi
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  TMPDIR="${HOME}/Library/Caches"
+  mkdir -p "${TMPDIR}" 2>/dev/null || TMPDIR="${HOME}"
+fi
+TMPDIR="${TMPDIR%/}"
+export TMPDIR
+export TMPPREFIX="${TMPDIR}/zsh"
+mkdir -p "${TMPPREFIX}" 2>/dev/null || true
+
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║           🌲 INSTALADOR DEL TEMA TANK 🌲                     ║"
@@ -29,7 +44,7 @@ fi
 
 SCRIPT_DIR="${0:A:h}"
 SWIFT_FILE="$SCRIPT_DIR/tank_theme_installer.swift"
-COMPILED="/tmp/configure_tank"
+COMPILED="${TMPDIR}/configure_tank_$$"
 
 # Verificar si existe el archivo Swift
 if [[ ! -f "$SWIFT_FILE" ]]; then
@@ -50,6 +65,11 @@ if [[ ! -f "$COMPILED" || ! -x "$COMPILED" ]]; then
 fi
 
 echo ""
+cleanup_compiled() {
+    rm -f "$COMPILED" 2>/dev/null || true
+}
+trap cleanup_compiled EXIT INT TERM
+
 if "$COMPILED"; then
     echo ""
     echo "✅ Tema Tank instalado exitosamente"

@@ -25,12 +25,31 @@
 set -euo pipefail
 setopt extended_glob
 
+# macOS often blocks writes to /tmp ("Operation not permitted") under TCC/sandbox.
+# zsh here-docs/here-strings (<<<) use TMPPREFIX, which defaults to /tmp/zsh.
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  if command -v getconf >/dev/null 2>&1; then
+    TMPDIR="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)"
+  fi
+fi
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  TMPDIR="${HOME}/Library/Caches"
+  mkdir -p "${TMPDIR}" 2>/dev/null || TMPDIR="${HOME}"
+fi
+TMPDIR="${TMPDIR%/}"
+export TMPDIR
+export TMPPREFIX="${TMPDIR}/zsh"
+mkdir -p "${TMPPREFIX}" 2>/dev/null || true
+
 USE_READER_MODE=${WIKI_READER_MODE:-1}
 
 tmp_root=""
-if ! tmp_root=$(mktemp -d -t wiki2pdf.XXXXXX 2>/dev/null); then
-  print -u2 "Error: Failed to create temporary directory"
-  exit 1
+if ! tmp_root=$(mktemp -d "${TMPDIR}/wiki2pdf.XXXXXX" 2>/dev/null); then
+  if ! tmp_root=$(mktemp -d "${HOME}/.cache/wiki2pdf.XXXXXX" 2>/dev/null); then
+    print -u2 "Error: Failed to create temporary directory (TMPDIR=${TMPDIR})"
+    print -u2 "En macOS, /tmp suele estar bloqueado; revisa TMPDIR o permisos de la terminal."
+    exit 1
+  fi
 fi
 
 cleanup_tmp() {

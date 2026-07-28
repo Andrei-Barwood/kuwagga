@@ -4,7 +4,30 @@ set -euo pipefail
 # Ensure PATH is set correctly (especially when running as root)
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH"
 
-LOG="/tmp/cleanup_large_dirs_$(date +%Y%m%d_%H%M%S).log"
+# macOS often blocks writes to /tmp ("Operation not permitted") under TCC/sandbox.
+# zsh here-docs/here-strings (<<<) use TMPPREFIX, which defaults to /tmp/zsh.
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  if command -v getconf >/dev/null 2>&1; then
+    TMPDIR="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)"
+  fi
+fi
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  TMPDIR="${HOME}/Library/Caches"
+  mkdir -p "${TMPDIR}" 2>/dev/null || TMPDIR="${HOME}"
+fi
+TMPDIR="${TMPDIR%/}"
+export TMPDIR
+export TMPPREFIX="${TMPDIR}/zsh"
+mkdir -p "${TMPPREFIX}" 2>/dev/null || true
+
+LOG="${TMPDIR}/cleanup_large_dirs_$(date +%Y%m%d_%H%M%S).log"
+if ! : >>"$LOG" 2>/dev/null; then
+  LOG="${HOME}/cleanup_large_dirs_$(date +%Y%m%d_%H%M%S).log"
+  : >>"$LOG" || {
+    print -r -- "No pude crear el log (TMPDIR=${TMPDIR} y HOME bloqueados)." >&2
+    exit 1
+  }
+fi
 
 log() { print -r -- "[$(date '+%F %T')] $*" | /usr/bin/tee -a "$LOG"; }
 

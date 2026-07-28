@@ -3,7 +3,29 @@ set -euo pipefail
 
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH"
 
-REPORT_DIR=$(mktemp -d "/tmp/disk_rescue_XXXXXX")
+# macOS often blocks writes to /tmp ("Operation not permitted") under TCC/sandbox.
+# zsh here-docs and here-strings (<<<) use TMPPREFIX, which defaults to /tmp/zsh.
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  if command -v getconf >/dev/null 2>&1; then
+    TMPDIR="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)"
+  fi
+fi
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  TMPDIR="${HOME}/Library/Caches"
+  mkdir -p "${TMPDIR}" 2>/dev/null || TMPDIR="${HOME}"
+fi
+TMPDIR="${TMPDIR%/}"
+export TMPDIR
+export TMPPREFIX="${TMPDIR}/zsh"
+mkdir -p "${TMPPREFIX}" 2>/dev/null || true
+
+if ! REPORT_DIR=$(mktemp -d "${TMPDIR}/disk_rescue_XXXXXX" 2>/dev/null); then
+  if ! REPORT_DIR=$(mktemp -d "${HOME}/.cache/disk_rescue_XXXXXX" 2>/dev/null); then
+    print -r -- "No pude crear directorio temporal (mktemp fallo en ${TMPDIR} y en ~/.cache)." >&2
+    print -r -- "En macOS, /tmp suele estar bloqueado; revisa TMPDIR o permisos de la terminal." >&2
+    exit 1
+  fi
+fi
 LOG="$REPORT_DIR/disk_rescue.log"
 
 COMMAND="doctor"

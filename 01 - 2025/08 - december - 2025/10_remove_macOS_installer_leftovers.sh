@@ -5,9 +5,34 @@ set -euo pipefail
 # Típicamente libera 5-15GB de espacio
 # Requiere permisos de administrador
 
-LOG="/tmp/cleanup_installer_data_$(date +%Y%m%d_%H%M%S).log"
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH"
 
-log() { print -r -- "[$(date '+%F %T')] $*" | tee -a "$LOG"; }
+# macOS often blocks writes to /tmp ("Operation not permitted") under TCC/sandbox.
+# zsh here-docs/here-strings (<<<) use TMPPREFIX, which defaults to /tmp/zsh.
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  if command -v getconf >/dev/null 2>&1; then
+    TMPDIR="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)"
+  fi
+fi
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  TMPDIR="${HOME}/Library/Caches"
+  mkdir -p "${TMPDIR}" 2>/dev/null || TMPDIR="${HOME}"
+fi
+TMPDIR="${TMPDIR%/}"
+export TMPDIR
+export TMPPREFIX="${TMPDIR}/zsh"
+mkdir -p "${TMPPREFIX}" 2>/dev/null || true
+
+LOG="${TMPDIR}/cleanup_installer_data_$(date +%Y%m%d_%H%M%S).log"
+if ! : >>"$LOG" 2>/dev/null; then
+  LOG="${HOME}/cleanup_installer_data_$(date +%Y%m%d_%H%M%S).log"
+  : >>"$LOG" || {
+    print -r -- "No pude crear el log (TMPDIR=${TMPDIR} y HOME bloqueados)." >&2
+    exit 1
+  }
+fi
+
+log() { print -r -- "[$(date '+%F %T')] $*" | /usr/bin/tee -a "$LOG"; }
 
 if [[ $EUID -ne 0 ]]; then
   echo "Este script requiere permisos de administrador." >&2

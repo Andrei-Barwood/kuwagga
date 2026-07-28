@@ -21,6 +21,51 @@ import re
 import atexit
 from datetime import datetime
 
+# macOS often blocks writes to /tmp ("Operation not permitted") under TCC/sandbox.
+# Ensure tempfile and child tools use a writable location before any mkdtemp calls.
+def _ensure_writable_tempdir() -> str:
+    candidates = []
+    for key in ("TMPDIR", "TEMP", "TMP"):
+        val = os.environ.get(key)
+        if val:
+            candidates.append(val)
+    try:
+        out = subprocess.check_output(
+            ["getconf", "DARWIN_USER_TEMP_DIR"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        if out:
+            candidates.append(out)
+    except Exception:
+        pass
+    home = str(Path.home())
+    candidates.extend(
+        [
+            str(Path.home() / "Library" / "Caches"),
+            str(Path.home() / ".cache"),
+            "/var/tmp",
+            home,
+        ]
+    )
+    for raw in candidates:
+        if not raw:
+            continue
+        p = Path(raw)
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+            test = p / f".write_test_{os.getpid()}"
+            test.write_text("ok", encoding="utf-8")
+            test.unlink(missing_ok=True)
+            resolved = str(p)
+            os.environ["TMPDIR"] = resolved
+            tempfile.tempdir = resolved
+            return resolved
+        except Exception:
+            continue
+    return tempfile.gettempdir()
+
+
+_ensure_writable_tempdir()
+
 # ============================================================================
 # CONFIGURACIÓN Y CONSTANTES
 # ============================================================================
@@ -110,6 +155,41 @@ AUDIO_SOURCE_FORMATS_LABEL = "WAV/AIFF/FLAC"
 HIRES_AUDIO_SOURCE_EXTENSIONS = AUDIO_SOURCE_EXTENSIONS | {'.mp3', '.m4a'}
 HIRES_AUDIO_SOURCE_FORMATS_LABEL = "WAV/AIFF/FLAC/MP3/M4A"
 LOSSY_AUDIO_SOURCE_EXTENSIONS = {'.mp3', '.m4a'}
+# Formatos de entrada admitidos para conversión genérica a MP3 (ffmpeg)
+ANY_AUDIO_SOURCE_EXTENSIONS = {
+    '.wav', '.flac', '.aiff', '.aif', '.mp3', '.m4a', '.aac', '.ogg', '.oga',
+    '.opus', '.wma', '.wv', '.ape', '.caf', '.mp2', '.mp4', '.m4b', '.webm',
+    '.ac3', '.dts', '.amr', '.3gp', '.3g2', '.mov', '.mkv', '.ts', '.mka',
+    '.ra', '.rm', '.tak', '.dsf', '.dff', '.tta',
+}
+ANY_AUDIO_SOURCE_FORMATS_LABEL = "cualquier formato de audio"
+
+# Motor mono (Lurssen mono_config / breakcore) → mono MP3
+MONO_CONFIG_DIR = Path("/Users/andreibarwood/kuwagga/renoise/2026/01_mono_config")
+MONO_SCRIPT = MONO_CONFIG_DIR / "lurssen_mono_breakcore.py"
+MONO_CONFIG_YAML = MONO_CONFIG_DIR / "config.yaml"
+MONO_VENV_PYTHON = MONO_CONFIG_DIR / ".venv" / "bin" / "python"
+MONO_DEFAULTS: Dict = {
+    "preset": "Electronic",
+    "input_drive": 4.8,
+    "push": 3.2,
+    "presence": 3.5,
+    "true_peak": -1.0,
+    "loudness_target": None,
+    "bitrate": "320k",
+    "suffix": "_MONO",
+    "use_plugin": True,
+    "plugin_path": None,
+    "jobs": 1,
+}
+# Audio + contenedores de video (se extrae la pista de audio)
+MONO_SOURCE_EXTENSIONS = ANY_AUDIO_SOURCE_EXTENSIONS | {
+    '.mp4', '.mkv', '.mov', '.avi', '.webm', '.m4v', '.wmv', '.flv',
+    '.mts', '.m2ts', '.mpg', '.mpeg', '.vob', '.ogv',
+}
+MONO_SOURCE_FORMATS_LABEL = "audio y video (→ mono MP3 vía mono_config)"
+# Extensiones nativas del script lurssen_mono_breakcore (el resto se pre-decodifica)
+MONO_SCRIPT_NATIVE_EXTS = {'.wav', '.wave', '.aiff', '.aif', '.flac', '.m4a', '.mp3', '.opus'}
 
 # ============================================================================
 # COLORES Y FORMATO (Paleta: Forest Green)
@@ -1123,63 +1203,449 @@ def print_bit_depth_guide(sample_rate: int):
     print()
 
 # ============================================================================
-# ANIMACIONES
+# PROGRESO REAL (ffmpeg -progress) + RESTAURACIÓN DE TERMINAL
 # ============================================================================
 
-def equalizer_animation(frame: int) -> str:
-    bars = 8
-    heights = ['▁', '▃', '▅', '▆', '█']
-    colors = [Colors.DARK_GREEN, Colors.MEDIUM_GREEN, Colors.LIGHT_GREEN, Colors.LIME]
-    output = ""
-    for i in range(bars):
-        height_idx = (frame + i) % 5
-        bar_char = heights[height_idx]
-        color = colors[i % len(colors)]
-        output += f"{color}{bar_char}{Colors.NC}"
-    return output
+def prepare_for_user_input():
+    """
+    Limpia líneas de progreso y restaura el TTY antes de pedir input.
+    Evita el cuelgue aparente tras exportaciones (termios roto por hijos,
+    hilos de progreso, o líneas \\r sin newline).
+    """
+    try:
+        sys.stdout.write("\r\033[K")
+        sys.stdout.flush()
+    except Exception:
+        pass
+    try:
+        sys.stderr.write("\r\033[K")
+        sys.stderr.flush()
+    except Exception:
+        pass
+    # Restaurar modo canónico del terminal (questionary/tqdm/plugins pueden dejarlo roto)
+    if sys.stdin.isatty():
+        try:
+            import termios
+            fd = sys.stdin.fileno()
+            attrs = termios.tcgetattr(fd)
+            # flags canónicos + eco (hijos con questionary/tqdm pueden desactivarlos)
+            attrs[3] = attrs[3] | termios.ECHO | termios.ICANON
+            termios.tcsetattr(fd, termios.TCSANOW, attrs)
+        except Exception:
+            try:
+                subprocess.run(
+                    ["stty", "sane"],
+                    stdin=sys.stdin,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+            except Exception:
+                pass
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        pass
 
 
-def audio_wave_animation(frame: int) -> str:
-    waves = []
-    phases = [0, 1, 2, 3, 4, 3, 2, 1]
-    heights = ['▁', '▂', '▄', '▆']
-    colors = [Colors.DARK_GREEN, Colors.MEDIUM_GREEN, Colors.LIGHT_GREEN, Colors.LIME]
-    for i in range(12):
-        phase = phases[(frame + i) % len(phases)]
-        waves.append(heights[phase])
-    output = f"{Colors.LIME}🎧{Colors.NC} "
-    for i, wave in enumerate(waves):
-        color = colors[i % len(colors)]
-        output += f"{color}{wave}{Colors.NC}"
-    output += f" {Colors.LIME}🎧{Colors.NC}"
-    return output
+def _format_eta(seconds: Optional[float]) -> str:
+    if seconds is None or seconds < 0 or seconds == float("inf"):
+        return "--:--"
+    seconds = int(max(0, seconds))
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f"{h:d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
 
 
-def animated_progress_bar(current: int, total: int, label: str, width: int = 35):
-    percent = int(current * 100 / total)
-    filled = int(current * width / total)
+def _format_clock(seconds: Optional[float]) -> str:
+    if seconds is None or seconds < 0:
+        return "00:00"
+    seconds = int(max(0, seconds))
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f"{h:d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
+
+
+def render_progress_bar(
+    fraction: float,
+    label: str,
+    *,
+    file_index: int = 1,
+    total_files: int = 1,
+    current_sec: Optional[float] = None,
+    total_sec: Optional[float] = None,
+    eta_sec: Optional[float] = None,
+    width: int = 28,
+    stream=None,
+):
+    """
+    Barra de progreso real (fraction 0..1 del archivo actual + avance global por archivos).
+    """
+    stream = stream or sys.stderr
+    fraction = 0.0 if fraction is None else max(0.0, min(1.0, float(fraction)))
+    total_files = max(1, int(total_files))
+    file_index = max(1, min(int(file_index), total_files))
+
+    # Progreso global: archivos ya terminados + fracción del actual
+    overall = ((file_index - 1) + fraction) / total_files
+    overall = max(0.0, min(1.0, overall))
+
+    filled = int(round(overall * width))
     empty = width - filled
-    spinner = SPINNER_FRAMES[current % len(SPINNER_FRAMES)]
-    note = MUSIC_NOTES[current % len(MUSIC_NOTES)]
-    bar = f"{Colors.LIGHT_GREEN}{'█' * (filled - 1) if filled > 0 else ''}{Colors.NC}"
-    if filled > 0:
-        bar += f"{Colors.LIME}{note}{Colors.NC}"
-    bar += f"{Colors.DARK_FOREST}{'░' * empty}{Colors.NC}"
-    print(f"\r    {spinner} {Colors.DARK_FOREST}[{Colors.NC}{bar}{Colors.DARK_FOREST}]{Colors.NC} "
-          f"{Colors.LIME}{percent:3d}%{Colors.NC} {Colors.MEDIUM_GREEN}{label}{Colors.NC} "
-          f"{Colors.YELLOW_GREEN}({current}/{total}){Colors.NC}  ", end='', flush=True)
+    bar = f"{Colors.LIGHT_GREEN}{'█' * filled}{Colors.NC}{Colors.DARK_FOREST}{'░' * empty}{Colors.NC}"
+    pct = int(round(overall * 100))
+
+    time_part = ""
+    if total_sec is not None and total_sec > 0:
+        cur = current_sec if current_sec is not None else fraction * total_sec
+        time_part = f" {_format_clock(cur)}/{_format_clock(total_sec)}"
+        if eta_sec is not None:
+            time_part += f" ETA {_format_eta(eta_sec)}"
+    elif eta_sec is not None:
+        time_part = f" ETA {_format_eta(eta_sec)}"
+
+    short = label if len(label) <= 36 else (label[:33] + "...")
+    line = (
+        f"\r    {Colors.YELLOW_GREEN}▶{Colors.NC} "
+        f"{Colors.DARK_FOREST}[{Colors.NC}{bar}{Colors.DARK_FOREST}]{Colors.NC} "
+        f"{Colors.LIME}{pct:3d}%{Colors.NC} "
+        f"{Colors.MEDIUM_GREEN}{short}{Colors.NC} "
+        f"{Colors.YELLOW_GREEN}[{file_index}/{total_files}]{Colors.NC}"
+        f"{Colors.DARK_FOREST}{time_part}{Colors.NC}  "
+    )
+    print(line, end="", flush=True, file=stream)
+
+
+def clear_progress_line(stream=None):
+    stream = stream or sys.stderr
+    print("\r\033[K", end="", flush=True, file=stream)
+
+
+def _prepare_ffmpeg_progress_cmd(cmd: List[str]) -> List[str]:
+    """Inserta flags de progreso real y silencia stats basura de ffmpeg."""
+    if not cmd:
+        return cmd
+    out = list(cmd)
+    # Quitar flags de stats ruidosos si existen
+    cleaned = []
+    skip_next = False
+    for i, tok in enumerate(out):
+        if skip_next:
+            skip_next = False
+            continue
+        if tok in ("-stats", "-progress", "-nostats"):
+            # si -progress ya trae valor, saltarlo también
+            if tok == "-progress" and i + 1 < len(out):
+                skip_next = True
+            continue
+        if tok == "-loglevel" and i + 1 < len(out):
+            cleaned.append(tok)
+            cleaned.append("error")
+            skip_next = True
+            continue
+        cleaned.append(tok)
+    # Insertar tras el binario ffmpeg
+    insert_at = 1
+    extra = ["-hide_banner", "-nostats", "-loglevel", "error", "-progress", "pipe:1", "-nostdin"]
+    # Evitar duplicar -hide_banner
+    head = cleaned[:insert_at]
+    tail = cleaned[insert_at:]
+    # Quitar hide_banner duplicado del tail
+    filtered_tail = []
+    i = 0
+    while i < len(tail):
+        if tail[i] == "-hide_banner":
+            i += 1
+            continue
+        if tail[i] == "-loglevel" and i + 1 < len(tail):
+            i += 2
+            continue
+        if tail[i] in ("-nostats", "-nostdin"):
+            i += 1
+            continue
+        if tail[i] == "-progress" and i + 1 < len(tail):
+            i += 2
+            continue
+        filtered_tail.append(tail[i])
+        i += 1
+    return head + extra + filtered_tail
+
+
+def _parse_ffmpeg_time_seconds(value: str) -> Optional[float]:
+    """Parsea out_time=HH:MM:SS.micro o out_time_ms=."""
+    value = (value or "").strip()
+    if not value or value.startswith("N/A"):
+        return None
+    if ":" in value:
+        try:
+            parts = value.split(":")
+            if len(parts) == 3:
+                h, m, s = parts
+                return int(h) * 3600 + int(m) * 60 + float(s)
+            if len(parts) == 2:
+                m, s = parts
+                return int(m) * 60 + float(s)
+        except Exception:
+            return None
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def run_ffmpeg_with_progress(
+    cmd: List[str],
+    *,
+    duration: Optional[float] = None,
+    label: str = "Procesando",
+    file_index: int = 1,
+    total_files: int = 1,
+) -> "subprocess.CompletedProcess":
+    """
+    Ejecuta ffmpeg mostrando progreso REAL basado en -progress pipe:1
+    (out_time / duration). No usa animaciones aleatorias.
+
+    - stdin cerrado (evita que ffmpeg robe teclas / deje el TTY colgado)
+    - stderr capturado en hilo (evita deadlock del pipe)
+    """
+    full_cmd = _prepare_ffmpeg_progress_cmd(cmd)
+    label_short = label if len(label) <= 40 else (label[:37] + "...")
+    stderr_chunks: List[str] = []
+    last_out_time = 0.0
+    started = time.time()
+    last_draw = 0.0
+
+    try:
+        proc = subprocess.Popen(
+            full_cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+        )
+    except Exception as e:
+        clear_progress_line()
+        return subprocess.CompletedProcess(full_cmd, returncode=1, stdout="", stderr=str(e))
+
+    def _read_stderr():
+        try:
+            if proc.stderr:
+                for line in proc.stderr:
+                    stderr_chunks.append(line)
+        except Exception:
+            pass
+
+    err_thread = threading.Thread(target=_read_stderr, daemon=True)
+    err_thread.start()
+
+    try:
+        # Dibujo inicial
+        render_progress_bar(
+            0.0, label_short,
+            file_index=file_index, total_files=total_files,
+            current_sec=0.0, total_sec=duration, eta_sec=None,
+        )
+
+        if proc.stdout is not None:
+            for raw in proc.stdout:
+                if INTERRUPTED:
+                    try:
+                        proc.terminate()
+                    except Exception:
+                        pass
+                    break
+                line = raw.strip()
+                if not line or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                key = key.strip()
+                val = val.strip()
+
+                if key in ("out_time_ms", "out_time_us"):
+                    try:
+                        num = float(val)
+                        # ffmpeg reporta out_time_ms y out_time_us en MICROSEGUNDOS
+                        # (out_time_ms está mal nombrado en la API de -progress).
+                        last_out_time = num / 1_000_000.0
+                    except Exception:
+                        pass
+                elif key == "out_time":
+                    parsed = _parse_ffmpeg_time_seconds(val)
+                    if parsed is not None:
+                        last_out_time = parsed
+                elif key == "progress":
+                    # Actualizar UI en cada bloque de progreso
+                    now = time.time()
+                    if now - last_draw < 0.05 and val != "end":
+                        continue
+                    last_draw = now
+                    if duration and duration > 0:
+                        frac = max(0.0, min(1.0, last_out_time / duration))
+                        elapsed = max(1e-3, now - started)
+                        speed = last_out_time / elapsed if last_out_time > 0 else 0.0
+                        remaining = (duration - last_out_time) / speed if speed > 0 else None
+                        render_progress_bar(
+                            frac, label_short,
+                            file_index=file_index, total_files=total_files,
+                            current_sec=last_out_time, total_sec=duration, eta_sec=remaining,
+                        )
+                    else:
+                        # Sin duración conocida: avance monótono acotado por tiempo (no aleatorio)
+                        # Asintótico hacia 90% según tiempo transcurrido (se completa al final).
+                        elapsed = now - started
+                        soft = 1.0 - (1.0 / (1.0 + elapsed / 8.0))
+                        frac = min(0.90, soft)
+                        render_progress_bar(
+                            frac, label_short,
+                            file_index=file_index, total_files=total_files,
+                            current_sec=last_out_time if last_out_time > 0 else None,
+                            total_sec=None,
+                            eta_sec=None,
+                        )
+                    if val == "end":
+                        break
+
+        rc = proc.wait()
+        err_thread.join(timeout=1.0)
+        # Completar barra al 100% del archivo
+        render_progress_bar(
+            1.0 if rc == 0 else (last_out_time / duration if duration and duration > 0 else 0.0),
+            label_short,
+            file_index=file_index, total_files=total_files,
+            current_sec=duration if (rc == 0 and duration) else last_out_time,
+            total_sec=duration,
+            eta_sec=0 if rc == 0 else None,
+        )
+        clear_progress_line()
+        stderr_text = "".join(stderr_chunks)
+        return subprocess.CompletedProcess(full_cmd, returncode=rc, stdout="", stderr=stderr_text)
+    except Exception as e:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        try:
+            proc.wait(timeout=2)
+        except Exception:
+            pass
+        err_thread.join(timeout=0.5)
+        clear_progress_line()
+        stderr_text = "".join(stderr_chunks) + f"\n{e}"
+        return subprocess.CompletedProcess(full_cmd, returncode=1, stdout="", stderr=stderr_text)
+
+
+def run_subprocess_with_file_progress(
+    cmd: List[str],
+    *,
+    label: str,
+    file_index: int = 1,
+    total_files: int = 1,
+    cwd: Optional[str] = None,
+    env: Optional[Dict] = None,
+) -> "subprocess.CompletedProcess":
+    """
+    Para procesos que no son ffmpeg (p.ej. mono_config): progreso real por
+    conteo de archivos de salida / tamaño, sin animación aleatoria.
+    """
+    label_short = label if len(label) <= 40 else (label[:37] + "...")
+    started = time.time()
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=cwd,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+        )
+    except Exception as e:
+        return subprocess.CompletedProcess(cmd, returncode=1, stdout="", stderr=str(e))
+
+    output_lines: List[str] = []
+    # Parsear tqdm / porcentajes reales del hijo si los emite
+    pct_re = re.compile(r"(\d{1,3})%\|")
+    last_frac = 0.0
+    try:
+        render_progress_bar(0.0, label_short, file_index=file_index, total_files=total_files)
+        if proc.stdout is not None:
+            for line in proc.stdout:
+                if INTERRUPTED:
+                    try:
+                        proc.terminate()
+                    except Exception:
+                        pass
+                    break
+                output_lines.append(line)
+                m = pct_re.search(line)
+                if m:
+                    try:
+                        last_frac = max(last_frac, min(1.0, int(m.group(1)) / 100.0))
+                    except Exception:
+                        pass
+                else:
+                    # Avance suave monótono si no hay % (basado en tiempo, no random)
+                    elapsed = time.time() - started
+                    soft = 1.0 - (1.0 / (1.0 + elapsed / 12.0))
+                    last_frac = max(last_frac, min(0.95, soft))
+                render_progress_bar(
+                    last_frac, label_short,
+                    file_index=file_index, total_files=total_files,
+                )
+        rc = proc.wait()
+        render_progress_bar(
+            1.0 if rc == 0 else last_frac,
+            label_short,
+            file_index=file_index, total_files=total_files,
+        )
+        clear_progress_line()
+        text = "".join(output_lines)
+        return subprocess.CompletedProcess(cmd, returncode=rc, stdout=text, stderr="")
+    except Exception as e:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        clear_progress_line()
+        return subprocess.CompletedProcess(cmd, returncode=1, stdout="".join(output_lines), stderr=str(e))
+
+
+# Compat: llamadas antiguas a animated_progress_bar / animate_conversion
+def animated_progress_bar(current: int, total: int, label: str, width: int = 35):
+    """Progreso discreto por archivo (current/total). Sin animación aleatoria."""
+    total = max(1, int(total))
+    current = max(0, min(int(current), total))
+    frac = 1.0 if current >= total else 0.0
+    # current es 1-based "archivo en curso" en el código existente → mostrar como en curso al 0%
+    idx = current if current > 0 else 1
+    render_progress_bar(frac if current == total else 0.0, label, file_index=idx, total_files=total, width=width)
 
 
 def animate_conversion(filename: str, stop_event: threading.Event, messages: List[str]):
-    frame = 0
+    """
+    Fallback legacy: si algo aún llama esto, muestra avance monótono por tiempo
+    (no aleatorio) hasta que stop_event se active.
+    """
+    started = time.time()
+    label = messages[0] if messages else (filename or "Procesando")
     while not stop_event.is_set():
-        msg_idx = (frame // 8) % len(messages)
-        eq_anim = equalizer_animation(frame)
-        msg = messages[msg_idx]
-        print(f"\r    {Colors.YELLOW_GREEN}🎧{Colors.NC} {eq_anim} {Colors.MEDIUM_GREEN}{msg}{Colors.NC}  ",
-              end='', flush=True, file=sys.stderr)
-        frame += 1
-        time.sleep(0.1)
+        elapsed = time.time() - started
+        soft = 1.0 - (1.0 / (1.0 + elapsed / 10.0))
+        frac = min(0.95, soft)
+        msg_idx = min(len(messages) - 1, int(elapsed // 3)) if messages else 0
+        msg = messages[msg_idx] if messages else label
+        render_progress_bar(frac, msg, file_index=1, total_files=1)
+        stop_event.wait(0.15)
+    clear_progress_line()
 
 # ============================================================================
 # MANEJO DE INTERRUPCIONES
@@ -1226,7 +1692,8 @@ atexit.register(cleanup)
 
 def convert_m4a_to_mp4(audio_file: Path, output_dir: Path, cover_image: Path,
                        crf: int = VIDEO_CRF, preset: str = VIDEO_PRESET,
-                       resolution: str = VIDEO_RESOLUTION) -> bool:
+                       resolution: str = VIDEO_RESOLUTION,
+                       file_index: int = 1, total_files: int = 1) -> bool:
     output_file = output_dir / f"{audio_file.stem}.mp4"
     duration = get_audio_duration(audio_file)
     if not duration:
@@ -1241,14 +1708,8 @@ def convert_m4a_to_mp4(audio_file: Path, output_dir: Path, cover_image: Path,
     duration_fmt = format_duration(duration)
     print(f"    {Colors.LIME}Duración:{Colors.NC} {Colors.LIGHT_GREEN}{duration_fmt}{Colors.NC} | "
           f"{Colors.LIME}Codec:{Colors.NC} {Colors.LIGHT_GREEN}{audio_codec}{Colors.NC}")
-    
-    # Iniciar animación de conversión
-    stop_event = threading.Event()
-    messages = ["Creando video...", "Codificando H.264...", "Aplicando imagen...", "Finalizando..."]
-    anim_thread = threading.Thread(target=animate_conversion, args=(audio_file.name, stop_event, messages), daemon=True)
-    anim_thread.start()
-    
-    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
+
+    cmd = ['ffmpeg',
            '-loop', '1', '-framerate', '30', '-i', str(cover_image),
            '-i', str(audio_file), '-map', '0:v:0', '-map', '1:a:0',
            '-t', str(duration), '-shortest',
@@ -1258,64 +1719,137 @@ def convert_m4a_to_mp4(audio_file: Path, output_dir: Path, cover_image: Path,
            '-movflags', '+faststart', '-metadata', f'title={audio_file.stem}',
            '-y', str(output_file)]
     try:
-        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-        
-        # Detener animación
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
-        print("\r\033[K", end='', flush=True, file=sys.stderr)
-        
+        result = run_ffmpeg_with_progress(
+            cmd, duration=duration, label=f"MP4: {audio_file.name}",
+            file_index=file_index, total_files=total_files,
+        )
         if result.returncode == 0 and output_file.exists():
             return True
-        else:
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
-            return False
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        return False
     except Exception as e:
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
         print_error(f"Error: {e}")
         return False
 
 
 def convert_to_m4a(audio_file: Path, output_dir: Path, quality_mode: str = QUALITY_MODE,
-                   vbr_quality: int = VBR_QUALITY, cbr_bitrate: str = CBR_BITRATE) -> bool:
+                   vbr_quality: int = VBR_QUALITY, cbr_bitrate: str = CBR_BITRATE,
+                   file_index: int = 1, total_files: int = 1) -> bool:
     output_file = output_dir / f"{audio_file.stem}.m4a"
     if quality_mode == "vbr":
         quality_args = ['-c:a', 'aac', '-q:a', str(vbr_quality), '-ar', '48000']
     else:
         quality_args = ['-c:a', 'aac', '-b:a', cbr_bitrate, '-ar', '48000']
-    stop_event = threading.Event()
-    messages = ["Codificando AAC...", "Comprimiendo audio...", "Optimizando M4A...", "Casi listo..."]
-    anim_thread = threading.Thread(target=animate_conversion, args=(audio_file.name, stop_event, messages), daemon=True)
-    anim_thread.start()
+    duration = get_audio_duration(audio_file)
     try:
-        cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
+        cmd = ['ffmpeg',
                '-i', str(audio_file), *quality_args, '-movflags', '+faststart', '-y', str(output_file)]
-        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
-        print("\r\033[K", end='', flush=True, file=sys.stderr)
+        result = run_ffmpeg_with_progress(
+            cmd, duration=duration, label=f"M4A: {audio_file.name}",
+            file_index=file_index, total_files=total_files,
+        )
         if result.returncode == 0 and output_file.exists():
             return True
-        else:
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
-            return False
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        return False
     except Exception as e:
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
         print(f"\nError: {e}", file=sys.stderr)
         return False
 
 
+def convert_to_mp3(audio_file: Path, output_file: Path, sample_rate: int = 48000,
+                   bitrate_kbps: int = 320, vbr_quality: Optional[int] = None,
+                   file_index: int = 1, total_files: int = 1) -> bool:
+    """
+    Convierte cualquier archivo de audio (soportado por ffmpeg) a MP3 con libmp3lame.
+
+    Args:
+        audio_file: Archivo de entrada (WAV, FLAC, M4A, OGG, WMA, etc.)
+        output_file: Ruta del MP3 de salida
+        sample_rate: Sample rate de salida (Hz). Se limita a 48kHz (máx. libmp3lame)
+        bitrate_kbps: Bitrate CBR en kbps (si vbr_quality es None)
+        vbr_quality: Calidad VBR 0-9 (0 = máxima). Si se define, ignora bitrate_kbps
+    """
+    if not audio_file.exists():
+        print_error(f"El archivo no existe: {audio_file}")
+        return False
+
+    try:
+        if audio_file.resolve() == output_file.resolve():
+            print_error(f"Entrada y salida son el mismo archivo: {audio_file.name}")
+            return False
+    except Exception:
+        pass
+
+    # libmp3lame: máx. 48kHz
+    mp3_sample_rate = min(int(sample_rate), 48000)
+    info = get_audio_info(audio_file)
+    input_codec = info.get('codec') or 'desconocido'
+    input_sr = info.get('sample_rate') or '?'
+    duration = info.get('duration') or get_audio_duration(audio_file)
+
+    if vbr_quality is not None:
+        quality_label = f"VBR Q{vbr_quality}"
+    else:
+        quality_label = f"CBR {bitrate_kbps}kbps"
+
+    print(f"    {Colors.MEDIUM_GREEN}🎵 Conversión a MP3{Colors.NC}")
+    print(f"    {Colors.DARK_FOREST}Input: {input_codec} @ {input_sr}Hz → Output: MP3 {mp3_sample_rate}Hz ({quality_label}){Colors.NC}")
+
+    try:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            'ffmpeg',
+            '-i', str(audio_file),
+            '-vn',
+            '-map', '0:a:0',
+            '-c:a', 'libmp3lame',
+            '-ar', str(mp3_sample_rate),
+            '-ac', '2',
+        ]
+
+        if vbr_quality is not None:
+            cmd.extend(['-q:a', str(vbr_quality)])
+        else:
+            cmd.extend(['-b:a', f'{bitrate_kbps}k'])
+
+        cmd.extend(['-id3v2_version', '3', '-write_id3v1', '1'])
+        cmd.extend(['-map_metadata', '0'])
+        cmd.extend(['-metadata', f'title={audio_file.stem}'])
+        cmd.extend(['-f', 'mp3', '-y', str(output_file)])
+
+        result = run_ffmpeg_with_progress(
+            cmd, duration=duration, label=f"MP3: {audio_file.name}",
+            file_index=file_index, total_files=total_files,
+        )
+
+        if result.returncode == 0 and output_file.exists():
+            orig_size = get_file_size(audio_file)
+            new_size = get_file_size(output_file)
+            print_success(f"Creado: {output_file.name}")
+            print(f"    {Colors.DARK_FOREST}{orig_size} → {new_size} | {mp3_sample_rate}Hz | {quality_label}{Colors.NC}")
+            return True
+
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        print_error(f"Error al convertir: {audio_file.name}")
+        return False
+    except Exception as e:
+        print_error(f"Error: {e}")
+        return False
+
+
 def convert_to_flac(audio_file: Path, output_dir: Path, sample_rate: int = FLAC_SAMPLE_RATE,
-                    bit_depth: int = FLAC_BIT_DEPTH, compression: int = FLAC_COMPRESSION) -> bool:
+                    bit_depth: int = FLAC_BIT_DEPTH, compression: int = FLAC_COMPRESSION,
+                    file_index: int = 1, total_files: int = 1) -> bool:
     output_file = output_dir / f"{audio_file.stem}.flac"
     info = get_audio_info(audio_file)
     input_codec = info.get('codec', '')
     input_sr = info.get('sample_rate')
     input_bd = info.get('bit_depth')
+    duration = info.get('duration') or get_audio_duration(audio_file)
     effective_target_bd = get_effective_flac_bit_depth(bit_depth)
     if input_codec == 'flac' and input_sr and str(input_sr) == str(sample_rate):
         input_bd_norm = get_effective_flac_bit_depth(input_bd or effective_target_bd)
@@ -1325,25 +1859,24 @@ def convert_to_flac(audio_file: Path, output_dir: Path, sample_rate: int = FLAC_
                 if output_file.exists():
                     orig_size = get_file_size(audio_file)
                     out_size = get_file_size(output_file)
+                    render_progress_bar(1.0, f"Copia: {audio_file.name}",
+                                        file_index=file_index, total_files=total_files)
+                    clear_progress_line()
                     print_success(f"Copiado (sin re-codificación): {output_file.name}")
                     print(f"    {Colors.DARK_FOREST}{orig_size} → {out_size} | {input_sr}Hz/{input_bd_norm}bit FLAC{Colors.NC}")
                     return True
             except Exception:
                 pass
     sample_fmt = "s16" if bit_depth == 16 else "s32"
-    stop_event = threading.Event()
-    messages = ["Procesando audio...", "Codificando FLAC...", "Aplicando compresión...", "Finalizando..."]
-    anim_thread = threading.Thread(target=animate_conversion, args=(audio_file.name, stop_event, messages), daemon=True)
-    anim_thread.start()
     try:
-        cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
+        cmd = ['ffmpeg',
                '-i', str(audio_file), '-c:a', 'flac', '-ar', str(sample_rate),
                '-sample_fmt', sample_fmt, '-compression_level', str(compression),
                '-y', str(output_file)]
-        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
-        print("\r\033[K", end='', flush=True, file=sys.stderr)
+        result = run_ffmpeg_with_progress(
+            cmd, duration=duration, label=f"FLAC: {audio_file.name}",
+            file_index=file_index, total_files=total_files,
+        )
         if result.returncode == 0 and output_file.exists():
             orig_size = get_file_size(audio_file)
             out_size = get_file_size(output_file)
@@ -1356,21 +1889,20 @@ def convert_to_flac(audio_file: Path, output_dir: Path, sample_rate: int = FLAC_
                 print_warning("32-bit solicitado, pero FFmpeg/FLAC generó FLAC efectivo a 24-bit.")
                 print_info("Si necesitas 32-bit real, conviene exportar a WAV o AIFF.")
             return True
-        else:
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
-            return False
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        return False
     except Exception as e:
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
         print(f"\nError: {e}", file=sys.stderr)
         return False
 
 
 def convert_to_432hz(input_file: Path, output_file: Path, output_sample_rate: int = 96000,
-                     output_format: str = 'flac', compression_level: int = 8, codec: str = None) -> bool:
+                     output_format: str = 'flac', compression_level: int = 8, codec: str = None,
+                     target_frequency: int = 432,
+                     file_index: int = 1, total_files: int = 1) -> bool:
     """
-    Convierte audio a frecuencia 432Hz
+    Convierte audio a frecuencia objetivo (432Hz, 342Hz, etc)
     
     Args:
         input_file: Archivo de entrada
@@ -1379,6 +1911,7 @@ def convert_to_432hz(input_file: Path, output_file: Path, output_sample_rate: in
         output_format: 'wav', 'flac', o 'wav_compressed'
         compression_level: Nivel de compresión (0-12 para FLAC)
         codec: Codec para WAV comprimido (ej: 'adpcm_ms', 'gsm_ms')
+        target_frequency: Frecuencia objetivo en Hz
     """
     if not input_file.exists():
         print_error(f"El archivo no existe: {input_file}")
@@ -1390,6 +1923,10 @@ def convert_to_432hz(input_file: Path, output_file: Path, output_sample_rate: in
         print_error("No se pudo detectar el sample rate del archivo")
         return False
     input_sample_rate = int(input_sample_rate)
+    
+    # Calcular ratios para frecuencia objetivo
+    freq_ratio = f"{target_frequency}/440"
+    tempo_ratio = f"440/{target_frequency}"
     
     # Determinar formato de muestra según bit depth
     if output_format == 'wav':
@@ -1408,64 +1945,53 @@ def convert_to_432hz(input_file: Path, output_file: Path, output_sample_rate: in
         sample_fmt = "s16" if bit_depth == 16 else "s32"
         audio_codec = "flac"
     
-    print(f"    {Colors.MEDIUM_GREEN}🎵 Conversión a frecuencia universal 432Hz{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}🎵 Conversión a frecuencia universal {target_frequency}Hz{Colors.NC}")
     print(f"    {Colors.DARK_FOREST}Input: {input_sample_rate}Hz/{bit_depth}-bit → Output: {output_sample_rate}Hz/{bit_depth}-bit{Colors.NC}")
-    print(f"    {Colors.DARK_FOREST}Procesando: 440Hz → 432Hz (manteniendo duración){Colors.NC}")
+    print(f"    {Colors.DARK_FOREST}Procesando: 440Hz → {target_frequency}Hz (manteniendo duración){Colors.NC}")
     print(f"    {Colors.DARK_FOREST}Formato: {output_format.upper()}{Colors.NC}")
-    
-    stop_event = threading.Event()
-    messages = ["Ajustando frecuencia...", "Aplicando pitch shift...", "Re-muestreando audio...", "Casi listo..."]
-    anim_thread = threading.Thread(target=animate_conversion, args=(input_file.name, stop_event, messages), daemon=True)
-    anim_thread.start()
-    
+
+    duration = info.get('duration') or get_audio_duration(input_file)
+
     try:
-        # Construir comando base
-        cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
+        cmd = ['ffmpeg',
                '-i', str(input_file),
-               '-af', f'asetrate={input_sample_rate}*432/440,aresample={output_sample_rate},atempo=440/432',
+               '-af', f'asetrate={input_sample_rate}*{freq_ratio},aresample={output_sample_rate},atempo={tempo_ratio}',
                '-c:a', audio_codec,
                '-ar', str(output_sample_rate),
                '-y', str(output_file)]
-        
-        # Agregar parámetros específicos según formato
+
         if output_format == 'wav':
-            # WAV sin comprimir: agregar formato de muestra
             cmd.extend(['-sample_fmt', sample_fmt])
         elif output_format == 'wav_compressed':
-            # WAV comprimido: algunos codecs pueden necesitar parámetros adicionales
-            # La mayoría funcionan con solo el codec
             pass
         elif output_format == 'flac':
-            # FLAC: agregar formato de muestra y nivel de compresión
             cmd.extend(['-sample_fmt', sample_fmt])
             cmd.extend(['-compression_level', str(compression_level)])
-        
-        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
-        print("\r\033[K", end='', flush=True, file=sys.stderr)
-        
+
+        result = run_ffmpeg_with_progress(
+            cmd, duration=duration, label=f"{target_frequency}Hz: {input_file.name}",
+            file_index=file_index, total_files=total_files,
+        )
+
         if result.returncode == 0 and output_file.exists():
             orig_size = get_file_size(input_file)
             new_size = get_file_size(output_file)
-            print_success(f"Conversión a 432Hz completada: {output_file.name}")
+            print_success(f"Conversión a {target_frequency}Hz completada: {output_file.name}")
             print(f"    {Colors.DARK_FOREST}Tamaño: {orig_size} → {new_size} | {output_sample_rate}Hz/{bit_depth}-bit{Colors.NC}")
             return True
-        else:
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
-            return False
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        return False
     except Exception as e:
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
         print(f"\nError: {e}", file=sys.stderr)
         return False
 
 
 def convert_to_432hz_mp3(input_file: Path, output_file: Path, output_sample_rate: int = 48000,
-                         bitrate_kbps: int = 320, vbr_quality: int = None) -> bool:
+                         bitrate_kbps: int = 320, vbr_quality: int = None, target_frequency: int = 432,
+                         file_index: int = 1, total_files: int = 1) -> bool:
     """
-    Convierte audio a frecuencia 432Hz y exporta a MP3
+    Convierte audio a frecuencia objetivo (ej 432Hz o 342Hz) y exporta a MP3
     
     Args:
         input_file: Archivo de entrada
@@ -1473,6 +1999,7 @@ def convert_to_432hz_mp3(input_file: Path, output_file: Path, output_sample_rate
         output_sample_rate: Sample rate deseado (Hz) - será limitado a 48kHz máximo para MP3
         bitrate_kbps: Bitrate en kbps (128, 192, 256, 320) - solo si vbr_quality es None
         vbr_quality: Calidad VBR (0-9, donde 0 es mejor) - si se especifica, usa VBR en lugar de CBR
+        target_frequency: Frecuencia de afinación objetivo en Hz (432, 342, etc)
     """
     if not input_file.exists():
         print_error(f"El archivo no existe: {input_file}")
@@ -1485,17 +2012,22 @@ def convert_to_432hz_mp3(input_file: Path, output_file: Path, output_sample_rate
         return False
     input_sample_rate = int(input_sample_rate)
     
+    # Calcular ratios para la frecuencia objetivo (generalizado desde 432)
+    # FÃ³rmula: asetrate = sr * target/440 ; atempo = 440/target para mantener duraciÃ³n
+    freq_ratio = f"{target_frequency}/440"
+    tempo_ratio = f"440/{target_frequency}"
+    
     # libmp3lame solo soporta hasta 48kHz - limitar sample rate
     # Sample rates soportados: 8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
     mp3_max_sample_rate = 48000
     processing_sample_rate = output_sample_rate  # Para procesamiento interno (pitch shift)
     mp3_sample_rate = min(output_sample_rate, mp3_max_sample_rate)  # Para encoding MP3
     
-    print(f"    {Colors.MEDIUM_GREEN}🎵 Conversión a frecuencia universal 432Hz → MP3{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}🎵 Conversión a frecuencia universal {target_frequency}Hz → MP3{Colors.NC}")
     print(f"    {Colors.DARK_FOREST}Input: {input_sample_rate}Hz/{bit_depth}-bit → Output: {mp3_sample_rate}Hz/MP3{Colors.NC}")
     if output_sample_rate > mp3_max_sample_rate:
         print(f"    {Colors.YELLOW_GREEN}ℹ️  Procesamiento interno a {output_sample_rate}Hz, luego resample a {mp3_sample_rate}Hz para MP3{Colors.NC}")
-    print(f"    {Colors.DARK_FOREST}Procesando: 440Hz → 432Hz (manteniendo duración){Colors.NC}")
+    print(f"    {Colors.DARK_FOREST}Procesando: 440Hz → {target_frequency}Hz (manteniendo duración){Colors.NC}")
     if vbr_quality is not None:
         print(f"    {Colors.DARK_FOREST}Modo: VBR Quality {vbr_quality} (0=máxima calidad){Colors.NC}")
     else:
@@ -1508,69 +2040,52 @@ def convert_to_432hz_mp3(input_file: Path, output_file: Path, output_sample_rate
         print_info(f"   El audio se procesa a {output_sample_rate}Hz internamente, luego se resamplea a {mp3_sample_rate}Hz para el MP3 final")
         print()
     
-    stop_event = threading.Event()
-    messages = ["Ajustando frecuencia...", "Aplicando pitch shift...", "Re-muestreando audio...", "Codificando MP3...", "Casi listo..."]
-    anim_thread = threading.Thread(target=animate_conversion, args=(input_file.name, stop_event, messages), daemon=True)
-    anim_thread.start()
-    
+    duration = info.get('duration') or get_audio_duration(input_file)
+
     try:
-        # Construir comando base
-        # Procesar a sample rate deseado internamente, luego resamplear a 48kHz para MP3
         if output_sample_rate > mp3_max_sample_rate:
-            # Procesar a alta resolución primero, luego resamplear a 48kHz para MP3
-            cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
+            cmd = ['ffmpeg',
                    '-i', str(input_file),
-                   '-af', f'asetrate={input_sample_rate}*432/440,aresample={output_sample_rate},atempo=440/432,aresample={mp3_sample_rate}',
+                   '-af', f'asetrate={input_sample_rate}*{freq_ratio},aresample={output_sample_rate},atempo={tempo_ratio},aresample={mp3_sample_rate}',
                    '-c:a', 'libmp3lame',
                    '-ar', str(mp3_sample_rate),
                    '-y', str(output_file)]
         else:
-            # Sample rate está dentro del rango soportado
-            cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-stats',
+            cmd = ['ffmpeg',
                    '-i', str(input_file),
-                   '-af', f'asetrate={input_sample_rate}*432/440,aresample={mp3_sample_rate},atempo=440/432',
+                   '-af', f'asetrate={input_sample_rate}*{freq_ratio},aresample={mp3_sample_rate},atempo={tempo_ratio}',
                    '-c:a', 'libmp3lame',
                    '-ar', str(mp3_sample_rate),
                    '-y', str(output_file)]
-        
-        # Agregar parámetros de bitrate o VBR
+
         if vbr_quality is not None:
-            # Modo VBR
             cmd.extend(['-q:a', str(vbr_quality)])
         else:
-            # Modo CBR
             cmd.extend(['-b:a', f'{bitrate_kbps}k'])
-        
-        # Agregar metadatos ID3 para compatibilidad con Ditto Music y reconocimiento de MIME type
-        # ID3v2.3 es el estándar más compatible
+
         cmd.extend(['-id3v2_version', '3'])
         cmd.extend(['-write_id3v1', '1'])
-        
-        # Agregar metadatos básicos del archivo original
+
         input_name = input_file.stem
         cmd.extend(['-metadata', f'title={input_name}'])
-        
-        # Asegurar formato MP3 estándar
+        cmd.extend(['-metadata', f'comment=Tuned to {target_frequency}Hz from 440Hz reference'])
         cmd.extend(['-f', 'mp3'])
-        
-        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
-        print("\r\033[K", end='', flush=True, file=sys.stderr)
-        
+
+        result = run_ffmpeg_with_progress(
+            cmd, duration=duration, label=f"{target_frequency}Hz MP3: {input_file.name}",
+            file_index=file_index, total_files=total_files,
+        )
+
         if result.returncode == 0 and output_file.exists():
             orig_size = get_file_size(input_file)
             new_size = get_file_size(output_file)
-            print_success(f"Conversión a 432Hz MP3 completada: {output_file.name}")
+            print_success(f"Conversión a {target_frequency}Hz MP3 completada: {output_file.name}")
             print(f"    {Colors.DARK_FOREST}Tamaño: {orig_size} → {new_size} | {mp3_sample_rate}Hz/MP3{Colors.NC}")
             return True
-        else:
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
-            return False
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        return False
     except Exception as e:
-        stop_event.set()
-        anim_thread.join(timeout=0.5)
         print(f"\nError: {e}", file=sys.stderr)
         return False
 
@@ -1661,22 +2176,24 @@ def process_m4a_to_mp4(source_dir: Path, output_dirname: str = "converted_videos
     print()
     success_count = 0
     fail_count = 0
+    total = len(m4a_files)
     for i, audio_file in enumerate(m4a_files, 1):
         if INTERRUPTED:
             print_warning("Conversión interrumpida por el usuario")
             break
-        animated_progress_bar(i, len(m4a_files), f"Convirtiendo: {audio_file.name[:25]}")
         if convert_m4a_to_mp4(audio_file, output_dir, cover_image,
                               crf=resolution_profile["crf"],
                               preset=resolution_profile["preset"],
-                              resolution=resolution_profile["resolution"]):
+                              resolution=resolution_profile["resolution"],
+                              file_index=i, total_files=total):
             success_count += 1
             orig_size = get_file_size(audio_file)
             out_size = get_file_size(output_dir / f"{audio_file.stem}.mp4")
-            print(f"\n    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
+            print(f"    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
         else:
             fail_count += 1
-            print(f"\n    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+            print(f"    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+    prepare_for_user_input()
     print()
     print_header("Conversión MP4 Completada")
     print(f"    {Colors.LIGHT_GREEN}Exitosos:{Colors.NC} {Colors.LIME}{success_count}{Colors.NC}")
@@ -1714,19 +2231,21 @@ def process_audio_to_m4a(source_dir: Path, output_dirname: str = "converted",
     print(f"    {Colors.MEDIUM_GREEN}💡 Presiona Ctrl+C en cualquier momento para cancelar{Colors.NC}")
     success_count = 0
     fail_count = 0
+    total = len(audio_files)
     for i, audio_file in enumerate(audio_files, 1):
         if INTERRUPTED:
             print_warning("Conversión interrumpida por el usuario")
             break
-        animated_progress_bar(i, len(audio_files), f"Convirtiendo: {audio_file.name[:25]}")
-        if convert_to_m4a(audio_file, output_dir, quality_mode, vbr_quality, cbr_bitrate):
+        if convert_to_m4a(audio_file, output_dir, quality_mode, vbr_quality, cbr_bitrate,
+                          file_index=i, total_files=total):
             success_count += 1
             orig_size = get_file_size(audio_file)
             out_size = get_file_size(output_dir / f"{audio_file.stem}.m4a")
-            print(f"\n    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
+            print(f"    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
         else:
             fail_count += 1
-            print(f"\n    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+            print(f"    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+    prepare_for_user_input()
     print()
     print_header("Conversión M4A Completada")
     print(f"    {Colors.LIGHT_GREEN}Exitosos:{Colors.NC} {Colors.LIME}{success_count}{Colors.NC}")
@@ -1780,10 +2299,13 @@ def process_album_to_unified_mp3(source_dir: Path, output_dirname: str = "unifie
     TMP_DIRS.append(tmp_dir)
     print_info(f"Generando silencio de {silence_duration} segundos...")
     silence_file = Path(tmp_dir) / "silence.wav"
-    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'error',
+    cmd = ['ffmpeg',
            '-f', 'lavfi', '-i', f'anullsrc=r=48000:cl=stereo',
            '-t', str(silence_duration), '-y', str(silence_file)]
-    subprocess.run(cmd, capture_output=True)
+    run_ffmpeg_with_progress(
+        cmd, duration=float(silence_duration), label="Generando silencio",
+        file_index=1, total_files=1,
+    )
     if not silence_file.exists():
         print_error("No se pudo crear el archivo de silencio")
         cleanup()
@@ -1797,18 +2319,21 @@ def process_album_to_unified_mp3(source_dir: Path, output_dirname: str = "unifie
     print(f"    {Colors.LIME}║{Colors.NC}  {Colors.YELLOW_GREEN}🎵 PREPARANDO PISTAS PARA EL ÁLBUM UNIFICADO 🎵{Colors.NC}          {Colors.LIME}║{Colors.NC}")
     print(f"    {Colors.LIME}╚════════════════════════════════════════════════════════════╝{Colors.NC}")
     print()
+    total_tracks = len(audio_files)
     for i, audio_file in enumerate(audio_files, 1):
         if INTERRUPTED:
             print_warning("Proceso interrumpido durante la preparación de pistas")
             cleanup()
             return False
-        filename_short = audio_file.name[:25] + "..." if len(audio_file.name) > 25 else audio_file.name
-        animated_progress_bar(i, len(audio_files), filename_short)
         tmp_wav = Path(tmp_dir) / f"track_{i:03d}.wav"
-        cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'error',
+        dur = get_audio_duration(audio_file)
+        cmd = ['ffmpeg',
                '-i', str(audio_file), '-ar', '48000', '-ac', '2', '-y', str(tmp_wav)]
-        result = subprocess.run(cmd, capture_output=True)
-        if not tmp_wav.exists():
+        result = run_ffmpeg_with_progress(
+            cmd, duration=dur, label=f"Pista: {audio_file.name}",
+            file_index=i, total_files=total_tracks,
+        )
+        if result.returncode != 0 or not tmp_wav.exists():
             print()
             print_error(f"Error al procesar: {audio_file.name}")
             cleanup()
@@ -1818,7 +2343,6 @@ def process_album_to_unified_mp3(source_dir: Path, output_dirname: str = "unifie
         if i < len(audio_files):
             with open(concat_list, 'a') as f:
                 f.write(f"file '{silence_file}'\n")
-    print()
     print()
     print_success(f"✅ {len(audio_files)} pistas preparadas correctamente")
     if INTERRUPTED:
@@ -1830,17 +2354,13 @@ def process_album_to_unified_mp3(source_dir: Path, output_dirname: str = "unifie
     print(f"    {Colors.LIME}╚════════════════════════════════════════════════════════════╝{Colors.NC}")
     print()
     tmp_concat = Path(tmp_dir) / "concatenated.wav"
-    stop_event = threading.Event()
-    messages = ["Uniendo pistas..."]
-    anim_thread = threading.Thread(target=lambda: animate_conversion("", stop_event, messages), daemon=True)
-    anim_thread.start()
-    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'error',
+    cmd = ['ffmpeg',
            '-f', 'concat', '-safe', '0', '-i', str(concat_list),
            '-c', 'copy', '-y', str(tmp_concat)]
-    result = subprocess.run(cmd, capture_output=True)
-    stop_event.set()
-    anim_thread.join(timeout=0.5)
-    print("\r\033[K", end='', flush=True, file=sys.stderr)
+    result = run_ffmpeg_with_progress(
+        cmd, duration=final_duration if final_duration > 0 else None,
+        label="Concatenando pistas", file_index=1, total_files=1,
+    )
     if result.returncode != 0 or not tmp_concat.exists():
         print()
         print_error("Error al concatenar archivos")
@@ -1856,11 +2376,8 @@ def process_album_to_unified_mp3(source_dir: Path, output_dirname: str = "unifie
     print(f"    {Colors.LIME}║{Colors.NC}  {Colors.YELLOW_GREEN}🎧 CODIFICANDO MP3 FINAL ({mp3_bitrate}) 🎧{Colors.NC}                    {Colors.LIME}║{Colors.NC}")
     print(f"    {Colors.LIME}╚════════════════════════════════════════════════════════════╝{Colors.NC}")
     print()
-    stop_event = threading.Event()
-    messages = ["Codificando audio...", "Aplicando compresión...", "Generando MP3...", "Casi listo..."]
-    anim_thread = threading.Thread(target=lambda: animate_conversion("", stop_event, messages), daemon=True)
-    anim_thread.start()
-    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'error',
+    concat_dur = get_audio_duration(tmp_concat) or final_duration
+    cmd = ['ffmpeg',
            '-i', str(tmp_concat),
            '-codec:a', 'libmp3lame', '-b:a', mp3_bitrate,
            '-id3v2_version', '3',
@@ -1868,12 +2385,13 @@ def process_album_to_unified_mp3(source_dir: Path, output_dirname: str = "unifie
            '-metadata', f'album={output_name}',
            '-metadata', f'comment=Álbum completo para registro de derechos de autor - {len(audio_files)} pistas',
            '-y', str(output_file)]
-    result = subprocess.run(cmd, capture_output=True)
-    stop_event.set()
-    anim_thread.join(timeout=0.5)
-    print("\r\033[K", end='', flush=True, file=sys.stderr)
+    result = run_ffmpeg_with_progress(
+        cmd, duration=concat_dur, label=f"MP3 unificado ({mp3_bitrate})",
+        file_index=1, total_files=1,
+    )
     print()
     cleanup()
+    prepare_for_user_input()
     if result.returncode == 0 and output_file.exists():
         final_size = get_file_size(output_file)
         final_dur = get_audio_duration(output_file)
@@ -1955,15 +2473,18 @@ def process_audio_to_flac(source_dir: Path, output_dirname: str = "flac_hires",
     print()
     success_count = 0
     fail_count = 0
+    total = len(audio_files)
     for i, audio_file in enumerate(audio_files, 1):
         if INTERRUPTED:
             print_warning("Conversión interrumpida por el usuario")
             break
-        print(f"\n{Colors.BOLD}[{i}/{len(audio_files)}]{Colors.NC} {audio_file.name}")
-        if convert_to_flac(audio_file, output_dir, sample_rate, bit_depth, compression):
+        print(f"\n{Colors.BOLD}[{i}/{total}]{Colors.NC} {audio_file.name}")
+        if convert_to_flac(audio_file, output_dir, sample_rate, bit_depth, compression,
+                           file_index=i, total_files=total):
             success_count += 1
         else:
             fail_count += 1
+    prepare_for_user_input()
     print()
     print_header("Conversión FLAC Completada")
     print()
@@ -2203,17 +2724,22 @@ def select_output_format_for_432hz() -> Optional[Dict]:
     }
 
 
-def select_audio_files_for_432hz(audio_files: List[Path]) -> Optional[List[Path]]:
+def select_audio_files_for_432hz(
+    audio_files: List[Path],
+    title: str = "Selecciona Archivos para Conversión a 432Hz",
+    subtitle: str = "Convierte audio de 440Hz a 432Hz manteniendo la duración original.",
+    emoji_line: str = "🕉️  Conversión a frecuencia universal 432Hz",
+) -> Optional[List[Path]]:
     """
     Permite al usuario seleccionar archivos individuales o procesar todos.
     Retorna:
     - Lista de Paths de archivos seleccionados
     - None si se cancela (Ctrl+C)
     """
-    print_header("Selecciona Archivos para Conversión a 432Hz")
+    print_header(title)
     print()
-    print(f"    {Colors.LIME}🕉️  Conversión a frecuencia universal 432Hz{Colors.NC}")
-    print(f"    {Colors.MEDIUM_GREEN}Convierte audio de 440Hz a 432Hz manteniendo la duración original.{Colors.NC}")
+    print(f"    {Colors.LIME}{emoji_line}{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}{subtitle}{Colors.NC}")
     print()
     print(f"    {Colors.LIME}📋 Selecciona archivos de la lista:{Colors.NC}")
     print()
@@ -2274,6 +2800,324 @@ def select_audio_files_for_432hz(audio_files: List[Path]) -> Optional[List[Path]
                 print_error(f"Por favor ingresa números del 1 al {len(audio_files)}, separados por comas, o presiona Enter para todos.")
         except (EOFError, KeyboardInterrupt):
             return None
+
+
+def select_sample_rate_for_mp3() -> Optional[int]:
+    """
+    Sample rate de salida para MP3 genérico.
+    libmp3lame soporta como máximo 48kHz.
+    """
+    print_header("Selecciona Sample Rate para MP3")
+    print()
+    print(f"    {Colors.MEDIUM_GREEN}libmp3lame soporta como máximo 48kHz.{Colors.NC}")
+    print()
+
+    sample_rates = {
+        "1": {"rate": 44100, "name": "44.1kHz (CD Quality)", "description": "Estándar CD. Máxima compatibilidad universal."},
+        "2": {"rate": 48000, "name": "48kHz (Professional) ⭐", "description": "Estándar profesional / video. RECOMENDADO."},
+    }
+
+    for key, sr_info in sample_rates.items():
+        print(f"  {Colors.LIME}{key}){Colors.NC} {sr_info['name']}")
+        print(f"      {Colors.MEDIUM_GREEN}{sr_info['description']}{Colors.NC}")
+        print()
+
+    while True:
+        try:
+            choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona resolución (1-2) o Enter para 48kHz: {Colors.NC}").strip()
+            if not choice:
+                print()
+                print_success("Sample rate seleccionado: 48kHz (Professional)")
+                print()
+                return 48000
+            if choice in sample_rates:
+                selected = sample_rates[choice]
+                print()
+                print_success(f"Sample rate seleccionado: {selected['name']}")
+                print()
+                return selected["rate"]
+            print_error("Opción inválida. Selecciona 1, 2, o Enter para 48kHz.")
+        except (EOFError, KeyboardInterrupt):
+            return None
+
+
+def show_mp3_conversion_estimations(audio_files: List[Path], sample_rate: int,
+                                    bitrate_kbps: Optional[int] = None,
+                                    vbr_quality: Optional[int] = None) -> None:
+    """Estimaciones de tamaño/tiempo para conversión genérica a MP3."""
+    print_header("Estimaciones de Conversión a MP3")
+    print()
+
+    sr_display = (
+        "48kHz" if sample_rate == 48000
+        else ("44.1kHz" if sample_rate == 44100 else f"{sample_rate}Hz")
+    )
+    print(f"    {Colors.LIME}Formato:{Colors.NC}        {Colors.LIGHT_GREEN}MP3{Colors.NC}")
+    print(f"    {Colors.LIME}Sample Rate:{Colors.NC}    {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    if bitrate_kbps:
+        print(f"    {Colors.LIME}Bitrate:{Colors.NC}        {Colors.LIGHT_GREEN}{bitrate_kbps} kbps (CBR){Colors.NC}")
+    elif vbr_quality is not None:
+        print(f"    {Colors.LIME}Calidad:{Colors.NC}        {Colors.LIGHT_GREEN}VBR Quality {vbr_quality} (0=máxima){Colors.NC}")
+    print()
+
+    # VBR aproximado en kbps promedio para estimar tamaño
+    est_bitrate = bitrate_kbps
+    if est_bitrate is None:
+        vbr_avg = {0: 245, 1: 225, 2: 210, 3: 190, 4: 185, 5: 175, 6: 165, 7: 155, 8: 145, 9: 130}
+        est_bitrate = vbr_avg.get(vbr_quality if vbr_quality is not None else 0, 200)
+
+    total_duration_min = 0.0
+    total_original_size_mb = 0.0
+    total_estimated_size_mb = 0.0
+    total_time_min = 0.0
+    file_estimations = []
+
+    for audio_file in audio_files:
+        duration = get_audio_duration(audio_file)
+        if not duration:
+            continue
+        duration_min = duration / 60.0
+        original_size_mb = audio_file.stat().st_size / (1024 * 1024)
+        est_size_mb = estimate_mp3_output_size(duration, est_bitrate)
+        # Encoding MP3 ~10-15% de la duración del audio
+        est_time_min = duration_min * 0.12
+
+        file_estimations.append({
+            'file': audio_file,
+            'duration': duration,
+            'original_size_mb': original_size_mb,
+            'estimated_size_mb': est_size_mb,
+            'estimated_time_min': est_time_min,
+        })
+        total_duration_min += duration_min
+        total_original_size_mb += original_size_mb
+        total_estimated_size_mb += est_size_mb
+        total_time_min += est_time_min
+
+    print(f"    {Colors.LIME}{'Archivo':<30} {'Duración':<12} {'Tamaño Orig.':<15} {'Tamaño Est.':<18} {'Tiempo Est.':<15}{Colors.NC}")
+    print(f"    {Colors.DARK_GREEN}{'-' * 90}{Colors.NC}")
+
+    for est in file_estimations:
+        duration_str = format_duration(est['duration'])
+        original_size_str = get_file_size(est['file'])
+        if est['estimated_size_mb'] < 1024:
+            estimated_size_str = f"{est['estimated_size_mb']:.1f}MB"
+        else:
+            estimated_size_str = f"{est['estimated_size_mb']/1024:.1f}GB"
+        time_str = format_time_estimate(est['estimated_time_min'])
+        file_name = est['file'].name[:28] + ".." if len(est['file'].name) > 30 else est['file'].name
+        print(f"    {Colors.LIGHT_GREEN}{file_name:<30}{Colors.NC} {duration_str:<12} {original_size_str:<15} {estimated_size_str:<18} {time_str:<15}")
+
+    print()
+    print(f"    {Colors.DARK_GREEN}{'-' * 90}{Colors.NC}")
+    total_duration_str = format_time_estimate(total_duration_min)
+    total_original_str = f"{total_original_size_mb:.1f}MB" if total_original_size_mb < 1024 else f"{total_original_size_mb/1024:.1f}GB"
+    total_estimated_str = f"{total_estimated_size_mb:.1f}MB" if total_estimated_size_mb < 1024 else f"{total_estimated_size_mb/1024:.1f}GB"
+    total_time_str = format_time_estimate(total_time_min)
+    print(f"    {Colors.LIME}{'TOTALES':<30} {total_duration_str:<12} {total_original_str:<15} {total_estimated_str:<18} {total_time_str:<15}{Colors.NC}")
+    print()
+
+
+def process_audio_to_mp3(source_dir: Path, output_dir: Path) -> bool:
+    """
+    Convierte archivos de audio de cualquier formato soportado a MP3.
+    Flujo interactivo: origen → selección de archivos → calidad → conversión.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    audio_files = select_audio_source_files(
+        source_dir,
+        extensions=ANY_AUDIO_SOURCE_EXTENSIONS,
+        formats_label=ANY_AUDIO_SOURCE_FORMATS_LABEL,
+        filter_note="Incluye WAV, FLAC, AIFF, MP3, M4A, OGG, OPUS, WMA, AAC, y más (ffmpeg).",
+    )
+    if audio_files is None:
+        print_warning("Conversión cancelada.")
+        return False
+    if not audio_files:
+        print_error("No se encontraron archivos de audio compatibles para convertir a MP3.")
+        return False
+
+    print_header("Conversión a MP3 - Cualquier Formato")
+    print()
+    print(f"    {Colors.LIME}╔════════════════════════════════════════════════════════════╗{Colors.NC}")
+    print(f"    {Colors.LIME}║{Colors.NC}  {Colors.YELLOW_GREEN}🎧  AUDIO → MP3 (cualquier formato de entrada) 🎧{Colors.NC}       {Colors.LIME}║{Colors.NC}")
+    print(f"    {Colors.LIME}╚════════════════════════════════════════════════════════════╝{Colors.NC}")
+    print()
+    print_info(f"Archivos encontrados: {len(audio_files)}")
+    print()
+
+    selected_files = select_audio_files_for_432hz(
+        audio_files,
+        title="Selecciona Archivos para Convertir a MP3",
+        subtitle="Codifica con libmp3lame (CBR o VBR). Conserva metadatos cuando sea posible.",
+        emoji_line="🎧  Conversión genérica a MP3",
+    )
+    if selected_files is None:
+        print_warning("Conversión cancelada.")
+        return False
+    if not selected_files:
+        print_error("No se seleccionaron archivos para convertir.")
+        return False
+
+    print()
+    output_sample_rate = select_sample_rate_for_mp3()
+    if output_sample_rate is None:
+        print_warning("Conversión cancelada.")
+        return False
+
+    quality_config = select_mp3_quality_settings()
+    if quality_config is None:
+        print_warning("Conversión cancelada.")
+        return False
+
+    bitrate_kbps = quality_config.get('bitrate')
+    vbr_quality = quality_config.get('vbr_quality')
+    sr_display = "48kHz" if output_sample_rate == 48000 else ("44.1kHz" if output_sample_rate == 44100 else f"{output_sample_rate}Hz")
+    quality_str = f"{bitrate_kbps}kbps (CBR)" if bitrate_kbps else f"VBR Quality {vbr_quality}"
+
+    print()
+    show_mp3_conversion_estimations(
+        selected_files, output_sample_rate,
+        bitrate_kbps=bitrate_kbps, vbr_quality=vbr_quality,
+    )
+
+    if not confirm(f"¿Convertir {len(selected_files)} archivo(s) a MP3 ({sr_display}, {quality_str})?"):
+        print_warning("Conversión cancelada.")
+        return False
+
+    print()
+    print_header("Iniciando conversión AUDIO → MP3")
+    print(f"    {Colors.LIME}Sample rate:{Colors.NC} {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    print(f"    {Colors.LIME}Calidad:{Colors.NC}     {Colors.LIGHT_GREEN}{quality_str}{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}💡 Presiona Ctrl+C en cualquier momento para cancelar{Colors.NC}")
+    print()
+
+    success_count = 0
+    fail_count = 0
+    skip_count = 0
+    existing_files = []
+    created_output_dirs = set()
+
+    if output_dir.resolve() == source_dir.resolve():
+        (source_dir / "masters").mkdir(parents=True, exist_ok=True)
+
+    for audio_file in selected_files:
+        target_dir = resolve_output_dir_for_file(source_dir, output_dir, audio_file, "mp3")
+        out_file = target_dir / f"{audio_file.stem}.mp3"
+        if out_file.exists():
+            existing_files.append((audio_file, out_file))
+
+    if existing_files:
+        print()
+        print_warning(f"⚠️  Se encontraron {len(existing_files)} archivo(s) que ya existen en el destino:")
+        for audio_file, out_file in existing_files:
+            print(f"    {Colors.YELLOW_GREEN}• {out_file.name}{Colors.NC} ({get_file_size(out_file)}) - de {audio_file.name}")
+        print()
+        print(f"    {Colors.LIME}Opciones:{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}1) Sobrescribir archivos existentes{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}2) Saltar archivos existentes{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}3) Agregar sufijo único a archivos nuevos{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}4) Cancelar{Colors.NC}")
+        print()
+
+        overwrite_mode = None
+        while overwrite_mode is None:
+            try:
+                choice = input(f"{Colors.YELLOW_GREEN}▶ Selecciona opción (1-4): {Colors.NC}").strip()
+                if choice == "1":
+                    overwrite_mode = "overwrite"
+                    print()
+                    print_warning("⚠️  Los archivos existentes serán SOBRESCRITOS")
+                    if not confirm("¿Continuar con sobrescritura?"):
+                        print_warning("Conversión cancelada.")
+                        return False
+                elif choice == "2":
+                    overwrite_mode = "skip"
+                    print()
+                    print_info(f"Se saltarán {len(existing_files)} archivo(s) existente(s)")
+                elif choice == "3":
+                    overwrite_mode = "unique"
+                    print()
+                    print_info("Se agregará un sufijo único a los archivos nuevos")
+                elif choice == "4":
+                    print_warning("Conversión cancelada.")
+                    return False
+                else:
+                    print_error("Opción inválida. Selecciona 1, 2, 3 o 4.")
+            except (EOFError, KeyboardInterrupt):
+                print_warning("Conversión cancelada.")
+                return False
+    else:
+        overwrite_mode = "overwrite"
+
+    print()
+
+    for i, audio_file in enumerate(selected_files, 1):
+        if INTERRUPTED:
+            print_warning("Conversión interrumpida por el usuario")
+            break
+
+        target_dir = resolve_output_dir_for_file(source_dir, output_dir, audio_file, "mp3")
+        target_dir.mkdir(parents=True, exist_ok=True)
+        created_output_dirs.add(str(target_dir))
+        output_file = target_dir / f"{audio_file.stem}.mp3"
+
+        if output_file.exists() and overwrite_mode == "skip":
+            skip_count += 1
+            print(f"\n    {Colors.YELLOW_GREEN}⊘{Colors.NC} {audio_file.name} → Saltado (ya existe: {get_file_size(output_file)})")
+            continue
+        if output_file.exists() and overwrite_mode == "unique":
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = target_dir / f"{audio_file.stem}_{timestamp}.mp3"
+            counter = 1
+            while output_file.exists():
+                output_file = target_dir / f"{audio_file.stem}_{timestamp}_{counter}.mp3"
+                counter += 1
+
+        # Si la fuente ya es .mp3 en el mismo path resuelto, saltar
+        try:
+            if audio_file.resolve() == output_file.resolve():
+                skip_count += 1
+                print(f"\n    {Colors.YELLOW_GREEN}⊘{Colors.NC} {audio_file.name} → Saltado (entrada = salida)")
+                continue
+        except Exception:
+            pass
+
+        if convert_to_mp3(
+            audio_file, output_file,
+            sample_rate=output_sample_rate,
+            bitrate_kbps=bitrate_kbps or 320,
+            vbr_quality=vbr_quality,
+            file_index=i, total_files=len(selected_files),
+        ):
+            success_count += 1
+            print(f"    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {get_file_size(output_file)} ({get_file_size(audio_file)})")
+        else:
+            fail_count += 1
+            print(f"    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+
+    prepare_for_user_input()
+    print()
+    print_header("Conversión a MP3 Completada")
+    print()
+    print(f"    {Colors.LIGHT_GREEN}Exitosos:{Colors.NC} {Colors.LIME}{success_count}{Colors.NC}")
+    if skip_count > 0:
+        print(f"    {Colors.YELLOW_GREEN}Saltados:{Colors.NC} {Colors.LIME}{skip_count}{Colors.NC}")
+    if fail_count > 0:
+        print(f"    {Colors.DARK_GREEN}Fallidos:{Colors.NC} {Colors.YELLOW_GREEN}{fail_count}{Colors.NC}")
+    print(f"    {Colors.LIME}Formato:{Colors.NC}     {Colors.LIGHT_GREEN}MP3{Colors.NC}")
+    print(f"    {Colors.LIME}Sample rate:{Colors.NC} {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    print(f"    {Colors.LIME}Calidad:{Colors.NC}     {Colors.LIGHT_GREEN}{quality_str}{Colors.NC}")
+    print(f"    {Colors.LIME}Salida:{Colors.NC}")
+    if output_dir.resolve() == source_dir.resolve():
+        print(f"    {Colors.MEDIUM_GREEN}• Raíz del origen: carpeta{Colors.NC} {Colors.LIGHT_GREEN}masters{Colors.NC}")
+        print(f"    {Colors.MEDIUM_GREEN}• Subdirectorios: carpeta{Colors.NC} {Colors.LIGHT_GREEN}mp3{Colors.NC} {Colors.MEDIUM_GREEN}en cada subdirectorio{Colors.NC}")
+    else:
+        print(f"    {Colors.LIGHT_GREEN}{output_dir}/{Colors.NC}")
+    for out_dir in sorted(created_output_dirs):
+        print(f"    {Colors.MEDIUM_GREEN}• {out_dir}{Colors.NC}")
+    return success_count > 0
 
 
 def select_sample_rate_for_432hz_mp3() -> Optional[int]:
@@ -2778,19 +3622,18 @@ def process_to_432hz(source_dir: Path, output_dir: Path):
                 output_file = target_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}{output_ext}"
                 counter += 1
         
-        animated_progress_bar(i, len(selected_files), f"Convirtiendo: {audio_file.name[:25]}")
-        
         if convert_to_432hz(audio_file, output_file, output_sample_rate,
                            output_format=output_format, compression_level=compression_level,
-                           codec=codec):
+                           codec=codec, file_index=i, total_files=len(selected_files)):
             success_count += 1
             orig_size = get_file_size(audio_file)
             out_size = get_file_size(output_file)
-            print(f"\n    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
+            print(f"    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
         else:
             fail_count += 1
-            print(f"\n    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+            print(f"    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
     
+    prepare_for_user_input()
     print()
     print_header("Conversión a 432Hz Completada")
     print()
@@ -2817,13 +3660,14 @@ def process_to_432hz(source_dir: Path, output_dir: Path):
     return success_count > 0
 
 
-def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
+def process_to_432hz_mp3(source_dir: Path, output_dir: Path, target_frequency: int = 432):
     """
-    Procesa archivos de audio convirtiéndolos a frecuencia 432Hz y exporta a MP3
+    Procesa archivos de audio convirtiéndolos a frecuencia objetivo (432Hz/342Hz etc) y exporta a MP3
     
     Args:
         source_dir: Directorio fuente donde están los archivos de audio
         output_dir: Directorio de destino donde se guardarán los archivos convertidos
+        target_frequency: Frecuencia de sintonía objetivo (default 432)
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     audio_files = select_audio_source_files(source_dir)
@@ -2831,13 +3675,13 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
         print_warning("Conversión cancelada.")
         return False
     if not audio_files:
-        print_error("No se encontraron archivos WAV/AIFF/FLAC para convertir a 432Hz MP3")
+        print_error(f"No se encontraron archivos WAV/AIFF/FLAC para convertir a {target_frequency}Hz MP3")
         return False
     
-    print_header("Conversión a frecuencia 432Hz MP3 - Música Devocional")
+    print_header(f"Conversión a frecuencia {target_frequency}Hz MP3 - Música Devocional")
     print()
     print(f"    {Colors.LIME}╔════════════════════════════════════════════════════════════╗{Colors.NC}")
-    print(f"    {Colors.LIME}║{Colors.NC}  {Colors.YELLOW_GREEN}🕉️  CONVERSIÓN A 432Hz MP3 - FRECUENCIA SANADORA 🕉️{Colors.NC}      {Colors.LIME}║{Colors.NC}")
+    print(f"    {Colors.LIME}║{Colors.NC}  {Colors.YELLOW_GREEN}🕉️  CONVERSIÓN A {target_frequency}Hz MP3 - FRECUENCIA SANADORA 🕉️{Colors.NC}      {Colors.LIME}║{Colors.NC}")
     print(f"    {Colors.LIME}╚════════════════════════════════════════════════════════════╝{Colors.NC}")
     print()
     print_info(f"Archivos encontrados: {len(audio_files)}")
@@ -2950,12 +3794,12 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
     
     print()
     quality_str = f"{bitrate_kbps}kbps (CBR)" if bitrate_kbps else f"VBR Quality {vbr_quality}"
-    if not confirm(f"¿Convertir {len(selected_files)} archivo(s) a 432Hz MP3 con sample rate {sr_display} y calidad {quality_str}?"):
+    if not confirm(f"¿Convertir {len(selected_files)} archivo(s) a {target_frequency}Hz MP3 con sample rate {sr_display} y calidad {quality_str}?"):
         print_warning("Conversión cancelada.")
         return False
     
     print()
-    print_header("Iniciando conversión a 432Hz MP3")
+    print_header(f"Iniciando conversión a {target_frequency}Hz MP3")
     print(f"    {Colors.LIME}Resolución de salida:{Colors.NC} {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
     print(f"    {Colors.LIME}Calidad:{Colors.NC} {Colors.LIGHT_GREEN}{quality_str}{Colors.NC}")
     if output_sample_rate > 48000:
@@ -2973,10 +3817,12 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
     if output_dir.resolve() == source_dir.resolve():
         (source_dir / "masters").mkdir(parents=True, exist_ok=True)
     
+    suffix = f"_{target_frequency}Hz"
+    
     # Verificar archivos existentes antes de procesar
     for audio_file in selected_files:
         target_dir = resolve_output_dir_for_file(source_dir, output_dir, audio_file, "mp3")
-        output_file = target_dir / f"{audio_file.stem}_432Hz.mp3"
+        output_file = target_dir / f"{audio_file.stem}{suffix}.mp3"
         if output_file.exists():
             existing_files.append((audio_file, output_file))
     
@@ -3035,7 +3881,7 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
         target_dir = resolve_output_dir_for_file(source_dir, output_dir, audio_file, "mp3")
         target_dir.mkdir(parents=True, exist_ok=True)
         created_output_dirs.add(str(target_dir))
-        output_file = target_dir / f"{audio_file.stem}_432Hz.mp3"
+        output_file = target_dir / f"{audio_file.stem}{suffix}.mp3"
         
         # Verificar si el archivo ya existe y manejar según el modo seleccionado
         if output_file.exists() and overwrite_mode == "skip":
@@ -3046,27 +3892,28 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
         elif output_file.exists() and overwrite_mode == "unique":
             # Agregar sufijo único basado en timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = target_dir / f"{audio_file.stem}_432Hz_{timestamp}.mp3"
+            output_file = target_dir / f"{audio_file.stem}{suffix}_{timestamp}.mp3"
             # Si aún existe (muy improbable), agregar un número incremental
             counter = 1
             while output_file.exists():
-                output_file = target_dir / f"{audio_file.stem}_432Hz_{timestamp}_{counter}.mp3"
+                output_file = target_dir / f"{audio_file.stem}{suffix}_{timestamp}_{counter}.mp3"
                 counter += 1
         
-        animated_progress_bar(i, len(selected_files), f"Convirtiendo: {audio_file.name[:25]}")
-        
         if convert_to_432hz_mp3(audio_file, output_file, output_sample_rate,
-                               bitrate_kbps=bitrate_kbps, vbr_quality=vbr_quality):
+                               bitrate_kbps=bitrate_kbps, vbr_quality=vbr_quality,
+                               target_frequency=target_frequency,
+                               file_index=i, total_files=len(selected_files)):
             success_count += 1
             orig_size = get_file_size(audio_file)
             out_size = get_file_size(output_file)
-            print(f"\n    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
+            print(f"    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → {out_size} ({orig_size})")
         else:
             fail_count += 1
-            print(f"\n    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+            print(f"    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
     
+    prepare_for_user_input()
     print()
-    print_header("Conversión a 432Hz MP3 Completada")
+    print_header(f"Conversión a {target_frequency}Hz MP3 Completada")
     print()
     print(f"    {Colors.LIGHT_GREEN}╔════════════════════════════════════════════════════════╗{Colors.NC}")
     print(f"    {Colors.LIGHT_GREEN}║{Colors.NC}  {Colors.LIME}🎵 MÚSICA AHORA VIBRA EN FRECUENCIA UNIVERSAL 🎵{Colors.NC}        {Colors.LIGHT_GREEN}║{Colors.NC}")
@@ -3078,7 +3925,7 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
     if fail_count > 0:
         print(f"    {Colors.DARK_GREEN}Fallidos:{Colors.NC} {Colors.YELLOW_GREEN}{fail_count}{Colors.NC}")
     print(f"    {Colors.LIME}Formato:{Colors.NC}     {Colors.LIGHT_GREEN}MP3{Colors.NC}")
-    print(f"    {Colors.LIME}Frecuencia:{Colors.NC} {Colors.LIGHT_GREEN}432Hz (frecuencia sanadora){Colors.NC}")
+    print(f"    {Colors.LIME}Frecuencia:{Colors.NC} {Colors.LIGHT_GREEN}{target_frequency}Hz (frecuencia sanadora){Colors.NC}")
     print(f"    {Colors.LIME}Resolución:{Colors.NC}   {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
     print(f"    {Colors.LIME}Calidad:{Colors.NC}     {Colors.LIGHT_GREEN}{quality_str}{Colors.NC}")
     if output_sample_rate > 48000:
@@ -3093,9 +3940,1070 @@ def process_to_432hz_mp3(source_dir: Path, output_dir: Path):
         print(f"    {Colors.MEDIUM_GREEN}• {out_dir}{Colors.NC}")
     return success_count > 0
 
+
+def batch_export_342hz_mp3_full_discography(source_root: Path, export_base: Path, target_hz: int = 432) -> bool:
+    """
+    Batch no-interactivo para exportar TODA la discografía a MP3 afinada (usa la lógica de Opción 7).
+    Estructura solicitada:
+      - Nueva carpeta dentro de export_base
+      - Dentro de ella: una subcarpeta por cada archivo de audio (usando su nombre/stem)
+      - MP3 exportado dentro de esa subcarpeta: nombre_<XXX>Hz.mp3
+    Defaults: 48kHz, CBR 320kbps (ajustado si >200MB), ID3v2.
+    """
+    TARGET_HZ = target_hz if target_hz is not None else 432
+    OUTPUT_SUBDIR_NAME = f"Mega Doll Discography (2012-2022) - {TARGET_HZ}Hz MP3"
+    output_root = export_base / OUTPUT_SUBDIR_NAME
+    output_root.mkdir(parents=True, exist_ok=True)
+
+    # Extensiones de audio a procesar (todas las fuentes comunes)
+    audio_exts = {'.wav', '.flac', '.aiff', '.aif', '.mp3', '.m4a'}
+
+    print_header(f"BATCH {TARGET_HZ}Hz MP3 - DISCOGRAFÍA COMPLETA 2012-2022")
+    print_info(f"Origen: {source_root}")
+    print_info(f"Destino raíz: {output_root}")
+    print()
+
+    # Recolectar TODOS los archivos de audio de forma recursiva
+    all_audio = []
+    for p in source_root.rglob("*"):
+        if p.is_file() and p.suffix.lower() in audio_exts:
+            all_audio.append(p)
+    all_audio = sorted(all_audio, key=lambda p: str(p).lower())
+
+    if not all_audio:
+        print_error("No se encontraron archivos de audio en el origen.")
+        return False
+
+    print_success(f"Encontrados {len(all_audio)} archivos de audio para procesar.")
+    print()
+
+    # Defaults Ditto-like para MP3
+    output_sample_rate = 48000
+    bitrate_kbps = 320
+    vbr_quality = None
+
+    success_count = 0
+    fail_count = 0
+    skip_count = 0
+    processed = 0
+
+    print_header(f"Iniciando exportación batch a {TARGET_HZ}Hz MP3 (sin prompts)")
+    print(f"    {Colors.MEDIUM_GREEN}Estructura: {output_root}/<nombre_archivo>/ <nombre_archivo>_{TARGET_HZ}Hz.mp3{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}Presiona Ctrl+C para interrumpir (se puede reanudar).{Colors.NC}")
+    print()
+
+    for i, audio_file in enumerate(all_audio, 1):
+        if INTERRUPTED:
+            print_warning("Proceso interrumpido por el usuario.")
+            break
+
+        # Nombre de subcarpeta basado en el nombre del archivo de audio
+        base_name = audio_file.stem
+        # Sanitizar nombre de carpeta (remover caracteres problemáticos)
+        safe_name = re.sub(r'[<>:"/\\|?*]', '_', base_name).strip()[:120]
+        if not safe_name:
+            safe_name = f"track_{i:04d}"
+
+        # Para evitar colisiones de stems idénticos en distintos álbumes, incluir un prefijo del padre si es necesario
+        subfolder = output_root / safe_name
+        if subfolder.exists():
+            # Hacerlo único agregando el nombre de la carpeta padre (o hash corto)
+            parent_hint = re.sub(r'[<>:"/\\|?*]', '_', audio_file.parent.name)[:30]
+            safe_name = f"{safe_name} - {parent_hint}" if parent_hint else f"{safe_name}_{i:04d}"
+            subfolder = output_root / safe_name
+
+        subfolder.mkdir(parents=True, exist_ok=True)
+
+        output_file = subfolder / f"{audio_file.stem}_{TARGET_HZ}Hz.mp3"
+
+        if output_file.exists():
+            skip_count += 1
+            print(f"  [{i}/{len(all_audio)}] ⊘ Saltado (existe): {output_file.relative_to(output_root)}")
+            continue
+
+        try:
+            ok = convert_to_432hz_mp3(
+                audio_file,
+                output_file,
+                output_sample_rate=output_sample_rate,
+                bitrate_kbps=bitrate_kbps,
+                vbr_quality=vbr_quality,
+                target_frequency=TARGET_HZ,
+                file_index=i,
+                total_files=len(all_audio),
+            )
+            if ok:
+                success_count += 1
+            else:
+                fail_count += 1
+        except Exception as ex:
+            fail_count += 1
+            print(f"    {Colors.DARK_GREEN}✗ Error en {audio_file.name}: {ex}{Colors.NC}")
+
+        processed += 1
+
+    prepare_for_user_input()
+    print()
+    print_header(f"EXPORTACIÓN {TARGET_HZ}Hz COMPLETADA")
+    print(f"    {Colors.LIGHT_GREEN}Total archivos fuente:{Colors.NC} {len(all_audio)}")
+    print(f"    {Colors.LIGHT_GREEN}Exitosos:{Colors.NC} {success_count}")
+    if skip_count:
+        print(f"    {Colors.YELLOW_GREEN}Saltados (ya existían):{Colors.NC} {skip_count}")
+    if fail_count:
+        print(f"    {Colors.DARK_GREEN}Fallidos:{Colors.NC} {fail_count}")
+    print(f"    {Colors.LIME}Salida:{Colors.NC} {output_root}")
+    print()
+    print_info(f"Cada pista tiene su propia subcarpeta con el nombre del archivo de audio original.")
+    print_info(f"Archivos: <carpeta>/<stem_original>_{TARGET_HZ}Hz.mp3")
+    return success_count > 0 or skip_count > 0
+
+
 # ============================================================================
 # MENÚ INTERACTIVO
 # ============================================================================
+
+# ============================================================================
+# MONO MP3 (vía lurssen mono_config / breakcore)
+# ============================================================================
+
+def resolve_mono_python() -> Optional[Path]:
+    """Python del venv de mono_config si existe; si no, el del sistema."""
+    if MONO_VENV_PYTHON.exists():
+        return MONO_VENV_PYTHON
+    which = shutil.which("python3") or shutil.which("python")
+    return Path(which) if which else None
+
+
+def load_mono_config_defaults() -> Dict:
+    """
+    Carga defaults desde mono_config/config.yaml (si existe) y rellena con MONO_DEFAULTS.
+    Usa PyYAML del venv del mono_config cuando está disponible.
+    """
+    cfg = dict(MONO_DEFAULTS)
+    if not MONO_CONFIG_YAML.exists():
+        return cfg
+
+    data = None
+    py = resolve_mono_python()
+    if py is not None:
+        try:
+            result = subprocess.run(
+                [
+                    str(py), "-c",
+                    "import json,yaml,sys; "
+                    f"d=yaml.safe_load(open({str(MONO_CONFIG_YAML)!r})) or {{}}; "
+                    "print(json.dumps(d, default=str))",
+                ],
+                capture_output=True, text=True, timeout=30,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                data = json.loads(result.stdout)
+        except Exception:
+            data = None
+
+    if data is None:
+        try:
+            import yaml  # type: ignore
+            with open(MONO_CONFIG_YAML, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        except Exception:
+            data = None
+
+    if not isinstance(data, dict):
+        return cfg
+
+    for key in (
+        "preset", "input_drive", "push", "presence", "true_peak",
+        "loudness_target", "bitrate", "suffix", "use_plugin",
+        "plugin_path", "jobs",
+    ):
+        if key in data and data[key] is not None:
+            cfg[key] = data[key]
+
+    # Normalizar bitrate a string con k
+    br = cfg.get("bitrate", "320k")
+    if isinstance(br, (int, float)):
+        cfg["bitrate"] = f"{int(br)}k"
+    elif isinstance(br, str) and br.isdigit():
+        cfg["bitrate"] = f"{br}k"
+
+    return cfg
+
+
+def build_mono_lurssen_ffmpeg_filter(drive: float, push: float, presence: float) -> str:
+    """
+    Cadena de filtros ffmpeg del motor mono_config (emulación Lurssen breakcore).
+    Espejo de build_ffmpeg_emulation_filter en lurssen_mono_breakcore.py.
+    """
+    eff_presence = round(float(presence) + (float(push) * 0.55), 1)
+    filters = [
+        f"volume={float(drive)}dB",
+        "equalizer=f=85:width_type=h:width=70:g=-2.8",
+        "equalizer=f=210:width_type=h:width=85:g=0.8",
+        f"equalizer=f=3250:width_type=h:width=820:g={eff_presence}",
+        "equalizer=f=6800:width_type=h:width=1600:g=2.0",
+        "equalizer=f=10200:width_type=h:width=3800:g=1.0",
+        "acompressor=threshold=-15.5dB:ratio=2.6:attack=5:release=65:makeup=1.6:knee=2.5",
+        "alimiter=limit=-1.3dB:level=0:attack=4:release=28",
+    ]
+    return ",".join(filters)
+
+
+def convert_to_mono_mp3(
+    input_file: Path,
+    output_file: Path,
+    sample_rate: int = 48000,
+    bitrate_kbps: int = 320,
+    drive: float = 4.8,
+    push: float = 3.2,
+    presence: float = 3.5,
+    loudness_target: Optional[float] = None,
+    true_peak: float = -1.0,
+    use_emulation: bool = True,
+    file_index: int = 1,
+    total_files: int = 1,
+) -> bool:
+    """
+    Convierte audio o video (extrae pista de audio) a mono MP3 48 kHz.
+    Aplica la cadena de emulación Lurssen de mono_config cuando use_emulation=True.
+    """
+    if not input_file.exists():
+        print_error(f"El archivo no existe: {input_file}")
+        return False
+
+    try:
+        if input_file.resolve() == output_file.resolve():
+            print_error(f"Entrada y salida son el mismo archivo: {input_file.name}")
+            return False
+    except Exception:
+        pass
+
+    mp3_sample_rate = min(int(sample_rate), 48000)
+    quality_label = f"CBR {bitrate_kbps}kbps mono"
+    duration = get_audio_duration(input_file)
+
+    print(f"    {Colors.MEDIUM_GREEN}🎵 Conversión a MONO MP3 (mono_config){Colors.NC}")
+    print(
+        f"    {Colors.DARK_FOREST}{input_file.name} → mono @ {mp3_sample_rate}Hz "
+        f"({quality_label}){Colors.NC}"
+    )
+
+    try:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        if use_emulation:
+            af_chain = build_mono_lurssen_ffmpeg_filter(drive, push, presence)
+            if loudness_target is not None:
+                af_chain += f",loudnorm=I={loudness_target}:TP={true_peak}:LRA=9"
+            else:
+                af_chain += f",alimiter=limit={true_peak}dB:level=0:attack=4:release=30"
+        else:
+            # Solo colapso a mono limpio + techo de pico
+            af_chain = f"alimiter=limit={true_peak}dB:level=0:attack=4:release=30"
+
+        cmd = [
+            "ffmpeg",
+            "-i", str(input_file),
+            "-vn",
+            "-map", "0:a:0",
+            "-af", af_chain,
+            "-ar", str(mp3_sample_rate),
+            "-ac", "1",
+            "-c:a", "libmp3lame",
+            "-b:a", f"{bitrate_kbps}k",
+            "-id3v2_version", "3",
+            "-write_id3v1", "1",
+            "-map_metadata", "0",
+            "-metadata", f"title={input_file.stem}",
+            "-f", "mp3",
+            "-y", str(output_file),
+        ]
+
+        result = run_ffmpeg_with_progress(
+            cmd,
+            duration=duration,
+            label=f"Mono MP3: {input_file.name}",
+            file_index=file_index,
+            total_files=total_files,
+        )
+
+        if result.returncode == 0 and output_file.exists() and output_file.stat().st_size > 0:
+            orig_size = get_file_size(input_file)
+            new_size = get_file_size(output_file)
+            print_success(f"Creado: {output_file.name}")
+            print(
+                f"    {Colors.DARK_FOREST}{orig_size} → {new_size} | "
+                f"mono {mp3_sample_rate}Hz | {quality_label}{Colors.NC}"
+            )
+            return True
+
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        print_error(f"Error al convertir a mono MP3: {input_file.name}")
+        if output_file.exists():
+            try:
+                output_file.unlink()
+            except Exception:
+                pass
+        return False
+    except Exception as e:
+        clear_progress_line()
+        print_error(f"Error: {e}")
+        return False
+
+
+def reencode_to_mono_mp3(
+    input_file: Path,
+    output_file: Path,
+    sample_rate: int = 48000,
+    bitrate_kbps: int = 320,
+    file_index: int = 1,
+    total_files: int = 1,
+) -> bool:
+    """Re-codifica un mono M4A (salida del script) a mono MP3 sin re-procesar mastering."""
+    try:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        mp3_sr = min(int(sample_rate), 48000)
+        duration = get_audio_duration(input_file)
+        cmd = [
+            "ffmpeg",
+            "-i", str(input_file),
+            "-vn",
+            "-map", "0:a:0",
+            "-ar", str(mp3_sr),
+            "-ac", "1",
+            "-c:a", "libmp3lame",
+            "-b:a", f"{bitrate_kbps}k",
+            "-id3v2_version", "3",
+            "-write_id3v1", "1",
+            "-map_metadata", "0",
+            "-f", "mp3",
+            "-y", str(output_file),
+        ]
+        result = run_ffmpeg_with_progress(
+            cmd,
+            duration=duration,
+            label=f"Re-encode MP3: {input_file.name}",
+            file_index=file_index,
+            total_files=total_files,
+        )
+        return result.returncode == 0 and output_file.exists() and output_file.stat().st_size > 0
+    except Exception as e:
+        print_error(f"Re-encode MP3 falló: {e}")
+        return False
+
+
+def launch_mono_config_interactive() -> bool:
+    """Lanza el menú interactivo completo de lurssen_mono_breakcore.py."""
+    py = resolve_mono_python()
+    if py is None:
+        print_error("No se encontró Python para ejecutar mono_config.")
+        return False
+    if not MONO_SCRIPT.exists():
+        print_error(f"No se encontró el script mono_config: {MONO_SCRIPT}")
+        return False
+
+    print_header("Motor mono_config (Lurssen)")
+    print_info(f"Script: {MONO_SCRIPT}")
+    print_info(f"Python: {py}")
+    print_info("Salida nativa del script: mono M4A 48 kHz (no MP3).")
+    print_info("Usa el menú del script para rutas, perfiles y plugin Lurssen.")
+    print()
+    if not confirm("¿Abrir el menú interactivo de mono_config?"):
+        print_warning("Cancelado.")
+        return False
+
+    print()
+    print_info("Lanzando mono_config… (Ctrl+C para interrumpir)")
+    print()
+    try:
+        result = subprocess.run(
+            [str(py), str(MONO_SCRIPT), "-I"],
+            cwd=str(MONO_CONFIG_DIR),
+        )
+        # questionary/tqdm del hijo pueden dejar el TTY en mal estado → restaurar
+        prepare_for_user_input()
+        if result.returncode == 0:
+            print_success("mono_config finalizó correctamente.")
+            return True
+        print_warning(f"mono_config terminó con código {result.returncode}.")
+        return False
+    except KeyboardInterrupt:
+        print()
+        prepare_for_user_input()
+        print_warning("mono_config interrumpido.")
+        return False
+    except Exception as e:
+        prepare_for_user_input()
+        print_error(f"No se pudo lanzar mono_config: {e}")
+        return False
+
+
+def _extract_audio_pcm_for_mono_script(
+    src: Path,
+    dest_wav: Path,
+    file_index: int = 1,
+    total_files: int = 1,
+) -> bool:
+    """Decodifica audio/video a WAV PCM float para el script mono_config."""
+    try:
+        dest_wav.parent.mkdir(parents=True, exist_ok=True)
+        duration = get_audio_duration(src)
+        cmd = [
+            "ffmpeg",
+            "-i", str(src),
+            "-vn",
+            "-map", "0:a:0?",
+            "-acodec", "pcm_f32le",
+            "-y", str(dest_wav),
+        ]
+        result = run_ffmpeg_with_progress(
+            cmd,
+            duration=duration,
+            label=f"Extraer audio: {src.name}",
+            file_index=file_index,
+            total_files=total_files,
+        )
+        return result.returncode == 0 and dest_wav.exists() and dest_wav.stat().st_size > 128
+    except Exception:
+        return False
+
+
+def process_via_mono_script(
+    selected_files: List[Path],
+    source_dir: Path,
+    output_dir: Path,
+    mono_cfg: Dict,
+    bitrate_kbps: int,
+    sample_rate: int,
+    overwrite_mode: str,
+) -> Tuple[int, int, int]:
+    """
+    Procesa archivos vía lurssen_mono_breakcore.py (plugin o emulación del script)
+    y re-codifica la salida M4A a mono MP3 en el destino final.
+
+    Returns:
+        (success_count, fail_count, skip_count)
+    """
+    py = resolve_mono_python()
+    if py is None or not MONO_SCRIPT.exists():
+        print_error("Motor mono_config no disponible (script o venv ausente).")
+        return 0, len(selected_files), 0
+
+    success_count = 0
+    fail_count = 0
+    skip_count = 0
+    created_output_dirs: set = set()
+
+    tmp_root = Path(tempfile.mkdtemp(prefix="audio_conv_mono_"))
+    TMP_DIRS.append(str(tmp_root))
+    tmp_in = tmp_root / "in"
+    tmp_out = tmp_root / "out"
+    tmp_in.mkdir(parents=True, exist_ok=True)
+    tmp_out.mkdir(parents=True, exist_ok=True)
+
+    # Mapa: path relativo dentro de tmp_in → archivo fuente original
+    staging_map: Dict[Path, Path] = {}
+
+    print_info("Preparando staging para mono_config…")
+    n_selected = len(selected_files)
+    for idx, src in enumerate(selected_files, 1):
+        try:
+            try:
+                rel = src.resolve().relative_to(source_dir.resolve())
+            except Exception:
+                rel = Path(src.name)
+
+            ext = src.suffix.lower()
+            if ext in MONO_SCRIPT_NATIVE_EXTS:
+                # Audio nativo del script: symlink
+                staged = tmp_in / rel
+                staged.parent.mkdir(parents=True, exist_ok=True)
+                if staged.exists() or staged.is_symlink():
+                    staged.unlink()
+                staged.symlink_to(src.resolve())
+                staging_map[staged] = src
+                render_progress_bar(
+                    1.0, f"Staging: {src.name}",
+                    file_index=idx, total_files=n_selected,
+                )
+                clear_progress_line()
+            else:
+                # Video u otros contenedores: extraer a WAV PCM
+                staged = tmp_in / rel.with_suffix(".wav")
+                staged.parent.mkdir(parents=True, exist_ok=True)
+                print(f"    {Colors.MEDIUM_GREEN}→ extrayendo audio: {src.name}{Colors.NC}")
+                if not _extract_audio_pcm_for_mono_script(
+                    src, staged, file_index=idx, total_files=n_selected
+                ):
+                    print_error(f"No se pudo extraer audio de: {src.name}")
+                    fail_count += 1
+                    continue
+                staging_map[staged] = src
+        except Exception as e:
+            print_error(f"Staging falló para {src.name}: {e}")
+            fail_count += 1
+
+    if not staging_map:
+        print_error("No hay archivos listos para procesar con mono_config.")
+        return 0, fail_count + len(selected_files), 0
+
+    # Construir CLI del script
+    suffix = str(mono_cfg.get("suffix") or "_MONO")
+    bitrate_str = mono_cfg.get("bitrate") or f"{bitrate_kbps}k"
+    if isinstance(bitrate_str, (int, float)):
+        bitrate_str = f"{int(bitrate_str)}k"
+    jobs = max(1, int(mono_cfg.get("jobs") or 1))
+
+    cmd = [
+        str(py), str(MONO_SCRIPT),
+        "-i", str(tmp_in),
+        "-o", str(tmp_out),
+        "--bitrate", str(bitrate_str),
+        "--suffix", suffix,
+        "--true-peak", str(mono_cfg.get("true_peak", -1.0)),
+        "-j", str(jobs),
+        "--overwrite",
+    ]
+
+    if mono_cfg.get("preset"):
+        cmd.extend(["--preset", str(mono_cfg["preset"])])
+    if mono_cfg.get("input_drive") is not None:
+        cmd.extend(["--input-drive", str(mono_cfg["input_drive"])])
+    if mono_cfg.get("push") is not None:
+        cmd.extend(["--push", str(mono_cfg["push"])])
+    if mono_cfg.get("presence") is not None:
+        cmd.extend(["--presence", str(mono_cfg["presence"])])
+    if mono_cfg.get("loudness_target") is not None:
+        cmd.extend(["--loudness-target", str(mono_cfg["loudness_target"])])
+
+    use_plugin = bool(mono_cfg.get("use_plugin", True))
+    plugin_path = mono_cfg.get("plugin_path")
+    if not use_plugin:
+        cmd.append("--no-plugin")
+    elif plugin_path:
+        cmd.extend(["--plugin-path", str(plugin_path)])
+
+    if MONO_CONFIG_YAML.exists():
+        # No pasar -c para evitar override de input/output del config del usuario;
+        # los flags CLI ya llevan los valores de mastering.
+        pass
+
+    print()
+    print_header("Ejecutando mono_config (lurssen_mono_breakcore)")
+    print_info(f"Archivos en cola: {len(staging_map)}")
+    print_info(f"Plugin: {'sí' if use_plugin else 'no (emulación ffmpeg del script)'}")
+    print_info(" ".join(cmd[:6]) + " …")
+    print()
+
+    try:
+        # stdin=DEVNULL: evita que el hijo robe teclas y deje el TTY colgado
+        result = run_subprocess_with_file_progress(
+            cmd,
+            label="mono_config (Lurssen)",
+            file_index=1,
+            total_files=1,
+            cwd=str(MONO_CONFIG_DIR),
+        )
+        prepare_for_user_input()
+        if result.returncode != 0:
+            print_warning(
+                f"mono_config terminó con código {result.returncode}. "
+                f"Se intentará recuperar salidas parciales."
+            )
+            if result.stdout:
+                # Mostrar solo tail si es muy largo
+                tail = result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout
+                print(tail, file=sys.stderr)
+    except KeyboardInterrupt:
+        print()
+        prepare_for_user_input()
+        print_warning("Procesamiento interrumpido.")
+        return success_count, fail_count + (len(staging_map) - success_count - skip_count), skip_count
+    except Exception as e:
+        prepare_for_user_input()
+        print_error(f"Error al ejecutar mono_config: {e}")
+        return 0, len(staging_map), 0
+
+    # Localizar M4As generados y re-codificar a mono MP3
+    print()
+    print_header("Re-codificando salidas a mono MP3")
+    items = list(staging_map.items())
+    n_items = max(1, len(items))
+    for idx, (staged, original) in enumerate(items, 1):
+        if INTERRUPTED:
+            break
+
+        rel = staged.relative_to(tmp_in)
+        # El script escribe: stem + suffix + .m4a
+        expected_m4a = tmp_out / rel.parent / f"{staged.stem}{suffix}.m4a"
+        # Fallback: buscar cualquier .m4a con el stem
+        if not expected_m4a.exists():
+            candidates = list((tmp_out / rel.parent).glob(f"{staged.stem}*.m4a")) if (tmp_out / rel.parent).exists() else []
+            if candidates:
+                expected_m4a = candidates[0]
+            else:
+                print_error(f"Sin salida mono_config para: {original.name}")
+                fail_count += 1
+                continue
+
+        target_dir = resolve_output_dir_for_file(source_dir, output_dir, original, "mono_mp3")
+        target_dir.mkdir(parents=True, exist_ok=True)
+        created_output_dirs.add(str(target_dir))
+        out_mp3 = target_dir / f"{original.stem}{suffix}.mp3"
+
+        if out_mp3.exists() and overwrite_mode == "skip":
+            skip_count += 1
+            print(f"    {Colors.YELLOW_GREEN}⊘{Colors.NC} {original.name} → Saltado (ya existe)")
+            continue
+        if out_mp3.exists() and overwrite_mode == "unique":
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            out_mp3 = target_dir / f"{original.stem}{suffix}_{timestamp}.mp3"
+            counter = 1
+            while out_mp3.exists():
+                out_mp3 = target_dir / f"{original.stem}{suffix}_{timestamp}_{counter}.mp3"
+                counter += 1
+
+        if reencode_to_mono_mp3(
+            expected_m4a, out_mp3,
+            sample_rate=sample_rate, bitrate_kbps=bitrate_kbps,
+            file_index=idx, total_files=n_items,
+        ):
+            success_count += 1
+            print_success(f"{original.name} → {out_mp3.name} ({get_file_size(out_mp3)})")
+        else:
+            fail_count += 1
+            print_error(f"Falló MP3 final: {original.name}")
+
+    if created_output_dirs:
+        print()
+        print_info("Directorios de salida:")
+        for d in sorted(created_output_dirs):
+            print(f"    {Colors.MEDIUM_GREEN}• {d}{Colors.NC}")
+
+    # Limpiar temp ya (no dejar basura hasta atexit; rmtree grande puede “congelar” al salir)
+    try:
+        if tmp_root.exists():
+            shutil.rmtree(tmp_root, ignore_errors=True)
+        if str(tmp_root) in TMP_DIRS:
+            TMP_DIRS.remove(str(tmp_root))
+    except Exception:
+        pass
+
+    prepare_for_user_input()
+    return success_count, fail_count, skip_count
+
+
+def select_mono_engine(mono_cfg: Dict) -> Optional[str]:
+    """
+    Elige motor de conversión mono.
+    Returns: 'ffmpeg' | 'script' | 'interactive' | None
+    """
+    print_header("Motor mono_config")
+    print()
+    print(f"    {Colors.LIME}Directorio:{Colors.NC} {Colors.LIGHT_GREEN}{MONO_CONFIG_DIR}{Colors.NC}")
+    script_ok = MONO_SCRIPT.exists()
+    venv_ok = MONO_VENV_PYTHON.exists()
+    print(
+        f"    {Colors.LIME}Script:{Colors.NC} "
+        f"{Colors.LIGHT_GREEN if script_ok else Colors.DARK_GREEN}"
+        f"{'disponible' if script_ok else 'no encontrado'}{Colors.NC}"
+    )
+    print(
+        f"    {Colors.LIME}Venv:{Colors.NC} "
+        f"{Colors.LIGHT_GREEN if venv_ok else Colors.YELLOW_GREEN}"
+        f"{'sí' if venv_ok else 'no (se usará python del sistema)'}{Colors.NC}"
+    )
+    print()
+    print(f"  {Colors.LIME}1){Colors.NC} Emulación ffmpeg (cadena Lurssen de mono_config) → mono MP3  ⭐")
+    print(f"     {Colors.MEDIUM_GREEN}Rápido, sin dependencias extra. Ideal para audio y video.{Colors.NC}")
+    print()
+    print(f"  {Colors.LIME}2){Colors.NC} Vía script lurssen_mono_breakcore.py → M4A mono → MP3")
+    print(f"     {Colors.MEDIUM_GREEN}Plugin Lurssen real (pedalboard) o emulación del script.{Colors.NC}")
+    print(f"     {Colors.MEDIUM_GREEN}use_plugin={mono_cfg.get('use_plugin')} | "
+          f"drive={mono_cfg.get('input_drive')} push={mono_cfg.get('push')} "
+          f"presence={mono_cfg.get('presence')}{Colors.NC}")
+    print()
+    print(f"  {Colors.LIME}3){Colors.NC} Abrir menú interactivo completo de mono_config")
+    print(f"     {Colors.MEDIUM_GREEN}El script nativo (salida M4A mono). No genera MP3 aquí.{Colors.NC}")
+    print()
+
+    while True:
+        try:
+            choice = input(
+                f"{Colors.YELLOW_GREEN}▶ Motor (1-3) o Enter=1: {Colors.NC}"
+            ).strip()
+            if not choice or choice == "1":
+                print_success("Motor: emulación ffmpeg (mono_config) → mono MP3")
+                return "ffmpeg"
+            if choice == "2":
+                if not script_ok:
+                    print_error(f"Script no encontrado: {MONO_SCRIPT}")
+                    continue
+                print_success("Motor: lurssen_mono_breakcore.py → mono MP3")
+                return "script"
+            if choice == "3":
+                if not script_ok:
+                    print_error(f"Script no encontrado: {MONO_SCRIPT}")
+                    continue
+                print_success("Motor: menú interactivo mono_config")
+                return "interactive"
+            print_error("Opción inválida. Usa 1, 2 o 3.")
+        except (EOFError, KeyboardInterrupt):
+            return None
+
+
+def select_mono_mastering_tweaks(mono_cfg: Dict) -> Optional[Dict]:
+    """Permite aceptar o ajustar drive/push/presence/loudness del perfil mono_config."""
+    print_header("Perfil de mastering mono (Lurssen / breakcore)")
+    print()
+    print(f"    {Colors.LIME}preset:{Colors.NC}       {Colors.LIGHT_GREEN}{mono_cfg.get('preset')}{Colors.NC}")
+    print(f"    {Colors.LIME}input_drive:{Colors.NC}  {Colors.LIGHT_GREEN}{mono_cfg.get('input_drive')}{Colors.NC}")
+    print(f"    {Colors.LIME}push:{Colors.NC}         {Colors.LIGHT_GREEN}{mono_cfg.get('push')}{Colors.NC}")
+    print(f"    {Colors.LIME}presence:{Colors.NC}     {Colors.LIGHT_GREEN}{mono_cfg.get('presence')}{Colors.NC}")
+    print(f"    {Colors.LIME}true_peak:{Colors.NC}    {Colors.LIGHT_GREEN}{mono_cfg.get('true_peak')} dBTP{Colors.NC}")
+    lt = mono_cfg.get("loudness_target")
+    print(
+        f"    {Colors.LIME}loudness:{Colors.NC}     "
+        f"{Colors.LIGHT_GREEN}{lt if lt is not None else 'desactivado (recomendado)'}{Colors.NC}"
+    )
+    print(f"    {Colors.LIME}bitrate cfg:{Colors.NC}  {Colors.LIGHT_GREEN}{mono_cfg.get('bitrate')}{Colors.NC}")
+    print()
+    print(f"  {Colors.LIME}1){Colors.NC} Usar estos valores (desde config.yaml / defaults)  ⭐")
+    print(f"  {Colors.LIME}2){Colors.NC} Ajustar drive / push / presence")
+    print(f"  {Colors.LIME}3){Colors.NC} Solo mono limpio (sin emulación Lurssen)")
+    print()
+
+    while True:
+        try:
+            choice = input(f"{Colors.YELLOW_GREEN}▶ Perfil (1-3) o Enter=1: {Colors.NC}").strip()
+            if not choice or choice == "1":
+                cfg = dict(mono_cfg)
+                cfg["_use_emulation"] = True
+                print_success("Perfil mono_config aceptado")
+                return cfg
+            if choice == "3":
+                cfg = dict(mono_cfg)
+                cfg["_use_emulation"] = False
+                print_success("Solo colapso a mono (sin cadena Lurssen)")
+                return cfg
+            if choice == "2":
+                cfg = dict(mono_cfg)
+                cfg["_use_emulation"] = True
+                try:
+                    d = input(
+                        f"{Colors.YELLOW_GREEN}input_drive [{cfg.get('input_drive')}]: {Colors.NC}"
+                    ).strip()
+                    if d:
+                        cfg["input_drive"] = float(d)
+                    p = input(
+                        f"{Colors.YELLOW_GREEN}push [{cfg.get('push')}]: {Colors.NC}"
+                    ).strip()
+                    if p:
+                        cfg["push"] = float(p)
+                    pr = input(
+                        f"{Colors.YELLOW_GREEN}presence [{cfg.get('presence')}]: {Colors.NC}"
+                    ).strip()
+                    if pr:
+                        cfg["presence"] = float(pr)
+                    print_success(
+                        f"Ajustado: drive={cfg['input_drive']} push={cfg['push']} "
+                        f"presence={cfg['presence']}"
+                    )
+                    return cfg
+                except ValueError:
+                    print_error("Valor numérico inválido.")
+                    continue
+            print_error("Opción inválida.")
+        except (EOFError, KeyboardInterrupt):
+            return None
+
+
+def process_to_mono_mp3(source_dir: Path, output_dir: Path) -> bool:
+    """
+    Opción 9: convierte audio y video a mono MP3 usando el motor de
+    renoise/2026/01_mono_config (lurssen_mono_breakcore).
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    mono_cfg = load_mono_config_defaults()
+
+    print_header("AUDIO/VIDEO → MONO MP3 (mono_config)")
+    print()
+    print(f"    {Colors.LIME}╔════════════════════════════════════════════════════════════╗{Colors.NC}")
+    print(f"    {Colors.LIME}║{Colors.NC}  {Colors.YELLOW_GREEN}🎛  Mono MP3 vía lurssen mono_config / breakcore 🎛{Colors.NC}   {Colors.LIME}║{Colors.NC}")
+    print(f"    {Colors.LIME}╚════════════════════════════════════════════════════════════╝{Colors.NC}")
+    print()
+    print_info(f"Motor: {MONO_CONFIG_DIR}")
+    print_info("Entrada: audio o video (se usa la pista de audio).")
+    print_info("Salida: MP3 mono @ 48 kHz (cadena Lurssen o script nativo).")
+    print()
+
+    engine = select_mono_engine(mono_cfg)
+    if engine is None:
+        print_warning("Conversión cancelada.")
+        return False
+
+    if engine == "interactive":
+        return launch_mono_config_interactive()
+
+    audio_files = select_audio_source_files(
+        source_dir,
+        extensions=MONO_SOURCE_EXTENSIONS,
+        formats_label=MONO_SOURCE_FORMATS_LABEL,
+        filter_note="Incluye audio y contenedores de video (MP4/MKV/MOV/WEBM…). Se procesa solo el audio.",
+    )
+    if audio_files is None:
+        print_warning("Conversión cancelada.")
+        return False
+    if not audio_files:
+        print_error("No se encontraron archivos de audio/video compatibles.")
+        return False
+
+    print_info(f"Archivos encontrados: {len(audio_files)}")
+    print()
+
+    selected_files = select_audio_files_for_432hz(
+        audio_files,
+        title="Selecciona Archivos para MONO MP3",
+        subtitle="Cadena mono_config (Lurssen) + colapso a mono + libmp3lame.",
+        emoji_line="🎛  Audio/Video → mono MP3",
+    )
+    if selected_files is None:
+        print_warning("Conversión cancelada.")
+        return False
+    if not selected_files:
+        print_error("No se seleccionaron archivos.")
+        return False
+
+    print()
+    mono_cfg = select_mono_mastering_tweaks(mono_cfg)
+    if mono_cfg is None:
+        print_warning("Conversión cancelada.")
+        return False
+
+    print()
+    # Sample rate: mono_config trabaja a 48 kHz; ofrecemos 44.1/48
+    output_sample_rate = select_sample_rate_for_mp3()
+    if output_sample_rate is None:
+        print_warning("Conversión cancelada.")
+        return False
+
+    # Bitrate: por defecto el de config (320k / 256k)
+    default_br = 320
+    br_cfg = str(mono_cfg.get("bitrate") or "320k").lower().replace("k", "")
+    if br_cfg.isdigit():
+        default_br = int(br_cfg)
+
+    print()
+    print_header("Bitrate mono MP3")
+    print(f"  {Colors.LIME}1){Colors.NC} 256 kbps")
+    print(f"  {Colors.LIME}2){Colors.NC} 320 kbps  ⭐")
+    print(f"  {Colors.MEDIUM_GREEN}Default desde mono_config: {default_br} kbps{Colors.NC}")
+    print()
+    bitrate_kbps = default_br
+    try:
+        br_choice = input(
+            f"{Colors.YELLOW_GREEN}▶ Bitrate (1=256, 2=320, Enter={default_br}): {Colors.NC}"
+        ).strip()
+        if br_choice == "1":
+            bitrate_kbps = 256
+        elif br_choice == "2":
+            bitrate_kbps = 320
+        elif br_choice and br_choice.isdigit():
+            bitrate_kbps = int(br_choice)
+    except (EOFError, KeyboardInterrupt):
+        print_warning("Conversión cancelada.")
+        return False
+
+    sr_display = (
+        "48kHz" if output_sample_rate == 48000
+        else ("44.1kHz" if output_sample_rate == 44100 else f"{output_sample_rate}Hz")
+    )
+    quality_str = f"{bitrate_kbps}kbps CBR mono"
+
+    print()
+    show_mp3_conversion_estimations(
+        selected_files, output_sample_rate, bitrate_kbps=bitrate_kbps,
+    )
+
+    engine_label = (
+        "emulación ffmpeg mono_config" if engine == "ffmpeg"
+        else "script lurssen_mono_breakcore → MP3"
+    )
+    if not confirm(
+        f"¿Convertir {len(selected_files)} archivo(s) a mono MP3 "
+        f"({sr_display}, {quality_str}) con {engine_label}?"
+    ):
+        print_warning("Conversión cancelada.")
+        return False
+
+    # Overwrite handling (pre-scan)
+    existing_files = []
+    suffix = str(mono_cfg.get("suffix") or "_MONO")
+    for audio_file in selected_files:
+        target_dir = resolve_output_dir_for_file(source_dir, output_dir, audio_file, "mono_mp3")
+        out_file = target_dir / f"{audio_file.stem}{suffix}.mp3"
+        if out_file.exists():
+            existing_files.append((audio_file, out_file))
+
+    overwrite_mode = "overwrite"
+    if existing_files:
+        print()
+        print_warning(f"Se encontraron {len(existing_files)} archivo(s) que ya existen:")
+        for audio_file, out_file in existing_files[:8]:
+            print(f"    {Colors.YELLOW_GREEN}• {out_file.name}{Colors.NC} ({get_file_size(out_file)})")
+        if len(existing_files) > 8:
+            print(f"    {Colors.MEDIUM_GREEN}… y {len(existing_files) - 8} más{Colors.NC}")
+        print()
+        print(f"  {Colors.LIME}1){Colors.NC} Sobrescribir")
+        print(f"  {Colors.LIME}2){Colors.NC} Saltar existentes")
+        print(f"  {Colors.LIME}3){Colors.NC} Sufijo único")
+        print(f"  {Colors.LIME}4){Colors.NC} Cancelar")
+        print()
+        while True:
+            try:
+                ch = input(f"{Colors.YELLOW_GREEN}▶ Opción (1-4): {Colors.NC}").strip()
+                if ch == "1":
+                    overwrite_mode = "overwrite"
+                    if not confirm("¿Sobrescribir archivos existentes?"):
+                        print_warning("Conversión cancelada.")
+                        return False
+                    break
+                if ch == "2":
+                    overwrite_mode = "skip"
+                    break
+                if ch == "3":
+                    overwrite_mode = "unique"
+                    break
+                if ch == "4":
+                    print_warning("Conversión cancelada.")
+                    return False
+                print_error("Opción inválida.")
+            except (EOFError, KeyboardInterrupt):
+                print_warning("Conversión cancelada.")
+                return False
+
+    print()
+    print_header("Iniciando conversión AUDIO/VIDEO → MONO MP3")
+    print(f"    {Colors.LIME}Motor:{Colors.NC}       {Colors.LIGHT_GREEN}{engine_label}{Colors.NC}")
+    print(f"    {Colors.LIME}Sample rate:{Colors.NC} {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    print(f"    {Colors.LIME}Calidad:{Colors.NC}     {Colors.LIGHT_GREEN}{quality_str}{Colors.NC}")
+    print(f"    {Colors.MEDIUM_GREEN}💡 Ctrl+C para cancelar{Colors.NC}")
+    print()
+
+    if output_dir.resolve() == source_dir.resolve():
+        (source_dir / "masters").mkdir(parents=True, exist_ok=True)
+
+    if engine == "script":
+        # Ajustar bitrate en cfg para el script AAC intermedio (usa el mismo bitrate numérico)
+        mono_cfg = dict(mono_cfg)
+        mono_cfg["bitrate"] = f"{bitrate_kbps}k"
+        success_count, fail_count, skip_count = process_via_mono_script(
+            selected_files, source_dir, output_dir, mono_cfg,
+            bitrate_kbps=bitrate_kbps,
+            sample_rate=output_sample_rate,
+            overwrite_mode=overwrite_mode,
+        )
+    else:
+        # Emulación ffmpeg directa → mono MP3
+        success_count = 0
+        fail_count = 0
+        skip_count = 0
+        created_output_dirs: set = set()
+        use_emulation = bool(mono_cfg.get("_use_emulation", True))
+
+        for i, audio_file in enumerate(selected_files, 1):
+            if INTERRUPTED:
+                print_warning("Conversión interrumpida por el usuario")
+                break
+
+            target_dir = resolve_output_dir_for_file(
+                source_dir, output_dir, audio_file, "mono_mp3"
+            )
+            target_dir.mkdir(parents=True, exist_ok=True)
+            created_output_dirs.add(str(target_dir))
+            output_file = target_dir / f"{audio_file.stem}{suffix}.mp3"
+
+            if output_file.exists() and overwrite_mode == "skip":
+                skip_count += 1
+                print(
+                    f"\n    {Colors.YELLOW_GREEN}⊘{Colors.NC} {audio_file.name} → "
+                    f"Saltado (ya existe: {get_file_size(output_file)})"
+                )
+                continue
+            if output_file.exists() and overwrite_mode == "unique":
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_file = target_dir / f"{audio_file.stem}{suffix}_{timestamp}.mp3"
+                counter = 1
+                while output_file.exists():
+                    output_file = target_dir / f"{audio_file.stem}{suffix}_{timestamp}_{counter}.mp3"
+                    counter += 1
+
+            try:
+                if audio_file.resolve() == output_file.resolve():
+                    skip_count += 1
+                    print(
+                        f"\n    {Colors.YELLOW_GREEN}⊘{Colors.NC} {audio_file.name} → "
+                        f"Saltado (entrada = salida)"
+                    )
+                    continue
+            except Exception:
+                pass
+
+            ok = convert_to_mono_mp3(
+                audio_file,
+                output_file,
+                sample_rate=output_sample_rate,
+                bitrate_kbps=bitrate_kbps,
+                drive=float(mono_cfg.get("input_drive", 4.8)),
+                push=float(mono_cfg.get("push", 3.2)),
+                presence=float(mono_cfg.get("presence", 3.5)),
+                loudness_target=mono_cfg.get("loudness_target"),
+                true_peak=float(mono_cfg.get("true_peak", -1.0)),
+                use_emulation=use_emulation,
+                file_index=i,
+                total_files=len(selected_files),
+            )
+            if ok:
+                success_count += 1
+                print(
+                    f"    {Colors.LIGHT_GREEN}✓{Colors.NC} {audio_file.name} → "
+                    f"{get_file_size(output_file)}"
+                )
+            else:
+                fail_count += 1
+                print(f"    {Colors.DARK_GREEN}✗{Colors.NC} {audio_file.name} → Error")
+
+        print()
+        if created_output_dirs:
+            print_info("Directorios de salida:")
+            for d in sorted(created_output_dirs):
+                print(f"    {Colors.MEDIUM_GREEN}• {d}{Colors.NC}")
+
+    # Crítico: restaurar TTY antes de volver al menú (opción 9 se colgaba en "Presiona Enter")
+    prepare_for_user_input()
+    print()
+    print_header("Conversión MONO MP3 Completada")
+    print()
+    print(f"    {Colors.LIGHT_GREEN}Exitosos:{Colors.NC} {Colors.LIME}{success_count}{Colors.NC}")
+    if skip_count > 0:
+        print(f"    {Colors.YELLOW_GREEN}Saltados:{Colors.NC} {Colors.LIME}{skip_count}{Colors.NC}")
+    if fail_count > 0:
+        print(f"    {Colors.DARK_GREEN}Fallidos:{Colors.NC} {Colors.YELLOW_GREEN}{fail_count}{Colors.NC}")
+    print(f"    {Colors.LIME}Formato:{Colors.NC}     {Colors.LIGHT_GREEN}MP3 mono{Colors.NC}")
+    print(f"    {Colors.LIME}Sample rate:{Colors.NC} {Colors.LIGHT_GREEN}{sr_display}{Colors.NC}")
+    print(f"    {Colors.LIME}Calidad:{Colors.NC}     {Colors.LIGHT_GREEN}{quality_str}{Colors.NC}")
+    print(f"    {Colors.LIME}Motor:{Colors.NC}       {Colors.LIGHT_GREEN}{engine_label}{Colors.NC}")
+    if output_dir.resolve() == source_dir.resolve():
+        print(f"    {Colors.MEDIUM_GREEN}• Raíz: carpeta{Colors.NC} {Colors.LIGHT_GREEN}masters{Colors.NC}")
+        print(
+            f"    {Colors.MEDIUM_GREEN}• Subdirs: carpeta{Colors.NC} "
+            f"{Colors.LIGHT_GREEN}mono_mp3{Colors.NC}"
+        )
+    else:
+        print(f"    {Colors.LIME}Salida:{Colors.NC}      {Colors.LIGHT_GREEN}{output_dir}{Colors.NC}")
+    return success_count > 0
+
 
 def show_menu():
     print()
@@ -3119,7 +5027,13 @@ def show_menu():
     print(f"  {Colors.BOLD}{Colors.YELLOW_GREEN}7){Colors.NC} {Colors.YELLOW_GREEN}AUDIO → MP3 432Hz{Colors.NC}  {Colors.LIME}(frecuencia sanadora en MP3){Colors.NC}")
     print(f"     {Colors.MEDIUM_GREEN}Convierte audio a frecuencia 432Hz y exporta a MP3{Colors.NC}")
     print()
-    print(f"  {Colors.MEDIUM_GREEN}Entrada general en modos de audio: WAV, AIFF, FLAC (modo 5 también admite MP3 y M4A){Colors.NC}")
+    print(f"  {Colors.BOLD}{Colors.LIGHT_GREEN}8){Colors.NC} {Colors.LIGHT_GREEN}AUDIO → MP3{Colors.NC}  {Colors.LIME}(cualquier formato → MP3){Colors.NC}")
+    print(f"     {Colors.MEDIUM_GREEN}Convierte WAV/FLAC/M4A/OGG/OPUS/WMA/AAC/video-audio y más a MP3{Colors.NC}")
+    print()
+    print(f"  {Colors.BOLD}{Colors.YELLOW_GREEN}9){Colors.NC} {Colors.YELLOW_GREEN}AUDIO/VIDEO → MONO MP3{Colors.NC}  {Colors.LIME}(vía mono_config / Lurssen){Colors.NC}")
+    print(f"     {Colors.MEDIUM_GREEN}Colapso a mono + cadena Lurssen (script renoise/2026/01_mono_config){Colors.NC}")
+    print()
+    print(f"  {Colors.MEDIUM_GREEN}Entrada: WAV/AIFF/FLAC | modo 5: +MP3/M4A | 8: cualquier audio | 9: audio+video mono{Colors.NC}")
     print()
     print(f"  {Colors.DARK_FOREST}h){Colors.NC} Ayuda")
     print(f"  {Colors.DARK_FOREST}q){Colors.NC} Salir")
@@ -3168,6 +5082,24 @@ MODOS DE CONVERSIÓN:
        Convierte audio a 432Hz y exporta a MP3 con opciones de calidad.
        Incluye preset Ditto Pro (48kHz, CBR 320kbps con ajuste por tamaño).
 
+    8) AUDIO → MP3 (cualquier formato)
+       Convierte audio de casi cualquier formato soportado por ffmpeg a MP3.
+       Entrada: WAV, FLAC, AIFF, MP3, M4A, AAC, OGG, OPUS, WMA, WV, CAF,
+                y pistas de audio en MP4/MKV/MOV/WEBM, entre otros.
+       Calidad: CBR (128–320 kbps) o VBR (Q0–Q9). Sample rate 44.1 o 48 kHz.
+       Conserva metadatos cuando es posible (ID3v2.3).
+
+    9) AUDIO/VIDEO → MONO MP3 (vía mono_config / Lurssen)
+       Convierte audio o video a MP3 mono usando el motor de:
+         /Users/andreibarwood/kuwagga/renoise/2026/01_mono_config
+       Tres motores:
+         1) Emulación ffmpeg (cadena Lurssen breakcore de mono_config) → mono MP3
+         2) Script lurssen_mono_breakcore.py (plugin AU o emulación) → M4A → MP3
+         3) Menú interactivo completo del script (salida nativa M4A mono)
+       Carga defaults desde config.yaml (drive, push, presence, bitrate, LUFS…).
+       Entrada: audio y contenedores de video (se extrae la pista de audio).
+       Salida: MP3 mono @ 48 kHz (o 44.1), CBR 256/320 kbps, sufijo _MONO.
+
 DETALLE TÉCNICO MODO 5 (192kHz + BIT DEPTH):
     Sample rate y bit depth no son lo mismo:
     - Sample rate (Hz): cuántas muestras por segundo.
@@ -3192,6 +5124,8 @@ DETALLE TÉCNICO MODO 5 (192kHz + BIT DEPTH):
 NOTAS GENERALES:
     - En modos de audio se listan WAV/AIFF/FLAC por defecto.
     - El modo 5 también incluye MP3 y M4A como fuente.
+    - El modo 8 acepta cualquier formato de audio decodificable por ffmpeg.
+    - El modo 9 usa el pipeline mono de renoise/2026/01_mono_config (Lurssen).
     - Presiona Ctrl+C para cancelar en cualquier momento.
 
 EJEMPLOS:
@@ -3207,8 +5141,52 @@ EJEMPLOS:
 # ============================================================================
 
 def main():
+    parser = argparse.ArgumentParser(description="Audio/Video Conversion Tool - Batch export (Opción 7) con afinación")
+    parser.add_argument("--batch-432", action="store_true",
+                        help="Exportación batch no interactiva de toda la discografía a MP3 432Hz (Opción 7)")
+    parser.add_argument("--batch-342", action="store_true",
+                        help="Exportación batch no interactiva de toda la discografía a MP3 342Hz (Opción 7)")
+    parser.add_argument("--source", type=str, default=None,
+                        help="Ruta raíz de la discografía fuente (requerido con --batch-432 o --batch-342)")
+    parser.add_argument("--dest", "--output", type=str, default=None,
+                        help="Directorio base donde crear la carpeta de exportación (requerido con --batch-*)")
+    parser.add_argument("--target-hz", type=int, default=None,
+                        help="Frecuencia objetivo personalizada (ej: 432, 342). Se infiere del flag si se omite.")
+    args = parser.parse_args()
+
     if not check_dependencies():
         sys.exit(1)
+
+    # Determinar si estamos en modo batch y qué frecuencia usar
+    batch_mode = None
+    if args.batch_432:
+        batch_mode = 432
+    elif args.batch_342:
+        batch_mode = 342
+
+    if batch_mode:
+        if not args.source or not args.dest:
+            print_error(f"--batch-{batch_mode} requiere --source y --dest")
+            print_info("Ejemplo (432Hz):")
+            print_info('  python3 "06_audio_converter.py" --batch-432 --source "/ruta/a/la/discografia" --dest "/Volumes/mid 2026/Mega Doll Discography (2012 - 2022)"')
+            sys.exit(2)
+
+        src = Path(args.source).expanduser().resolve()
+        dst = Path(args.dest).expanduser().resolve()
+        if not src.exists() or not src.is_dir():
+            print_error(f"Fuente no válida: {src}")
+            sys.exit(1)
+        if not dst.exists():
+            dst.mkdir(parents=True, exist_ok=True)
+
+        # Usar --target-hz si se especificó explícitamente, sino el del flag
+        target_hz = args.target_hz if args.target_hz is not None else batch_mode
+
+        print_info(f"Modo batch activado: {target_hz}Hz MP3 (lógica de Opción 7 inyectada)")
+        ok = batch_export_342hz_mp3_full_discography(src, dst, target_hz=target_hz)
+        sys.exit(0 if ok else 1)
+
+    # Modo interactivo normal
     while True:
         choice = show_menu()
         print()
@@ -3281,7 +5259,19 @@ def main():
             if folder:
                 output_dir = select_output_folder(folder)
                 if output_dir:
-                    process_to_432hz_mp3(folder, output_dir)
+                    process_to_432hz_mp3(folder, output_dir, target_frequency=432)
+        elif choice == '8':
+            folder = select_folder()
+            if folder:
+                output_dir = select_output_folder(folder)
+                if output_dir:
+                    process_audio_to_mp3(folder, output_dir)
+        elif choice == '9':
+            folder = select_folder()
+            if folder:
+                output_dir = select_output_folder(folder)
+                if output_dir:
+                    process_to_mono_mp3(folder, output_dir)
         elif choice.lower() == 'h':
             show_help()
         elif choice.lower() == 'q':
@@ -3290,11 +5280,24 @@ def main():
         else:
             print_error(f"Opción inválida: {choice}")
         print()
+        # Restaurar terminal y limpiar líneas de progreso antes de pedir Enter
+        # (evita el cuelgue tras opción 9 y otras exportaciones largas)
+        prepare_for_user_input()
         try:
-            input(f"{Colors.MEDIUM_GREEN}Presiona Enter para continuar...{Colors.NC}")
+            sys.stdout.write(f"{Colors.MEDIUM_GREEN}Presiona Enter para continuar...{Colors.NC}")
+            sys.stdout.flush()
+            # Lectura robusta: sys.stdin.readline evita algunos hangs de input()
+            # con TTY parcialmente restaurado tras hijos (questionary/tqdm/ffmpeg).
+            _ = sys.stdin.readline()
         except (EOFError, KeyboardInterrupt):
             print()
             sys.exit(0)
+        except Exception:
+            try:
+                input()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                sys.exit(0)
 
 
 if __name__ == "__main__":

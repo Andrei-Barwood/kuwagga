@@ -1,10 +1,35 @@
 #!/bin/zsh
 set -euo pipefail
 
-LOG="/tmp/disk_log_scan_$(date +%Y%m%d_%H%M%S).log"
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH"
+
+# macOS often blocks writes to /tmp ("Operation not permitted") under TCC/sandbox.
+# zsh here-docs/here-strings (<<<) use TMPPREFIX, which defaults to /tmp/zsh.
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  if command -v getconf >/dev/null 2>&1; then
+    TMPDIR="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)"
+  fi
+fi
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  TMPDIR="${HOME}/Library/Caches"
+  mkdir -p "${TMPDIR}" 2>/dev/null || TMPDIR="${HOME}"
+fi
+TMPDIR="${TMPDIR%/}"
+export TMPDIR
+export TMPPREFIX="${TMPDIR}/zsh"
+mkdir -p "${TMPPREFIX}" 2>/dev/null || true
+
+LOG="${TMPDIR}/disk_log_scan_$(date +%Y%m%d_%H%M%S).log"
+if ! : >>"$LOG" 2>/dev/null; then
+  LOG="${HOME}/disk_log_scan_$(date +%Y%m%d_%H%M%S).log"
+  : >>"$LOG" || {
+    print -r -- "No pude crear el log (TMPDIR=${TMPDIR} y HOME bloqueados)." >&2
+    exit 1
+  }
+fi
 HORIZON="${HORIZON:-1h}"  # set HORIZON=3h for a longer lookback
 
-log_msg(){ print -r -- "[$(date '+%F %T')] $*" | tee -a "$LOG"; }
+log_msg(){ print -r -- "[$(date '+%F %T')] $*" | /usr/bin/tee -a "$LOG"; }
 
 need_cmds=(log tmutil diskutil lsof awk sort uniq head grep sed)
 for c in "${need_cmds[@]}"; do

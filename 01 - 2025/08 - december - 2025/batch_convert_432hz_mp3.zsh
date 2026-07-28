@@ -6,6 +6,22 @@
 
 set -e  # Salir si hay error
 
+# macOS often blocks writes to /tmp ("Operation not permitted") under TCC/sandbox.
+# zsh here-docs/here-strings (<<<) use TMPPREFIX, which defaults to /tmp/zsh.
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  if command -v getconf >/dev/null 2>&1; then
+    TMPDIR="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)"
+  fi
+fi
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  TMPDIR="${HOME}/Library/Caches"
+  mkdir -p "${TMPDIR}" 2>/dev/null || TMPDIR="${HOME}"
+fi
+TMPDIR="${TMPDIR%/}"
+export TMPDIR
+export TMPPREFIX="${TMPDIR}/zsh"
+mkdir -p "${TMPPREFIX}" 2>/dev/null || true
+
 # ============================================================================
 # CONFIGURACIÓN
 # ============================================================================
@@ -94,7 +110,7 @@ process_directory() {
     local dest_dir="$2"
     local dir_name="$3"
     
-    local log_file="/tmp/batch_convert_${dir_name//\//_}_$$.log"
+    local log_file="${TMPDIR}/batch_convert_${dir_name//\//_}_$$.log"
     local start_time=$(date +%s)
     
     print_header "Procesando: $dir_name"
@@ -118,8 +134,12 @@ process_directory() {
     print_info "Archivos de audio encontrados: $audio_count"
     echo ""
     
-    # Crear script expect temporal
-    local expect_script=$(mktemp /tmp/audio_converter_expect.XXXXXX)
+    # Crear script expect temporal (usar TMPDIR escribible; /tmp puede estar bloqueado)
+    local expect_script
+    expect_script=$(mktemp "${TMPDIR}/audio_converter_expect.XXXXXX") || {
+        print_error "No se pudo crear archivo temporal en ${TMPDIR}"
+        return 1
+    }
     
     # Crear script expect con variables expandidas por zsh
     cat > "$expect_script" <<EXPECT_EOF
@@ -576,8 +596,8 @@ main() {
     
     # Mostrar ubicación de logs
     echo ""
-    print_info "Logs individuales guardados en: /tmp/batch_convert_*.log"
-    print_info "Puedes revisarlos con: ls -lht /tmp/batch_convert_*.log"
+    print_info "Logs individuales guardados en: ${TMPDIR}/batch_convert_*.log"
+    print_info "Puedes revisarlos con: ls -lht ${TMPDIR}/batch_convert_*.log"
     echo ""
 }
 

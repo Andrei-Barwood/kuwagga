@@ -9,10 +9,55 @@ import sys
 import subprocess
 import time
 import threading
+import tempfile
 from pathlib import Path
 from datetime import datetime
 from typing import List, Optional
 import signal
+
+# ============================================================================
+# TEMP DIR (macOS may block /tmp with "Operation not permitted")
+# ============================================================================
+
+def _ensure_writable_tempdir() -> Path:
+    """Pick a writable temp dir; never rely on hardcoded /tmp on macOS."""
+    candidates = []
+    for key in ("TMPDIR", "TEMP", "TMP"):
+        val = os.environ.get(key)
+        if val:
+            candidates.append(Path(val))
+    try:
+        out = subprocess.check_output(
+            ["getconf", "DARWIN_USER_TEMP_DIR"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        if out:
+            candidates.append(Path(out))
+    except Exception:
+        pass
+    candidates.extend(
+        [
+            Path.home() / "Library" / "Caches",
+            Path.home() / ".cache",
+            Path("/var/tmp"),
+            Path.home(),
+        ]
+    )
+    for p in candidates:
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+            test = p / f".write_test_{os.getpid()}"
+            test.write_text("ok", encoding="utf-8")
+            test.unlink(missing_ok=True)
+            resolved = str(p)
+            os.environ["TMPDIR"] = resolved
+            tempfile.tempdir = resolved
+            return p
+        except Exception:
+            continue
+    return Path(tempfile.gettempdir())
+
+
+WRITABLE_TMPDIR = _ensure_writable_tempdir()
 
 # ============================================================================
 # CONFIGURACIÓN
@@ -146,7 +191,7 @@ def process_directory(source_dir: Path, dest_dir: Path, dir_name: str) -> bool:
     """
     # Reemplazar espacios y caracteres problemáticos en el nombre del log
     safe_dir_name = dir_name.replace('/', '_').replace(' ', '_').replace('-', '_')
-    log_file = Path(f"/tmp/batch_convert_{safe_dir_name}_{os.getpid()}.log")
+    log_file = WRITABLE_TMPDIR / f"batch_convert_{safe_dir_name}_{os.getpid()}.log"
     start_time = time.time()
     
     print_header(f"Procesando: {dir_name}")
@@ -878,11 +923,11 @@ def main():
     
     # Mostrar ubicación de logs
     print()
-    print_info("Logs individuales guardados en: /tmp/batch_convert_*.log")
+    print_info(f"Logs individuales guardados en: {WRITABLE_TMPDIR}/batch_convert_*.log")
     print_info("Para ver el log más reciente:")
-    print_info("  cat \"$(ls -t /tmp/batch_convert_*.log | head -1)\"")
+    print_info(f"  cat \"$(ls -t {WRITABLE_TMPDIR}/batch_convert_*.log | head -1)\"")
     print_info("Para ver las últimas líneas:")
-    print_info("  tail -50 \"$(ls -t /tmp/batch_convert_*.log | head -1)\"")
+    print_info(f"  tail -50 \"$(ls -t {WRITABLE_TMPDIR}/batch_convert_*.log | head -1)\"")
     print()
 
 if __name__ == "__main__":

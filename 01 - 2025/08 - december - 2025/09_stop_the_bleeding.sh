@@ -1,10 +1,35 @@
 #!/bin/zsh
 set -euo pipefail
 
-LOG="/tmp/stop_drain_now_$(date +%Y%m%d_%H%M%S).log"
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH"
+
+# macOS often blocks writes to /tmp ("Operation not permitted") under TCC/sandbox.
+# zsh here-docs/here-strings (<<<) use TMPPREFIX, which defaults to /tmp/zsh.
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  if command -v getconf >/dev/null 2>&1; then
+    TMPDIR="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)"
+  fi
+fi
+if [[ -z "${TMPDIR:-}" || ! -w "${TMPDIR}" ]]; then
+  TMPDIR="${HOME}/Library/Caches"
+  mkdir -p "${TMPDIR}" 2>/dev/null || TMPDIR="${HOME}"
+fi
+TMPDIR="${TMPDIR%/}"
+export TMPDIR
+export TMPPREFIX="${TMPDIR}/zsh"
+mkdir -p "${TMPPREFIX}" 2>/dev/null || true
+
+LOG="${TMPDIR}/stop_drain_now_$(date +%Y%m%d_%H%M%S).log"
+if ! : >>"$LOG" 2>/dev/null; then
+  LOG="${HOME}/stop_drain_now_$(date +%Y%m%d_%H%M%S).log"
+  : >>"$LOG" || {
+    print -r -- "No pude crear el log (TMPDIR=${TMPDIR} y HOME bloqueados)." >&2
+    exit 1
+  }
+fi
 OS_SNAP="BAE3E18E-0D22-40CD-88C7-477AE31F427C"
 
-log(){ print -r -- "[$(date '+%F %T')] $*" | tee -a "$LOG"; }
+log(){ print -r -- "[$(date '+%F %T')] $*" | /usr/bin/tee -a "$LOG"; }
 
 if [[ $EUID -ne 0 ]]; then
   echo "Requesting sudo..."
