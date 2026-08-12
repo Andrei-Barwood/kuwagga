@@ -1,0 +1,54 @@
+# Example config for lurssen-mono-breakcore
+# Copy to config.yaml and edit paths/values.
+# CLI flags override these settings.
+
+# === Paths ===
+input_dir: "~/Music/Discography"          # Root folder containing album subfolders
+output_dir: "~/Music/Discography_MONO"    # Will mirror structure here
+
+# === Content selection (optional — set via interactive menu for full control) ===
+# When selection_active is true, only the listed folders/files under input_dir are converted.
+# Paths are relative to input_dir. Use "." for the input root itself.
+# Prefer the interactive menu: "Select folders & files to convert (up to 4 subfolder levels)"
+selection_active: false
+selected_folders: []                      # e.g. [".", "Album A", "Album B/CD1"]
+selected_files: []                        # e.g. ["Album A/01 Intro.wav", "Album B/CD1/track.flac"]
+
+# Path to the Lurssen AU component bundle.
+# Common locations:
+#   /Library/Audio/Plug-Ins/Components/Lurssen Mastering Console.component
+#   /Library/Audio/Plug-Ins/Components/Lurssen Mastering EQ v6.component
+#   ~/Library/Audio/Plug-Ins/Components/...
+# Use `auval -a | grep -i lur` or the finder to locate exact name.
+plugin_path: "/Library/Audio/Plug-Ins/Components/Lurssen Mastering Console.component"
+
+# === Processing mode ===
+use_plugin: true                 # true = pedalboard + Lurssen AU (preferred). false = ffmpeg emulation only
+
+# === Breakcore-optimized Lurssen settings ===
+preset: "Electronic"             # Try "Electronic", "EDM", "More Glue", or genre-specific if available
+input_drive: 4.8                 # Moderate-high drive for aggression and glue (typical range 0-12)
+push: 3.2                        # Noticeable Push for energy and presence without squashing
+presence: 3.5                    # Additional 3-4kHz presence emphasis (if plugin exposes band or via Push)
+
+# === Output & loudness ===
+# IMPORTANT: For breakcore, do NOT use broadcast-style -23 LUFS by default.
+# Strict EBU R128 normalization often kills transient punch, rhythmic clarity and chaotic energy.
+# Use higher targets (-14, -12, -10, -8) or leave null (recommended).
+# The plugin's internal processing + final light peak ceiling preserves dynamics.
+loudness_target: null            # e.g. -14 or -10 or null to disable
+true_peak: -1.0                  # dBTP ceiling. -1.0 is safe and punchy for electronic.
+
+# Output format: m4a (AAC, good for listening/distribution) or wav (PCM, good for DAW / further production)
+output_format: m4a               # m4a | wav
+wav_bit_depth: 24                # 16 or 24 — only used when output_format is wav (24 recommended)
+bitrate: "320k"                  # High quality AAC when output_format is m4a. Use "256k" or "320k".
+suffix: "_MONO_LURSSEN_BREAKCORE"
+
+# === Performance ===
+jobs: 2                          # Number of parallel workers (M-series benefit from 2-4). Use 1 for maximum stability.
+overwrite: false
+
+# === Logging ===
+verbose: false
+log_file: null                   # e.g. "lurssen_process.log"

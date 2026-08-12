@@ -1,0 +1,5 @@
+pedalboard>=0.8.0
+numpy>=1.21
+pyyaml>=6.0
+tqdm>=4.60
+questionary>=2.0.0

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool doc_version="0">
+  <Name>el sol perpendicular al amor</Name>
+  <Id>com.kirtantegsingh.elsolalamor</Id>
+  <Version>1.0.0</Version>
+  <ApiVersion>6.0</ApiVersion>
+  <Author>ਕਿਰਤਅਨ ਤੈਗ ਸਿਨਗਹ</Author>
+  <Category>Escultura de Audio</Category>
+  <Description>
+    el sol perpendicular al amor — applies predefined pattern-sequence maps (mapas) to the current song.
+    28 maps from "04 - el sol perpendicular al amor.txt". Sequence only
+    (no pattern names/colors by default). Pattern Matrix stays closed.
+  </Description>
+  <Homepage></Homepage>
+  <Platform>Windows, Mac, Linux</Platform>
+  <Icon></Icon>
+</RenoiseScriptingTool>

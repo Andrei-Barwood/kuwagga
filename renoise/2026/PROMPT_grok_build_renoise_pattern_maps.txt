@@ -1,0 +1,242 @@
+# Tarea: crear un Renoise Tool (.xrnx) de "pattern maps"
+
+Construye un **Renoise Scripting Tool** (Lua API 6.0) igual en arquitectura y comportamiento al tool de referencia descrito abajo, pero con **nombre, Id, autor y mapas distintos** tomados del archivo de texto/RTF que adjunto.
+
+## 1) Identidad del tool
+
+- **Name (visible en Tool Browser y menús):** `el sol perpendicular al amor`
+  Ejemplo de referencia: `moon eyes for karen`
+- **Id (OBLIGATORIO formato Renoise):** exactamente 3 componentes alfanuméricos separados por puntos: `abc.def.ghi`
+  Ejemplo: `com.kirtantegsingh.elsolalamor`
+  **NUNCA** uses un Id de una sola palabra (falla el manifest).
+- **Author:** `ਕਿਰਤਅਨ ਤੈਗ ਸਿਨਗਹ`
+- **Category:** `Escultura de Audio`
+- **Version:** `1.0.0`
+- **ApiVersion:** `6.0`
+- **Nombre del paquete/archivo:** debe coincidir con el Id → `abc.def.ghi.xrnx`
+- Carpeta fuente del proyecto: `abc.def.ghi/` con `manifest.xml` + `main.lua`
+- Al final genera el `.xrnx` instalable (zip de `manifest.xml` + `main.lua`)
+
+Si no indico Name/Id/Author, úsalos así a partir del nombre del archivo adjunto:
+- Name = nombre legible del archivo (sin extensión)
+- Id = `com.kirtantegsingh.` + versión minúscula sin espacios del nombre
+- Author = `kirtan teg singh`
+
+## 2) Qué hace el tool
+
+El tool aplica **mapas de patrones**: listas ordenadas de índices de patrón que **reemplazan por completo** la Pattern Sequence de la canción actual.
+
+Al aplicar un mapa:
+1. Calcula el patrón UI máximo necesario.
+2. Crea patrones vacíos en el pool si faltan.
+3. Asigna `sequencer.pattern_sequence` con la secuencia del mapa.
+4. 
+5. Pone el cursor de sequence en el slot 1.
+6. **NO abre** el Pattern Matrix. Debe quedar **cerrado siempre**:
+   - al inicio de apply: `renoise.app().window.pattern_matrix_is_visible = false`
+   - al final de apply: otra vez `false`
+7. Muestra status en la barra de Renoise y un `print` en la terminal de scripting.
+8. Usa `song:describe_undo(...)` para un undo limpio.
+
+## 3) Formato del archivo de entrada (mapas)
+
+El archivo adjunto define los mapas. Puede ser `.txt` o `.rtf` (si es RTF, conviértelo a texto plano primero).
+
+### Estructura exacta requerida / esperada
+
+```text
+=== nombre_del_mapa ===
+0
+1
+2
+3
+...
+
+=== otro_mapa ===
+0
+4
+5
+4
+...
+```
+
+### Reglas de parseo (OBLIGATORIAS)
+
+1. Un mapa empieza en una línea: `=== TITULO ===` (espacios opcionales alrededor del título).
+2. Debajo van **solo números de patrón**, uno por línea (enteros ≥ 0).
+3. Los números son los de la **UI de Renoise** (0-based: `0` = patrón 00, `7` = patrón 07).
+4. **Ignora** cualquier otra cosa: comentarios, letras, nombres de canciones, texto suelto, líneas vacías, espacios extra al final de la línea.
+5. Extrae de cada línea el **primer entero** si hay ruido; si la línea no tiene número, sáltala.
+6. El **título del mapa** es el texto entre `===` y `===` (trim). Ese título es el que aparece en el menú **sin comillas y sin prefijo** tipo "Apply map".
+7. Puede haber N mapas en un solo archivo. Implementa **todos**.
+8. Orden del menú = orden de aparición en el archivo.
+
+### Ejemplo real de formato (referencia)
+
+```text
+=== back2back ===
+0
+1
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+6
+7
+6
+5
+4
+10
+11
+10
+4
+5
+6
+7
+12
+13
+
+=== Citibank ===
+0
+1
+2
+3
+4
+3
+4
+3
+2
+5
+...
+```
+
+Referencia de formato del documento de origen:
+`/Users/andreibarwood/Documents/Mega Doll/renoise/moon eyes for karen.rtf`
+
+## 4) Índices UI vs API (crítico — no fallar aquí)
+
+| Concepto | Valor |
+|----------|--------|
+| Número en el archivo / menú UI | 0-based (`0`, `1`, `13`…) |
+| `song.patterns[i]` / `pattern_sequence` | **1-based** (`ui + 1`) |
+
+Helpers obligatorios:
+
+```lua
+local function ui_to_api(ui_pattern)
+  return ui_pattern + 1
+end
+```
+
+Al construir la sequence:
+
+```lua
+table.insert(new_sequence, ui_to_api(entry.pattern))
+```
+
+## 5) Crear patrones si no existen (API correcta)
+
+**PROHIBIDO:** `song.patterns:insert()` → no existe y crashea.
+
+**CORRECTO:**
+
+```lua
+while #song.patterns < needed do
+  song.sequencer:insert_new_pattern_at(#song.sequencer.pattern_sequence + 1)
+end
+```
+
+donde `needed = max_ui_pattern + 1`.
+
+## 6) Estructura de código (mantén esta arquitectura)
+
+Archivos:
+- `manifest.xml`
+- `main.lua`
+- empaquetar `.xrnx`
+
+En `main.lua`:
+
+1. Constantes: `TOOL_NAME`, `TOOL_VERSION`, `MENU_FOLDER` (= TOOL_NAME)
+2. `ui_to_api`, `numbers_to_map(numbers)`
+   `numbers_to_map` convierte `{0,1,2}` → `{{pattern=0},{pattern=1},{pattern=2}}`
+3. `ensure_patterns_exist(max_ui)`
+4. `set_pattern_name(ui, name)` vía `song:pattern(ui_to_api(ui)).name`
+5. `set_pattern_color(ui, {r,g,b})` en **todos** los tracks:
+
+```lua
+song:pattern(api):track(t).color = {r, g, b}  -- tabla NUEVA cada vez
+```
+
+   Color opcional de referencia: verde `#AEF504` = `{0xAE, 0xF5, 0x04}`
+
+6. Definición de cada mapa:
+   - Por defecto solo números: `local MAP_X = numbers_to_map { 0, 1, 2, ... }`
+   - Si hay anotaciones especiales en el archivo tipo `7 - terror` o instrucciones del usuario, soporta:
+
+```lua
+{pattern = 7, label = "terror", color = true}
+```
+
+7. Registro central:
+
+```lua
+local MAPS = {
+  {id = "...", title = "titulo_menu", map = MAP_...},
+  ...
+}
+```
+
+8. `apply_map(map, map_name)` con la lógica de la sección 2
+9. `register_map_actions` para **cada** mapa:
+   - Menús (solo el título, sin "Apply map", sin comillas):
+     - `Main Menu:Tools:MENU_FOLDER:TITLE`
+     - `Pattern Sequencer:MENU_FOLDER:TITLE`
+     - `Pattern Matrix:MENU_FOLDER:TITLE`
+   - Keybinding (**exactamente 2 dos-puntos** en todo el string):
+
+```lua
+"Global:Tools:" .. TOOL_NAME .. " - " .. title
+```
+
+     Forma válida: `scope:topic:name`
+     **Inválido:** `Global:Tools:Foo: Bar` (tercer `:`)
+
+## 7) Errores de API que NO debes repetir
+
+| Error | Causa | Solución |
+|-------|--------|----------|
+| `attempt to call method 'insert' (a nil value)` | `song.patterns:insert()` | `sequencer:insert_new_pattern_at` |
+| `invalid key binding entry... doubled colons` | keybinding con más de 2 `:` | `Global:Tools:Name - map` |
+| `Expected a 'Id' field value in the form 'abc.def.ghi'` | Id sin 3 partes | `com.autor.herramienta` |
+| Pattern Matrix se abre sola | forzar visible / no cerrar | `pattern_matrix_is_visible = false` al inicio y final |
+| Colores no se ven / sequence mal | índices 0 vs 1 | siempre `ui + 1` en API |
+
+## 8) Entregables
+
+1. Carpeta `com.xxx.yyy/` con `main.lua` + `manifest.xml`
+2. Archivo instalable `com.xxx.yyy.xrnx`
+3. Resumen breve: nombre, Id, lista de mapas (nombre + cantidad de slots + patrón máximo)
+4. Código limpio, comentado, fácil de extender con más mapas
+
+## 9) Fuente de mapas (archivo adjunto)
+
+**Parsea el archivo adjunto** y genera un mapa por cada bloque `=== ... ===`.
+
+Instrucciones extra del usuario (opcionales):
+- Labels/colores especiales: `[si aplica, descríbelos aquí; si no, solo números]`
+- Por defecto: **sin** colores ni nombres de patrón, solo la sequence.
+
+## 10) No hacer
+
+- No abras el Pattern Matrix ni cambies el middle frame.
+- No uses prefijos de menú "Apply map '…'".
+- No dejes el Id como una sola palabra.
+- No inventes mapas que no estén en el archivo.
+- No uses `song.patterns:insert()`.
