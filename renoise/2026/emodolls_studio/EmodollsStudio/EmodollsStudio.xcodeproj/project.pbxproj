@@ -1,0 +1,688 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0567126730262E70476555D9 /* MetadataDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF58078F6C37871F54F84888 /* MetadataDraft.swift */; };
+		0AD0A20DB0A2DB93BEEE1F6F /* Loudness.swift in Sources */ = {isa = PBXBuildFile; fileRef = C398E06A5BF813F7BE311149 /* Loudness.swift */; };
+		15CF0CFFC841A60884A8122B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3900A620E5110F64D1B48EFD /* Assets.xcassets */; };
+		1D80B9E8B227FB5610E24478 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6A1C9BFFF4D9E594A18555F /* ContentView.swift */; };
+		1DF9EE284ADE03C409738109 /* StudioFilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34FF92D2E5C2C3E36722D4FC /* StudioFilePicker.swift */; };
+		2E9BEED410DAD2E8DEB151AD /* ThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1DF4FB5797FB6C50045BA3 /* ThemeTests.swift */; };
+		32696EFB038B7CBA54DD20D1 /* AudioIOTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25EEC9C3C0DEFC8B04D0E610 /* AudioIOTests.swift */; };
+		3AD9F4721F60FDAC59F0D050 /* HearingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46D55A43F05DAFBF99409F6 /* HearingTests.swift */; };
+		3ADC5E6BFA239546F28D5C26 /* HighFrequencyCap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB578E48583323E83444957 /* HighFrequencyCap.swift */; };
+		436D19017E1C236CE8031113 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C0368FFC9EA94BD2C4DE61 /* Session.swift */; };
+		44D8213AAE5CEB7E169DA4CD /* CharacterID.swift in Sources */ = {isa = PBXBuildFile; fileRef = 218790318B55EC36582F86CE /* CharacterID.swift */; };
+		4B40B2E0718BBC627BA0AEB2 /* SessionLimits.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1380AA09F94006C3581B25CF /* SessionLimits.swift */; };
+		4DEC93BF501536B172AD8B4A /* KnobIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 190BB04B2BA600824D161042 /* KnobIDs.swift */; };
+		4ED2F699E0B00E4E7BC74B63 /* ThemeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F65353129948D7BBA7DCC /* ThemeController.swift */; };
+		59BAF22A71F459C680ADF767 /* Recipes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 065C698ED538CEA0E4B34366 /* Recipes.swift */; };
+		6661773BFF34E0EB1BB95CBD /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE82032C16116C4CBDC3C23 /* Color+Hex.swift */; };
+		6670DA4E16A8748ECA504E0D /* Biquad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B4467DF46F376D446288CAB /* Biquad.swift */; };
+		6C980F8E63141AD9E320A8E8 /* EmodollsStudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4CDFB93FBC7B2DE5FC34B31 /* EmodollsStudioApp.swift */; };
+		741712B3A6DBAD4EED0665DF /* Processor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89109849135007D1AB35CF19 /* Processor.swift */; };
+		74DF777AD654F67630030978 /* RenderSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21281C1972504743877BFBFB /* RenderSettings.swift */; };
+		7ABD4E52382C0F445EECA91E /* Compressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87BE6F8B23085DA4EFDEAE0 /* Compressor.swift */; };
+		7C28586FF32D6D1A73ED0332 /* DomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B1DB28192AC18389A398E8 /* DomainTests.swift */; };
+		7DB05D4DF01E15CB7B5C1E80 /* DSPSeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E02C8D08E8C5412CEF6BFE /* DSPSeal.swift */; };
+		8A3038520288BC46C5B714D1 /* libmpg123.0.dylib in Resources */ = {isa = PBXBuildFile; fileRef = DE088B631257D97620E9893F /* libmpg123.0.dylib */; };
+		8DB10B478CEE01D16089A184 /* AudioIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08960CAED1EAE345335BC33A /* AudioIO.swift */; };
+		92EC1F13DFBB4A0ED7741A3D /* Themed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16A24A767F00EDCAABB168F8 /* Themed.swift */; };
+		9BE1166F9108ED8A431A1BDC /* ID3v23.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5138CA0E1E633BE08E48CF9 /* ID3v23.swift */; };
+		9CF719BB5AA575FBB9FAE14E /* Genre.swift in Sources */ = {isa = PBXBuildFile; fileRef = F808A36267C7588ED5D10078 /* Genre.swift */; };
+		B3B65C0E802FAD4FD0CF2913 /* FrequencySkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65C1C5A5A9877F15600022B6 /* FrequencySkeleton.swift */; };
+		B77A281283076495554228DD /* ExportFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 075DE338BA3508E5D7E04CC8 /* ExportFormat.swift */; };
+		BE6BF1AFF2854C4274877DC0 /* TruePeakLimiter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 156987EB5E5D810841C2839A /* TruePeakLimiter.swift */; };
+		BF353FE5FD81D0742C173526 /* AudioBufferIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 503B6CBB90CEFA8DDC7A2925 /* AudioBufferIO.swift */; };
+		C3484D0D966D60AF4B524729 /* EQStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CA6E7FA8E0127E7F98BDB6 /* EQStage.swift */; };
+		CC1F5B7BB2962122051C38AC /* DSPTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFC79181FB5E36DE9035B1A2 /* DSPTests.swift */; };
+		CD3F1EC3D287CC6BCF6354A4 /* MonoCollapse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF88CFE15D1FEBBD639810F /* MonoCollapse.swift */; };
+		CD4567563C867F7D2E8ED5DC /* libmp3lame.0.dylib in Resources */ = {isa = PBXBuildFile; fileRef = 31D0ACE9A6AB370CEEDEF034 /* libmp3lame.0.dylib */; };
+		CE5C2EF57264A90A5E145392 /* TanhSaturator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C671B62FE9C42F7CBCD1D4E /* TanhSaturator.swift */; };
+		D5C0A79FF2F3579452E30177 /* RecipeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81F09B09DBB5821D90D726A8 /* RecipeTests.swift */; };
+		D62B9135092CAF091CDBE0A9 /* Oversampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698B2BD1B6D5E285ECD51514 /* Oversampler.swift */; };
+		D8EF65F6FCA6D325FAA7BC50 /* NOTICE.txt in Resources */ = {isa = PBXBuildFile; fileRef = EF2994E038E223FE7B144170 /* NOTICE.txt */; };
+		D93F3C9DA769445D7E335C2D /* DSPGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE6A7BE22A4829F647C86885 /* DSPGraph.swift */; };
+		E0B408C8814193542D3E4D9E /* LameEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E025B7EBD8C1FE1A88962312 /* LameEncoder.swift */; };
+		EF39E8290233A5A4592BEFFE /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C542A54C30D99496E6DD52 /* Palette.swift */; };
+		F84DD86C6E7311E3618984FC /* TPDFDither.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61F14EA67D3399F868DCDF0 /* TPDFDither.swift */; };
+		F9D53BBF44B375E65D109364 /* EstrenoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142385F39AEDF282CFC642D3 /* EstrenoTests.swift */; };
+		FD0E8E634A61C32F33BEE951 /* SessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C879E6B5A20BD92F25AE3C43 /* SessionTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3A99F1E7C157750EA6EBC30D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 248EAFA9C4D1FBE9E547A072 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8907D71D5F12393E8175112B;
+			remoteInfo = EmodollsStudio;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		065C698ED538CEA0E4B34366 /* Recipes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recipes.swift; sourceTree = "<group>"; };
+		075DE338BA3508E5D7E04CC8 /* ExportFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportFormat.swift; sourceTree = "<group>"; };
+		08960CAED1EAE345335BC33A /* AudioIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioIO.swift; sourceTree = "<group>"; };
+		0FE82032C16116C4CBDC3C23 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
+		1380AA09F94006C3581B25CF /* SessionLimits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLimits.swift; sourceTree = "<group>"; };
+		142385F39AEDF282CFC642D3 /* EstrenoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstrenoTests.swift; sourceTree = "<group>"; };
+		156987EB5E5D810841C2839A /* TruePeakLimiter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TruePeakLimiter.swift; sourceTree = "<group>"; };
+		15C542A54C30D99496E6DD52 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
+		16A24A767F00EDCAABB168F8 /* Themed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Themed.swift; sourceTree = "<group>"; };
+		190BB04B2BA600824D161042 /* KnobIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnobIDs.swift; sourceTree = "<group>"; };
+		21281C1972504743877BFBFB /* RenderSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderSettings.swift; sourceTree = "<group>"; };
+		218790318B55EC36582F86CE /* CharacterID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterID.swift; sourceTree = "<group>"; };
+		25EEC9C3C0DEFC8B04D0E610 /* AudioIOTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioIOTests.swift; sourceTree = "<group>"; };
+		2B4467DF46F376D446288CAB /* Biquad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Biquad.swift; sourceTree = "<group>"; };
+		31D0ACE9A6AB370CEEDEF034 /* libmp3lame.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmp3lame.0.dylib; sourceTree = "<group>"; };
+		34FF92D2E5C2C3E36722D4FC /* StudioFilePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudioFilePicker.swift; sourceTree = "<group>"; };
+		3900A620E5110F64D1B48EFD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		39E02C8D08E8C5412CEF6BFE /* DSPSeal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSPSeal.swift; sourceTree = "<group>"; };
+		4CF88CFE15D1FEBBD639810F /* MonoCollapse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonoCollapse.swift; sourceTree = "<group>"; };
+		503B6CBB90CEFA8DDC7A2925 /* AudioBufferIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBufferIO.swift; sourceTree = "<group>"; };
+		5C671B62FE9C42F7CBCD1D4E /* TanhSaturator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TanhSaturator.swift; sourceTree = "<group>"; };
+		65C1C5A5A9877F15600022B6 /* FrequencySkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequencySkeleton.swift; sourceTree = "<group>"; };
+		698B2BD1B6D5E285ECD51514 /* Oversampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oversampler.swift; sourceTree = "<group>"; };
+		6CB578E48583323E83444957 /* HighFrequencyCap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighFrequencyCap.swift; sourceTree = "<group>"; };
+		70B1DB28192AC18389A398E8 /* DomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainTests.swift; sourceTree = "<group>"; };
+		75CA6E7FA8E0127E7F98BDB6 /* EQStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EQStage.swift; sourceTree = "<group>"; };
+		7D1DF4FB5797FB6C50045BA3 /* ThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeTests.swift; sourceTree = "<group>"; };
+		81F09B09DBB5821D90D726A8 /* RecipeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeTests.swift; sourceTree = "<group>"; };
+		89109849135007D1AB35CF19 /* Processor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Processor.swift; sourceTree = "<group>"; };
+		B87BE6F8B23085DA4EFDEAE0 /* Compressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Compressor.swift; sourceTree = "<group>"; };
+		BF58078F6C37871F54F84888 /* MetadataDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataDraft.swift; sourceTree = "<group>"; };
+		C398E06A5BF813F7BE311149 /* Loudness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Loudness.swift; sourceTree = "<group>"; };
+		C879E6B5A20BD92F25AE3C43 /* SessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTests.swift; sourceTree = "<group>"; };
+		CF1E54F04DB966546B36110E /* EmodollsStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EmodollsStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D5138CA0E1E633BE08E48CF9 /* ID3v23.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ID3v23.swift; sourceTree = "<group>"; };
+		D6A1C9BFFF4D9E594A18555F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		D9E9288064EF69EA31C93F36 /* EmodollsStudioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmodollsStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE088B631257D97620E9893F /* libmpg123.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmpg123.0.dylib; sourceTree = "<group>"; };
+		E025B7EBD8C1FE1A88962312 /* LameEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LameEncoder.swift; sourceTree = "<group>"; };
+		E2C0368FFC9EA94BD2C4DE61 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		E4CDFB93FBC7B2DE5FC34B31 /* EmodollsStudioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmodollsStudioApp.swift; sourceTree = "<group>"; };
+		EF2994E038E223FE7B144170 /* NOTICE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = NOTICE.txt; sourceTree = "<group>"; };
+		F46D55A43F05DAFBF99409F6 /* HearingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HearingTests.swift; sourceTree = "<group>"; };
+		F61F14EA67D3399F868DCDF0 /* TPDFDither.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TPDFDither.swift; sourceTree = "<group>"; };
+		F808A36267C7588ED5D10078 /* Genre.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Genre.swift; sourceTree = "<group>"; };
+		FB0F65353129948D7BBA7DCC /* ThemeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeController.swift; sourceTree = "<group>"; };
+		FCFD0D9FF5AA46577AA08EFF /* EmodollsStudio.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EmodollsStudio.entitlements; sourceTree = "<group>"; };
+		FE6A7BE22A4829F647C86885 /* DSPGraph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSPGraph.swift; sourceTree = "<group>"; };
+		FFC79181FB5E36DE9035B1A2 /* DSPTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSPTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1B566A34B481B5DF65F1BF52 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				218790318B55EC36582F86CE /* CharacterID.swift */,
+				075DE338BA3508E5D7E04CC8 /* ExportFormat.swift */,
+				F808A36267C7588ED5D10078 /* Genre.swift */,
+				190BB04B2BA600824D161042 /* KnobIDs.swift */,
+				BF58078F6C37871F54F84888 /* MetadataDraft.swift */,
+				1380AA09F94006C3581B25CF /* SessionLimits.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		2AD42B42D6F788D124FF2E4A /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D6A1C9BFFF4D9E594A18555F /* ContentView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		30C4F27C6157EE2FD3E900F9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CF1E54F04DB966546B36110E /* EmodollsStudio.app */,
+				D9E9288064EF69EA31C93F36 /* EmodollsStudioTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		41658DCC148E3CBC8C0B4A7F /* DSP */ = {
+			isa = PBXGroup;
+			children = (
+				503B6CBB90CEFA8DDC7A2925 /* AudioBufferIO.swift */,
+				2B4467DF46F376D446288CAB /* Biquad.swift */,
+				B87BE6F8B23085DA4EFDEAE0 /* Compressor.swift */,
+				FE6A7BE22A4829F647C86885 /* DSPGraph.swift */,
+				39E02C8D08E8C5412CEF6BFE /* DSPSeal.swift */,
+				75CA6E7FA8E0127E7F98BDB6 /* EQStage.swift */,
+				65C1C5A5A9877F15600022B6 /* FrequencySkeleton.swift */,
+				6CB578E48583323E83444957 /* HighFrequencyCap.swift */,
+				C398E06A5BF813F7BE311149 /* Loudness.swift */,
+				4CF88CFE15D1FEBBD639810F /* MonoCollapse.swift */,
+				698B2BD1B6D5E285ECD51514 /* Oversampler.swift */,
+				065C698ED538CEA0E4B34366 /* Recipes.swift */,
+				21281C1972504743877BFBFB /* RenderSettings.swift */,
+				5C671B62FE9C42F7CBCD1D4E /* TanhSaturator.swift */,
+				F61F14EA67D3399F868DCDF0 /* TPDFDither.swift */,
+				156987EB5E5D810841C2839A /* TruePeakLimiter.swift */,
+			);
+			path = DSP;
+			sourceTree = "<group>";
+		};
+		691C8E212D899FA91B226913 = {
+			isa = PBXGroup;
+			children = (
+				6EFDB6637C9432BF7FD5C2BF /* EmodollsStudio */,
+				EC1AF3CDDAB1969584671242 /* EmodollsStudioTests */,
+				30C4F27C6157EE2FD3E900F9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6EFDB6637C9432BF7FD5C2BF /* EmodollsStudio */ = {
+			isa = PBXGroup;
+			children = (
+				8DC15A1A44BD60AF438C18D7 /* App */,
+				41658DCC148E3CBC8C0B4A7F /* DSP */,
+				1B566A34B481B5DF65F1BF52 /* Models */,
+				B07ABB21F4BCC912A8070B46 /* Services */,
+				94B6045D1E0723950ECC69FF /* Theme */,
+				AC8B8EA4330B7FAC062C8F5F /* Vendor */,
+				2AD42B42D6F788D124FF2E4A /* Views */,
+				3900A620E5110F64D1B48EFD /* Assets.xcassets */,
+			);
+			path = EmodollsStudio;
+			sourceTree = "<group>";
+		};
+		8DC15A1A44BD60AF438C18D7 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				FCFD0D9FF5AA46577AA08EFF /* EmodollsStudio.entitlements */,
+				E4CDFB93FBC7B2DE5FC34B31 /* EmodollsStudioApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		94B6045D1E0723950ECC69FF /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				0FE82032C16116C4CBDC3C23 /* Color+Hex.swift */,
+				15C542A54C30D99496E6DD52 /* Palette.swift */,
+				FB0F65353129948D7BBA7DCC /* ThemeController.swift */,
+				16A24A767F00EDCAABB168F8 /* Themed.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		AC8B8EA4330B7FAC062C8F5F /* Vendor */ = {
+			isa = PBXGroup;
+			children = (
+				31D0ACE9A6AB370CEEDEF034 /* libmp3lame.0.dylib */,
+				DE088B631257D97620E9893F /* libmpg123.0.dylib */,
+				EF2994E038E223FE7B144170 /* NOTICE.txt */,
+			);
+			path = Vendor;
+			sourceTree = "<group>";
+		};
+		B07ABB21F4BCC912A8070B46 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				08960CAED1EAE345335BC33A /* AudioIO.swift */,
+				D5138CA0E1E633BE08E48CF9 /* ID3v23.swift */,
+				E025B7EBD8C1FE1A88962312 /* LameEncoder.swift */,
+				89109849135007D1AB35CF19 /* Processor.swift */,
+				E2C0368FFC9EA94BD2C4DE61 /* Session.swift */,
+				34FF92D2E5C2C3E36722D4FC /* StudioFilePicker.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		EC1AF3CDDAB1969584671242 /* EmodollsStudioTests */ = {
+			isa = PBXGroup;
+			children = (
+				25EEC9C3C0DEFC8B04D0E610 /* AudioIOTests.swift */,
+				70B1DB28192AC18389A398E8 /* DomainTests.swift */,
+				FFC79181FB5E36DE9035B1A2 /* DSPTests.swift */,
+				142385F39AEDF282CFC642D3 /* EstrenoTests.swift */,
+				F46D55A43F05DAFBF99409F6 /* HearingTests.swift */,
+				81F09B09DBB5821D90D726A8 /* RecipeTests.swift */,
+				C879E6B5A20BD92F25AE3C43 /* SessionTests.swift */,
+				7D1DF4FB5797FB6C50045BA3 /* ThemeTests.swift */,
+			);
+			path = EmodollsStudioTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8907D71D5F12393E8175112B /* EmodollsStudio */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9E7B238AD00C0961C56F6035 /* Build configuration list for PBXNativeTarget "EmodollsStudio" */;
+			buildPhases = (
+				DCB98DEDC81D191C0B393996 /* Sources */,
+				94BACF73EC2213622999CE24 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = EmodollsStudio;
+			packageProductDependencies = (
+			);
+			productName = EmodollsStudio;
+			productReference = CF1E54F04DB966546B36110E /* EmodollsStudio.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E9BBACE2A5AF3AEBE3D7C62F /* EmodollsStudioTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 48CF83C62DD2901611FC78D5 /* Build configuration list for PBXNativeTarget "EmodollsStudioTests" */;
+			buildPhases = (
+				030FADEFD6DF5FB3CD97BBC3 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E1F0AD879B22705CF38239E9 /* PBXTargetDependency */,
+			);
+			name = EmodollsStudioTests;
+			packageProductDependencies = (
+			);
+			productName = EmodollsStudioTests;
+			productReference = D9E9288064EF69EA31C93F36 /* EmodollsStudioTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		248EAFA9C4D1FBE9E547A072 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8907D71D5F12393E8175112B = {
+						DevelopmentTeam = T77VRM22PQ;
+						ProvisioningStyle = Automatic;
+					};
+					E9BBACE2A5AF3AEBE3D7C62F = {
+						DevelopmentTeam = T77VRM22PQ;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 56492F0901F5C6A4BB45EC89 /* Build configuration list for PBXProject "EmodollsStudio" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 691C8E212D899FA91B226913;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 30C4F27C6157EE2FD3E900F9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8907D71D5F12393E8175112B /* EmodollsStudio */,
+				E9BBACE2A5AF3AEBE3D7C62F /* EmodollsStudioTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		94BACF73EC2213622999CE24 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				15CF0CFFC841A60884A8122B /* Assets.xcassets in Resources */,
+				D8EF65F6FCA6D325FAA7BC50 /* NOTICE.txt in Resources */,
+				CD4567563C867F7D2E8ED5DC /* libmp3lame.0.dylib in Resources */,
+				8A3038520288BC46C5B714D1 /* libmpg123.0.dylib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		030FADEFD6DF5FB3CD97BBC3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				32696EFB038B7CBA54DD20D1 /* AudioIOTests.swift in Sources */,
+				CC1F5B7BB2962122051C38AC /* DSPTests.swift in Sources */,
+				7C28586FF32D6D1A73ED0332 /* DomainTests.swift in Sources */,
+				F9D53BBF44B375E65D109364 /* EstrenoTests.swift in Sources */,
+				3AD9F4721F60FDAC59F0D050 /* HearingTests.swift in Sources */,
+				D5C0A79FF2F3579452E30177 /* RecipeTests.swift in Sources */,
+				FD0E8E634A61C32F33BEE951 /* SessionTests.swift in Sources */,
+				2E9BEED410DAD2E8DEB151AD /* ThemeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DCB98DEDC81D191C0B393996 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF353FE5FD81D0742C173526 /* AudioBufferIO.swift in Sources */,
+				8DB10B478CEE01D16089A184 /* AudioIO.swift in Sources */,
+				6670DA4E16A8748ECA504E0D /* Biquad.swift in Sources */,
+				44D8213AAE5CEB7E169DA4CD /* CharacterID.swift in Sources */,
+				6661773BFF34E0EB1BB95CBD /* Color+Hex.swift in Sources */,
+				7ABD4E52382C0F445EECA91E /* Compressor.swift in Sources */,
+				1D80B9E8B227FB5610E24478 /* ContentView.swift in Sources */,
+				D93F3C9DA769445D7E335C2D /* DSPGraph.swift in Sources */,
+				7DB05D4DF01E15CB7B5C1E80 /* DSPSeal.swift in Sources */,
+				C3484D0D966D60AF4B524729 /* EQStage.swift in Sources */,
+				6C980F8E63141AD9E320A8E8 /* EmodollsStudioApp.swift in Sources */,
+				B77A281283076495554228DD /* ExportFormat.swift in Sources */,
+				B3B65C0E802FAD4FD0CF2913 /* FrequencySkeleton.swift in Sources */,
+				9CF719BB5AA575FBB9FAE14E /* Genre.swift in Sources */,
+				3ADC5E6BFA239546F28D5C26 /* HighFrequencyCap.swift in Sources */,
+				9BE1166F9108ED8A431A1BDC /* ID3v23.swift in Sources */,
+				4DEC93BF501536B172AD8B4A /* KnobIDs.swift in Sources */,
+				E0B408C8814193542D3E4D9E /* LameEncoder.swift in Sources */,
+				0AD0A20DB0A2DB93BEEE1F6F /* Loudness.swift in Sources */,
+				0567126730262E70476555D9 /* MetadataDraft.swift in Sources */,
+				CD3F1EC3D287CC6BCF6354A4 /* MonoCollapse.swift in Sources */,
+				D62B9135092CAF091CDBE0A9 /* Oversampler.swift in Sources */,
+				EF39E8290233A5A4592BEFFE /* Palette.swift in Sources */,
+				741712B3A6DBAD4EED0665DF /* Processor.swift in Sources */,
+				59BAF22A71F459C680ADF767 /* Recipes.swift in Sources */,
+				74DF777AD654F67630030978 /* RenderSettings.swift in Sources */,
+				436D19017E1C236CE8031113 /* Session.swift in Sources */,
+				4B40B2E0718BBC627BA0AEB2 /* SessionLimits.swift in Sources */,
+				1DF9EE284ADE03C409738109 /* StudioFilePicker.swift in Sources */,
+				F84DD86C6E7311E3618984FC /* TPDFDither.swift in Sources */,
+				CE5C2EF57264A90A5E145392 /* TanhSaturator.swift in Sources */,
+				4ED2F699E0B00E4E7BC74B63 /* ThemeController.swift in Sources */,
+				92EC1F13DFBB4A0ED7741A3D /* Themed.swift in Sources */,
+				BE6BF1AFF2854C4274877DC0 /* TruePeakLimiter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E1F0AD879B22705CF38239E9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8907D71D5F12393E8175112B /* EmodollsStudio */;
+			targetProxy = 3A99F1E7C157750EA6EBC30D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		011925823E9B79DD422C430E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = T77VRM22PQ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		3AE74A3263BC2C8841FE9284 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = T77VRM22PQ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		86C22DD9B9A3145BA57F63C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = T77VRM22PQ;
+				"EXCLUDED_ARCHS[sdk=macosx*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = studio.emodolls.tests;
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/emodolls studio.app/Contents/MacOS/emodolls studio";
+			};
+			name = Debug;
+		};
+		CB9AECDE959F960B00D6B1EE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = T77VRM22PQ;
+				"EXCLUDED_ARCHS[sdk=macosx*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = studio.emodolls.tests;
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/emodolls studio.app/Contents/MacOS/emodolls studio";
+			};
+			name = Release;
+		};
+		CBA3A7379F2EF6714BE72477 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = EmodollsStudio/App/EmodollsStudio.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTABILITY = YES;
+				"EXCLUDED_ARCHS[sdk=macosx*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "emodolls studio";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_LSMinimumSystemVersion = 14.0;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 emodolls. MIT.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = studio.emodolls.app;
+				PRODUCT_MODULE_NAME = EmodollsStudio;
+				PRODUCT_NAME = "emodolls studio";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				TARGETED_DEVICE_FAMILY = "";
+			};
+			name = Debug;
+		};
+		F7E562B50F8E6BAFC2BC719F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = EmodollsStudio/App/EmodollsStudio.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTABILITY = NO;
+				"EXCLUDED_ARCHS[sdk=macosx*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "emodolls studio";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_LSMinimumSystemVersion = 14.0;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 emodolls. MIT.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = studio.emodolls.app;
+				PRODUCT_MODULE_NAME = EmodollsStudio;
+				PRODUCT_NAME = "emodolls studio";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				TARGETED_DEVICE_FAMILY = "";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		48CF83C62DD2901611FC78D5 /* Build configuration list for PBXNativeTarget "EmodollsStudioTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				86C22DD9B9A3145BA57F63C8 /* Debug */,
+				CB9AECDE959F960B00D6B1EE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		56492F0901F5C6A4BB45EC89 /* Build configuration list for PBXProject "EmodollsStudio" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3AE74A3263BC2C8841FE9284 /* Debug */,
+				011925823E9B79DD422C430E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9E7B238AD00C0961C56F6035 /* Build configuration list for PBXNativeTarget "EmodollsStudio" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBA3A7379F2EF6714BE72477 /* Debug */,
+				F7E562B50F8E6BAFC2BC719F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 248EAFA9C4D1FBE9E547A072 /* Project object */;
+}

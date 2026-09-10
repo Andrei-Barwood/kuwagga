@@ -1,0 +1,12 @@
+libmp3lame and libmpg123 are bundled as dynamically linked libraries.
+
+LAME (libmp3lame) — GNU Lesser General Public License (LGPL)
+  https://lame.sourceforge.io/
+  https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+mpg123 (libmpg123) — GNU Lesser General Public License (LGPL) 2.1
+  https://www.mpg123.de/
+
+emodolls studio is MIT-licensed. These dylibs are not MIT.
+The LAME / mpg123 source is not included in this repository.
+You may replace the dylibs with your own LGPL-compliant builds.
